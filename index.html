@@ -134,14 +134,19 @@
             <div class="choices" id="choices-display"></div>
         </div>
 
-        <div class="panel" style="max-height: 95vh; overflow-y: auto;">
-            <div id="mode-display"></div>
-            <h3 style="margin-top:0">Личность</h3>
-            <div id="stats-display"></div>
-            <div class="lore-section"><h3>Близкие люди</h3><div id="npcs-display"></div></div>
-            <div class="lore-section"><h3>Вещи и Память</h3><div id="inventory-display"></div></div>
-            <button onclick="resetGame()" style="margin-top:30px; background: #333; color: #888; border:none; padding:8px; font-size:0.8rem; cursor:pointer;">Сброс сохранения</button>
-        </div>
+       <div class="panel" style="max-height: 95vh; overflow-y: auto;">
+    <div id="mode-display"></div>
+    <h3 style="margin-top:0">Личность</h3>
+    <div id="stats-display"></div>
+    <div class="lore-section"><h3>Близкие люди</h3><div id="npcs-display"></div></div>
+    <div class="lore-section"><h3>Вещи и Память</h3><div id="inventory-display"></div></div>
+    
+    <!-- Кнопки управления -->
+    <div style="display: flex; gap: 8px; margin-top: 30px;">
+        <button onclick="copyHistoryToClipboard()" style="flex:1; background: #30363d; color: var(--text-main); border:1px solid var(--border-color); padding:8px; font-size:0.8rem; cursor:pointer; border-radius:4px;">📋 Копировать историю</button>
+        <button onclick="resetGame()" style="flex:1; background: #333; color: #888; border:none; padding:8px; font-size:0.8rem; cursor:pointer; border-radius:4px;">🔄 Сброс</button>
+    </div>
+</div>
     </div>
 
 </body>
