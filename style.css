@@ -1,0 +1,534 @@
+/* ========== Переменные и глобальные стили ========== */
+:root {
+    --bg-color: #0d1117;
+    --panel-bg: #161b22;
+    --border-color: #30363d;
+    --text-main: #c9d1d9;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --danger: #f85149;
+    --warning: #d29922;
+    --safe: #238636;
+}
+
+body {
+    font-family: 'Merriweather', 'Georgia', serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    line-height: 1.6;
+}
+
+/* ========== Основной контейнер игры ========== */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    display: grid;
+    grid-template-columns: 65% 33%;
+    gap: 2%;
+}
+
+@media (max-width: 850px) {
+    .container { 
+        grid-template-columns: 1fr; 
+    }
+}
+
+/* ========== Общие панели ========== */
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ========== ЭКРАН НАСТРОЙКИ ========== */
+#setup-screen {
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 17, 23, 0.98);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 40px 20px;
+}
+
+.setup-container {
+    max-width: 520px;
+    width: 100%;
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+.setup-container h2 {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.setup-section {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.setup-section h3 {
+    margin: 0 0 15px 0;
+    font-size: 1rem;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.setup-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    align-items: center;
+}
+
+.setup-row label {
+    flex: 0 0 100px;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+}
+
+.setup-row input, 
+.setup-row select {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: #010409;
+    color: white;
+    font-size: 0.95rem;
+}
+
+.setup-row select { 
+    cursor: pointer; 
+}
+
+.setup-row input:focus, 
+.setup-row select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Кнопки-переключатели */
+.option-buttons {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+}
+
+.option-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: #21262d;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 0.9rem;
+}
+
+.option-btn:hover { 
+    border-color: var(--accent); 
+}
+
+.option-btn.selected {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: bold;
+}
+
+/* Информационные блоки */
+.pace-info, 
+.difficulty-info {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+    padding: 8px;
+    background: #21262d;
+    border-radius: 4px;
+}
+
+.pace-example {
+    font-family: monospace;
+    color: var(--accent);
+}
+
+/* Превью старта */
+.start-preview {
+    background: #21262d;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    font-size: 0.85rem;
+}
+
+.start-preview h4 {
+    margin: 0 0 8px 0;
+    color: var(--accent);
+    font-size: 0.9rem;
+}
+
+.start-preview .preview-item {
+    padding: 3px 0;
+    color: var(--text-dim);
+}
+
+.start-preview .preview-item .stat-mod {
+    font-size: 0.75rem;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+}
+
+.stat-mod.pos { 
+    background: rgba(35,134,54,0.3); 
+    color: var(--safe); 
+}
+
+.stat-mod.neg { 
+    background: rgba(248,81,73,0.2); 
+    color: var(--danger); 
+}
+
+.reroll-btn {
+    background: #30363d;
+    color: var(--text-dim);
+    border: 1px solid var(--border-color);
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-top: 8px;
+}
+
+.reroll-btn:hover { 
+    border-color: var(--accent); 
+    color: var(--accent); 
+}
+
+/* Поле API */
+.api-section input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+/* Кнопка запуска */
+button.primary {
+    background: var(--safe);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 14px 20px;
+    font-size: 1.1rem;
+    width: 100%;
+    border-radius: 6px;
+}
+
+button.primary:hover { 
+    background: #2ea043; 
+}
+
+button.primary:disabled { 
+    background: #333; 
+    cursor: not-allowed; 
+}
+
+/* ========== ИГРОВОЙ ИНТЕРФЕЙС ========== */
+
+/* Шапка с датой */
+.date-badge {
+    font-family: monospace;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.date-badge .location {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+}
+
+/* Текст истории */
+.story-content {
+    font-size: 1.05rem;
+    margin-bottom: 30px;
+    line-height: 1.7;
+}
+
+.story-content h1, 
+.story-content h2, 
+.story-content h3 {
+    color: var(--accent);
+    margin: 20px 0 10px 0;
+}
+
+.story-content h1 { font-size: 1.4rem; }
+.story-content h2 { font-size: 1.25rem; }
+.story-content h3 { font-size: 1.1rem; }
+.story-content p { margin: 0 0 12px 0; }
+.story-content strong { color: #e6edf3; }
+.story-content em { color: #b0bac5; font-style: italic; }
+
+.story-content blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 8px 15px;
+    margin: 12px 0;
+    background: rgba(88, 166, 255, 0.05);
+    color: #aeb6bf;
+    font-style: italic;
+}
+
+.story-content ul, 
+.story-content ol {
+    padding-left: 20px;
+    margin: 8px 0;
+}
+
+.story-content li { margin-bottom: 4px; }
+
+.story-content hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 20px 0;
+}
+
+/* Блок вариантов выбора */
+.choices {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: auto;
+}
+
+.choice-btn {
+    background: #21262d;
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: 0.2s;
+    font-family: sans-serif;
+}
+
+.choice-btn:hover { 
+    border-color: var(--accent); 
+    background: #292e36; 
+}
+
+.choice-btn:disabled { 
+    opacity: 0.5; 
+    cursor: wait; 
+}
+
+/* Статистика */
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #21262d;
+    font-family: sans-serif;
+    font-size: 0.9rem;
+}
+
+/* Цветовые классы для значений статов */
+.val-norm { color: var(--safe); }
+.val-flavor { color: #6cb4ee; }
+.val-skew { color: var(--warning); }
+.val-bad { color: var(--danger); font-weight: bold; }
+.val-crit { color: #ff0000; text-shadow: 0 0 8px red; font-weight: 900; }
+
+/* Бейджи режимов */
+.mode-badge {
+    font-family: sans-serif;
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
+.mode-badge.hardcore { 
+    background: var(--danger); 
+    color: white; 
+}
+
+.mode-badge.normal { 
+    background: var(--safe); 
+    color: white; 
+}
+
+/* Бейдж чуда */
+.miracle-badge {
+    font-family: sans-serif;
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+.miracle-badge.available { 
+    background: #d4a017; 
+    color: #000; 
+}
+
+.miracle-badge.used { 
+    background: #333; 
+    color: #666; 
+    text-decoration: line-through; 
+}
+
+/* Бейдж суммаризации */
+.summary-badge {
+    font-family: sans-serif;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #30363d;
+    color: var(--text-dim);
+    display: inline-block;
+    margin-left: 8px;
+}
+
+/* Баннер чуда */
+.miracle-banner {
+    background: linear-gradient(135deg, #1a1a00, #2d2a0a, #1a1a00);
+    border: 2px solid #d4a017;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.miracle-banner h2 {
+    color: #d4a017;
+    margin: 0 0 10px 0;
+    text-shadow: 0 0 10px rgba(212, 160, 23, 0.5);
+}
+
+/* Раздел лора (NPC и предметы) */
+.lore-section h3 {
+    font-size: 1rem;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border-color);
+    margin-top: 25px;
+    padding-bottom: 5px;
+}
+
+/* Сворачиваемые блоки NPC/предметов */
+details {
+    background: #21262d;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+summary {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.95rem;
+    list-style: none;
+    display: flex;
+    align-items: center;
+}
+
+summary::-webkit-details-marker { display: none; }
+
+summary::before {
+    content: "►";
+    font-size: 0.7em;
+    margin-right: 8px;
+    color: var(--text-dim);
+    transition: transform 0.2s;
+}
+
+details[open] summary::before { 
+    transform: rotate(90deg); 
+}
+
+details[open] summary { 
+    background: #2c333e; 
+}
+
+.lore-desc {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    color: #aeb6bf;
+    background: #1c2128;
+    border-top: 1px solid #30363d;
+    font-style: italic;
+}
+
+/* Индикатор загрузки */
+.loading-bar {
+    height: 4px;
+    background: linear-gradient(90deg, var(--bg-color), var(--accent), var(--bg-color));
+    background-size: 200% 100%;
+    animation: loading 2s infinite;
+    display: none;
+    margin: 10px 0;
+}
+
+@keyframes loading { 
+    0% { background-position: 100% 0; } 
+    100% { background-position: -100% 0; } 
+}
+
+/* Баннер Game Over */
+.game-over-banner {
+    background: linear-gradient(135deg, #1a0000, #2d0a0a, #1a0000);
+    border: 2px solid var(--danger);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.game-over-banner h2 {
+    color: var(--danger);
+    margin: 0 0 10px 0;
+    text-shadow: 0 0 10px rgba(248, 81, 73, 0.5);
+}
+
+.game-over-reasons {
+    text-align: left;
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    font-size: 0.95rem;
+}
+
+/* Утилита */
+.hidden { 
+    display: none !important; 
+}

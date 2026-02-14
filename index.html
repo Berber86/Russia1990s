@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Эпоха Перемен: 1993</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="app.js"></script>
+</head>
+<body>
+
+    <div id="setup-screen">
+        <div class="setup-container">
+            <h2>Эпоха Перемен</h2>
+            <p style="text-align:center; color:var(--text-dim); margin-bottom:20px;">Текстовая RPG о жизни в России 90-х</p>
+
+            <div class="setup-section api-section">
+                <h3>🔑 API Ключ</h3>
+                <input type="password" id="api-key" placeholder="sk-or-... (OpenRouter)">
+            </div>
+
+            <div class="setup-section">
+                <h3>⚔️ Сложность</h3>
+                <div class="setup-row">
+                    <div class="option-buttons" id="difficulty-btns">
+                        <button class="option-btn selected" data-value="normal">🛡️ Норма</button>
+                        <button class="option-btn" data-value="hardcore">💀 Хардкор</button>
+                    </div>
+                </div>
+                <div class="difficulty-info" id="difficulty-info">
+                    <strong>Норма:</strong> 4 варианта выбора. Одно чудесное спасение за игру.
+                </div>
+            </div>
+
+            <div class="setup-section">
+                <h3>👤 Персонаж</h3>
+                <div class="setup-row">
+                    <label>Пол:</label>
+                    <div class="option-buttons" id="gender-btns">
+                        <button class="option-btn selected" data-value="male">♂ Мальчик</button>
+                        <button class="option-btn" data-value="female">♀ Девочка</button>
+                    </div>
+                </div>
+                <div class="setup-row">
+                    <label>Возраст:</label>
+                    <select id="start-age">
+                        <option value="5">5 лет (детсад)</option>
+                        <option value="6">6 лет (подготовка)</option>
+                        <option value="7" selected>7 лет (1 класс)</option>
+                        <option value="8">8 лет (2 класс)</option>
+                        <option value="9">9 лет (3 класс)</option>
+                        <option value="10">10 лет (4 класс)</option>
+                        <option value="11">11 лет (5 класс)</option>
+                        <option value="12">12 лет (6 класс)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ОБНОВЛЕННЫЙ БЛОК ЛОКАЦИИ -->
+            <div class="setup-section">
+                <h3>📍 Локация</h3>
+                
+                <!-- Тип населенного пункта -->
+                <div class="setup-row">
+                    <label>Тип:</label>
+                    <div class="option-buttons" id="location-type-btns" style="flex-wrap:wrap;">
+                        <button class="option-btn" data-value="village">🏡 Село</button>
+                        <button class="option-btn" data-value="town">🏘️ Город</button>
+                        <button class="option-btn selected" data-value="capital">🏙️ Столица</button>
+                    </div>
+                </div>
+                
+                <!-- Регион (для сел и городов) - по умолчанию скрыт -->
+                <div class="setup-row" id="region-select-row" style="display: none;">
+                    <label>Регион:</label>
+                    <select id="region-select" class="region-select">
+                        <option value="central">🌲 Центральная Россия</option>
+                        <option value="siberia">❄️ Сибирь</option>
+                        <option value="far_east">🌊 Дальний Восток</option>
+                        <option value="ural">⛰️ Урал</option>
+                        <option value="black_sea">🏖️ Черноморское побережье</option>
+                        <option value="north_caucasus">🏔️ Северный Кавказ</option>
+                    </select>
+                </div>
+                
+                <!-- Город (для столиц) - по умолчанию видим -->
+                <div class="setup-row" id="city-select-row">
+                    <label>Город:</label>
+                    <select id="city-select" class="city-select">
+                        <option value="moscow">🏛️ Москва</option>
+                        <option value="spb">🌉 Санкт-Петербург</option>
+                        <option value="novosibirsk">🏭 Новосибирск</option>
+                        <option value="vladivostok">⚓ Владивосток</option>
+                        <option value="ekaterinburg">🏗️ Екатеринбург</option>
+                        <option value="rostov">🌻 Ростов-на-Дону</option>
+                        <option value="grozny">🕌 Грозный</option>
+                    </select>
+                </div>
+                
+                <!-- Краткое описание выбранной локации -->
+                <div class="location-description" id="location-description" style="margin-top:10px; padding:8px; background:#21262d; border-radius:4px; font-size:0.85rem; color:var(--text-dim);">
+                    Москва — столица, огромный муравейник...
+                </div>
+            </div>
+
+            <div class="setup-section">
+                <h3>⏱️ Темп повествования</h3>
+                <div class="setup-row">
+                    <div class="option-buttons" id="pace-btns">
+                        <button class="option-btn selected" data-value="season">По сезонам</button>
+                        <button class="option-btn" data-value="year">По годам</button>
+                    </div>
+                </div>
+                <div class="pace-info" id="pace-info">
+                    <strong>По сезонам:</strong> каждый ход = новый сезон<br>
+                    <span class="pace-example">Зима 1993 → Весна 1993 → Лето 1993 → …</span>
+                </div>
+            </div>
+
+            <div class="start-preview" id="start-preview"></div>
+
+            <button id="start-btn" class="primary">Начать игру</button>
+        </div>
+    </div>
+
+    <div class="container hidden" id="game-ui">
+        <div class="panel">
+            <div class="date-badge" id="date-display">
+                <span id="date-text">...</span>
+                <span class="location" id="location-display"></span>
+            </div>
+            <div id="story-display" class="story-content"></div>
+            <div class="loading-bar" id="loader"></div>
+            <div class="choices" id="choices-display"></div>
+        </div>
+
+        <div class="panel" style="max-height: 95vh; overflow-y: auto;">
+            <div id="mode-display"></div>
+            <h3 style="margin-top:0">Личность</h3>
+            <div id="stats-display"></div>
+            <div class="lore-section"><h3>Близкие люди</h3><div id="npcs-display"></div></div>
+            <div class="lore-section"><h3>Вещи и Память</h3><div id="inventory-display"></div></div>
+            <button onclick="resetGame()" style="margin-top:30px; background: #333; color: #888; border:none; padding:8px; font-size:0.8rem; cursor:pointer;">Сброс сохранения</button>
+        </div>
+    </div>
+
+</body>
+</html>
