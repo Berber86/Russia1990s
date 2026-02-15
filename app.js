@@ -9,16 +9,16 @@ import {
 
 // ========== СОСТОЯНИЕ ИГРЫ ==========
 
-// Начальное состояние по умолчанию (обновлено с новыми полями)
+// Начальное состояние по умолчанию
 const DEFAULT_STATE = {
     gender: 'male',
-    locationType: 'capital',  // village, town, capital
-    region: 'central',        // для сел и городов
-    city: 'moscow',           // для столиц
+    locationType: 'capital',
+    region: 'central',
+    city: 'moscow',
     pace: 'season',
     difficulty: 'normal',
     startAge: 7,
-    year: 1992,
+    year: 1992, // Исправлено: 1992 вместо 1993
     seasonIdx: 0,
     age: 7,
     stats: { mind: 5, body: 5, family: 5, friends: 5, health: 5, looks: 5, wealth: 5, authority: 5 },
@@ -54,7 +54,6 @@ const els = {
     loader: document.getElementById('loader'),
     modeDisplay: document.getElementById('mode-display'),
     preview: document.getElementById('start-preview'),
-    // Новые элементы
     locationDesc: document.getElementById('location-description'),
     regionRow: document.getElementById('region-select-row'),
     cityRow: document.getElementById('city-select-row'),
@@ -83,28 +82,43 @@ function rollChance(percent) {
  */
 function parseJSON(text) {
     if (!text) return null;
+    
+    // Сначала пробуем стандартный парсинг
     try {
         return JSON.parse(text);
-    } catch (e1) {
+    } catch (e) {
+        // Если не получилось, очищаем от markdown-блоков и лишнего
         try {
-            let clean = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-            return JSON.parse(clean);
-        } catch (e2) {
-            try {
-                const start = text.indexOf('{');
-                const end = text.lastIndexOf('}');
-                if (start !== -1 && end !== -1 && end > start) {
-                    return JSON.parse(text.substring(start, end + 1));
+            // Убираем ```json и ``` в начале и конце
+            let clean = text.replace(/^```json\s*/i, '').replace(/\s*```$/g, '').trim();
+            
+            // Ищем первый символ '{'
+            const startIdx = clean.indexOf('{');
+            if (startIdx === -1) throw new Error('No JSON object found');
+            
+            // Ищем закрывающую скобку с учётом вложенности
+            let braceCount = 0;
+            let endIdx = -1;
+            for (let i = startIdx; i < clean.length; i++) {
+                if (clean[i] === '{') braceCount++;
+                else if (clean[i] === '}') braceCount--;
+                
+                if (braceCount === 0 && clean[i] === '}') {
+                    endIdx = i;
+                    break;
                 }
-            } catch (e3) {
-                console.error("JSON parse error (all attempts failed):", e3, text.substring(0, 200));
             }
-            console.error("JSON parse error:", e2, text.substring(0, 200));
+            
+            if (endIdx === -1) throw new Error('Unbalanced braces');
+            
+            const jsonStr = clean.substring(startIdx, endIdx + 1);
+            return JSON.parse(jsonStr);
+        } catch (e2) {
+            console.error("JSON parse error (advanced):", e2, text.substring(0, 200));
             return null;
         }
     }
 }
-
 /**
  * Конвертирует Markdown-подобный текст в HTML
  */
@@ -165,7 +179,206 @@ window.resetGame = () => {
     location.reload();
 };
 
-// ========== НОВАЯ ФУНКЦИЯ ПОЛУЧЕНИЯ ИНФОРМАЦИИ О ЛОКАЦИИ ==========
+// ========== ФУНКЦИИ ГЕНЕРАЦИИ NPC И ПРЕДМЕТОВ (ОБЪЯВЛЯЕМ РАНЬШЕ) ==========
+
+/**
+ * Генерирует случайных NPC для указанной локации
+ */
+function generateRandomNPCs(locationType, region = null, city = null) {
+    // Собираем доступные пулы
+    const availablePools = [];
+    
+    // 1. Базовый пул по типу населённого пункта (всегда)
+    if (locationType === 'capital' && NPC_POOLS.capital) {
+        availablePools.push(NPC_POOLS.capital);
+    } else if (locationType === 'town' && NPC_POOLS.town) {
+        availablePools.push(NPC_POOLS.town);
+    } else if (locationType === 'village' && NPC_POOLS.village) {
+        availablePools.push(NPC_POOLS.village);
+    }
+    
+    // 2. Региональный пул для ГОРОДОВ (только если это город или столица)
+    if (region && (locationType === 'town' || locationType === 'capital')) {
+        if (NPC_POOLS.regions && 
+            NPC_POOLS.regions[region] && 
+            NPC_POOLS.regions[region].town) {
+            availablePools.push(NPC_POOLS.regions[region].town);
+        }
+    }
+    
+    // 3. Региональный пул для СЁЛ (только если это село)
+    if (region && locationType === 'village') {
+        if (NPC_POOLS.regions && 
+            NPC_POOLS.regions[region] && 
+            NPC_POOLS.regions[region].village) {
+            availablePools.push(NPC_POOLS.regions[region].village);
+        }
+    }
+    
+    // 4. Городской пул (только для столиц)
+    if (locationType === 'capital' && city && NPC_POOLS.cities && NPC_POOLS.cities[city]) {
+        availablePools.push(NPC_POOLS.cities[city]);
+    }
+    
+    const result = [];
+    const usedDescs = new Set();
+
+    function pickFromPools(category) {
+        const options = [];
+        for (const pool of availablePools) {
+            if (pool[category] && pool[category].length > 0) {
+                options.push(...pool[category]);
+            }
+        }
+        const freshOptions = options.filter(opt => !usedDescs.has(opt.desc));
+        if (freshOptions.length === 0) return null;
+        return pick(freshOptions);
+    }
+
+    // Мама — 90%
+    if (rollChance(90)) {
+        const mom = pickFromPools('mothers');
+        if (mom) {
+            result.push({ ...mom });
+            usedDescs.add(mom.desc);
+        }
+    }
+
+    // Папа — 70%
+    if (rollChance(70)) {
+        const dad = pickFromPools('fathers');
+        if (dad) {
+            result.push({ ...dad });
+            usedDescs.add(dad.desc);
+        }
+    }
+
+    // Если нет ни мамы ни папы — бабушка/дедушка
+    const hasParent = result.length > 0;
+    if (!hasParent) {
+        const gp = pickFromPools('grandparents');
+        if (gp) {
+            result.push({ ...gp });
+            usedDescs.add(gp.desc);
+        }
+    }
+
+    // Бабушка/дедушка — 60%
+    if (rollChance(60)) {
+        const gp = pickFromPools('grandparents');
+        if (gp) {
+            result.push({ ...gp });
+            usedDescs.add(gp.desc);
+        }
+    }
+
+    // Второй дедушка/бабушка — 30%
+    if (rollChance(30)) {
+        const gp = pickFromPools('grandparents');
+        if (gp) {
+            result.push({ ...gp });
+            usedDescs.add(gp.desc);
+        }
+    }
+
+    // 50% — один брат/сестра
+    if (rollChance(50)) {
+        const sib = pickFromPools('siblings');
+        if (sib) {
+            result.push({ ...sib });
+            usedDescs.add(sib.desc);
+        }
+    }
+
+    // 25% — второй брат/сестра
+    if (rollChance(25)) {
+        const sib = pickFromPools('siblings');
+        if (sib) {
+            result.push({ ...sib });
+            usedDescs.add(sib.desc);
+        }
+    }
+
+    // 1-2 друга
+    if (rollChance(70)) {
+        const fr = pickFromPools('friends');
+        if (fr) {
+            result.push({ ...fr });
+            usedDescs.add(fr.desc);
+        }
+    }
+    if (rollChance(40)) {
+        const fr = pickFromPools('friends');
+        if (fr) {
+            result.push({ ...fr });
+            usedDescs.add(fr.desc);
+        }
+    }
+
+    // 50% — сосед/учитель
+    if (rollChance(50)) {
+        const nb = pickFromPools('neighbors');
+        if (nb) {
+            result.push({ ...nb });
+            usedDescs.add(nb.desc);
+        }
+    }
+
+    // 45% — животное
+    if (rollChance(45)) {
+        const an = pickFromPools('animals');
+        if (an) {
+            result.push({ ...an });
+            usedDescs.add(an.desc);
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Генерирует случайные предметы для указанной локации и пола
+ */
+function generateRandomItems(location, gender) {
+    const poolData = ITEM_POOLS[location];
+    if (!poolData) return { items: [], statMods: {} };
+    
+    let pool = [...(poolData.common || [])];
+
+    if (gender === 'male' && poolData.boys) {
+        pool = pool.concat(poolData.boys);
+    } else if (gender === 'female' && poolData.girls) {
+        pool = pool.concat(poolData.girls);
+    }
+
+    const result = [];
+    const usedNames = new Set();
+    const statMods = {};
+
+    let shuffled = pool.sort(() => Math.random() - 0.5);
+
+    if (shuffled.length > 0) {
+        const first = shuffled[0];
+        result.push({ name: first.name, desc: first.desc, stat: first.stat, mod: first.mod });
+        usedNames.add(first.name);
+        statMods[first.stat] = (statMods[first.stat] || 0) + first.mod;
+
+        let chance = 75;
+        for (let i = 1; i < shuffled.length && chance > 10; i++) {
+            if (!rollChance(chance)) break;
+            if (usedNames.has(shuffled[i].name)) continue;
+            const item = shuffled[i];
+            result.push({ name: item.name, desc: item.desc, stat: item.stat, mod: item.mod });
+            usedNames.add(item.name);
+            statMods[item.stat] = (statMods[item.stat] || 0) + item.mod;
+            chance -= 12;
+        }
+    }
+
+    return { items: result, statMods };
+}
+
+// ========== ФУНКЦИЯ ПОЛУЧЕНИЯ ИНФОРМАЦИИ О ЛОКАЦИИ ==========
 
 /**
  * Возвращает полную информацию о текущей локации
@@ -183,7 +396,6 @@ function getLocationInfo() {
             region: REGIONS[city.region],
             fullName: `${city.icon} ${city.name}`,
             desc: detail.desc,
-            // Для совместимости со старым кодом
             legacyLocation: 'capital'
         };
     } else {
@@ -199,7 +411,6 @@ function getLocationInfo() {
             region: region,
             fullName: `${type.icon} ${type.name}, ${region.icon} ${region.name}`,
             desc: detail ? detail.desc : `${type.name} в ${region.name}`,
-            // Для совместимости со старым кодом
             legacyLocation: state.locationType
         };
     }
@@ -212,7 +423,6 @@ function updateLocationDescription() {
     const info = getLocationInfo();
     els.locationDesc.innerHTML = `<strong>${info.fullName}</strong><br>${info.desc}`;
     
-    // Показываем/скрываем соответствующие селекты
     if (state.locationType === 'capital') {
         els.regionRow.style.display = 'none';
         els.cityRow.style.display = 'flex';
@@ -224,11 +434,9 @@ function updateLocationDescription() {
 
 // ========== НАСТРОЙКА ИНТЕРФЕЙСА ==========
 
-/**
- * Настраивает кнопки-переключатели в меню настроек
- */
 function setupOptionButtons(containerId, stateKey, callback) {
     const container = document.getElementById(containerId);
+    if (!container) return;
     const buttons = container.querySelectorAll('.option-btn');
     buttons.forEach(btn => {
         btn.onclick = () => {
@@ -243,23 +451,20 @@ function setupOptionButtons(containerId, stateKey, callback) {
     });
 }
 
-/**
- * Обновляет информацию о темпе повествования
- */
 function updatePaceInfo(pace) {
     const info = document.getElementById('pace-info');
+    if (!info) return;
     if (pace === 'season') {
-        info.innerHTML = `<strong>По сезонам:</strong> каждый ход = новый сезон<br><span class="pace-example">Зима 1993 → Весна 1993 → Лето 1993 → …</span>`;
+        info.innerHTML = `<strong>По сезонам:</strong> каждый ход = новый сезон<br><span class="pace-example">Зима 1992 → Весна 1992 → Лето 1992 → …</span>`;
     } else {
+        // ВАШЕ ИЗМЕНЕНИЕ: каждый ход = 9 месяцев
         info.innerHTML = `<strong>По годам:</strong> каждый ход = 9 месяцев <br><span class="pace-example">лето 1993 → Весна 1994 → Зима 1995 → …</span>`;
     }
 }
 
-/**
- * Обновляет информацию о сложности
- */
 function updateDifficultyInfo(diff) {
     const info = document.getElementById('difficulty-info');
+    if (!info) return;
     if (diff === 'normal') {
         info.innerHTML = `<strong>Норма:</strong> 4 варианта выбора. Одно чудесное спасение за игру.`;
     } else {
@@ -267,21 +472,18 @@ function updateDifficultyInfo(diff) {
     }
 }
 
-/**
- * Генерирует и отображает превью стартовых данных
- */
 function rollStartPreview() {
-    // Используем legacyLocation для совместимости с генераторами
     const locInfo = getLocationInfo();
-    const npcs = generateRandomNPCs(locInfo.legacyLocation);
+    const npcs = generateRandomNPCs(
+        locInfo.legacyLocation, 
+        locInfo.type !== 'capital' ? state.region : null,
+        locInfo.type === 'capital' ? state.city : null
+    );
     const { items, statMods } = generateRandomItems(locInfo.legacyLocation, state.gender);
     generatedStart = { npcs, items, statMods };
     renderStartPreview();
 }
 
-/**
- * Отрисовывает превью стартовых данных
- */
 function renderStartPreview() {
     if (!generatedStart) return;
     const { npcs, items, statMods } = generatedStart;
@@ -289,7 +491,6 @@ function renderStartPreview() {
 
     let html = '<h4>🎲 Стартовые данные</h4>';
     
-    // Добавляем информацию о локации в превью
     html += `<div style="margin-bottom:10px; padding:5px; background:#1c2128; border-radius:4px;">`;
     html += `<strong>📍 ${locInfo.fullName}</strong><br>`;
     html += `<span style="font-size:0.8rem;">${locInfo.desc.substring(0, 100)}...</span>`;
@@ -323,50 +524,11 @@ function renderStartPreview() {
     html += '<button class="reroll-btn" id="reroll-btn">🎲 Перебросить</button>';
 
     els.preview.innerHTML = html;
-    document.getElementById('reroll-btn').onclick = rollStartPreview;
+    const rerollBtn = document.getElementById('reroll-btn');
+    if (rerollBtn) rerollBtn.onclick = rollStartPreview;
 }
 
-// Инициализация кнопок настроек
-setupOptionButtons('gender-btns', 'gender');
-setupOptionButtons('pace-btns', 'pace');
-setupOptionButtons('difficulty-btns', 'difficulty');
-
-// Обработчик для типа локации
-setupOptionButtons('location-type-btns', 'locationType', (value) => {
-    updateLocationDescription();
-    rollStartPreview();
-});
-
-// Обработчики для селектов
-els.regionSelect.onchange = (e) => {
-    state.region = e.target.value;
-    updateLocationDescription();
-    rollStartPreview();
-};
-
-els.citySelect.onchange = (e) => {
-    state.city = e.target.value;
-    updateLocationDescription();
-    rollStartPreview();
-};
-
-// Слушатель изменения возраста
-document.getElementById('start-age').onchange = (e) => {
-    state.startAge = parseInt(e.target.value);
-};
-
-// Генерация первого превью и обновление описания
-updateLocationDescription();
-rollStartPreview();
-
 // ========== ЗАПУСК ИГРЫ ==========
-
-els.startBtn.onclick = () => {
-    const key = els.keyInput.value.trim();
-    if (!key) return alert("Нужен ключ API");
-    localStorage.setItem('rpg90_key', key);
-    initGame(key);
-};
 
 function initGame(key) {
     openai = new OpenAI({
@@ -375,31 +537,6 @@ function initGame(key) {
         dangerouslyAllowBrowser: true
     });
     
-    const saved = localStorage.getItem('rpg90_state');
-    if (saved) {
-        try {
-            state = JSON.parse(saved);
-            // Обратная совместимость
-            if (!state.locationType) {
-                state.locationType = state.location || 'capital';
-                state.region = 'central';
-                state.city = 'moscow';
-            }
-            if (state.difficulty === undefined) state.difficulty = 'normal';
-            if (state.miracleUsed === undefined) state.miracleUsed = false;
-            if (state.miracleAvailable === undefined) state.miracleAvailable = (state.difficulty === 'normal');
-            if (state.turnCount === undefined) state.turnCount = 0;
-            if (state.lifeSummary === undefined) state.lifeSummary = "";
-            if (state.lastSummaryTurn === undefined) state.lastSummaryTurn = 0;
-            if (state.stats.wealth === undefined) state.stats.wealth = 5;
-            if (state.stats.authority === undefined) state.stats.authority = 5;
-        } catch (e) {
-            applyStartSettings();
-        }
-    } else {
-        applyStartSettings();
-    }
-
     els.setup.classList.add('hidden');
     els.game.classList.remove('hidden');
     
@@ -415,7 +552,7 @@ function initGame(key) {
 
 function applyStartSettings() {
     state.age = state.startAge;
-    state.year = 1993;
+    state.year = 1992;
     state.seasonIdx = 0;
     state.miracleUsed = false;
     state.miracleAvailable = (state.difficulty === 'normal');
@@ -439,6 +576,7 @@ function applyStartSettings() {
 // ========== ФОРМИРОВАНИЕ КОНТЕКСТА ДЛЯ НЕЙРОСЕТИ ==========
 
 function buildContextBlock() {
+    // ВАШЕ ИЗМЕНЕНИЕ: "ЛЮДИ вокруг" вместо "БЛИЗКИЕ ЛЮДИ"
     let ctx = "\n=== ЛЮДИ вокруг ===\n";
     if (state.npcs.length > 0) {
         state.npcs.forEach(n => { ctx += `- ${n.name}: ${n.desc}\n`; });
@@ -446,6 +584,7 @@ function buildContextBlock() {
         ctx += "Никого рядом нет.\n";
     }
 
+    // ВАШЕ ИЗМЕНЕНИЕ: "ВЕЩИ и перки ГЕРОЯ" вместо "ВЕЩИ ГЕРОЯ"
     ctx += "\n=== ВЕЩИ и перки ГЕРОЯ ===\n";
     if (state.inventory.length > 0) {
         state.inventory.forEach(i => { ctx += `- ${i.name}: ${i.desc}\n`; });
@@ -470,15 +609,15 @@ function buildStatsDescription() {
         let impact = "";
 
         if (val === 0) { status = `GAME OVER (0/10)`; impact = "Полный крах: " + info.low; }
-        else if (val === 1) { status = `ТРАГИЗМ ситуации (1/10)`; impact = "На грани гибели, катастрофа в любой момент: " + info.low; }
-        else if (val === 2) { status = `ОЧЕВИДНЫЕ и сильные ПРОБЛЕМЫ (2/10)`; impact = "Даже герой видит беду: " + info.low; }
+        else if (val === 1) { status = `ТРАГИЗМ ситуации (1/10)`; impact = "На грани гибели, катастрофа в любой момент: " + info.low; } // ВАШЕ ИЗМЕНЕНИЕ
+        else if (val === 2) { status = `ОЧЕВИДНЫЕ и сильные ПРОБЛЕМЫ (2/10)`; impact = "Даже герой видит беду: " + info.low; } // ВАШЕ ИЗМЕНЕНИЕ
         else if (val === 3) { status = `ЗНАЧИТЕЛЬНОЕ ОТКЛОНЕНИЕ (3/10)`; impact = "Герой считает нормой, читатель видит проблемы: " + info.low; }
-        else if (val === 4) { status = `ЛЁГКОЕ ОТКЛОНЕНИЕ (4/10)`; impact = "Пока еще не трагедия: — " + info.low; }
+        else if (val === 4) { status = `ЛЁГКОЕ ОТКЛОНЕНИЕ (4/10)`; impact = "Пока еще не трагедия: — " + info.low; } // ВАШЕ ИЗМЕНЕНИЕ
         else if (val === 5) { status = `НОРМА (5/10)`; impact = "Средний уровень, обычная жизнь"; }
-        else if (val === 6) { status = `ЛЁГКОЕ ОТКЛОНЕНИЕ (6/10)`; impact = "Придаёт характер, не трагедия: лёгкий привкус счастья — " + info.high; }
-        else if (val === 7) { status = `ЗНАЧИТЕЛЬНОЕ ОТКЛОНЕНИЕ (7/10)`; impact = "Герой считает ситуацию благом, но читатель видит проблемы: " + info.high; }
+        else if (val === 6) { status = `ЛЁГКОЕ ОТКЛОНЕНИЕ (6/10)`; impact = "Придаёт характер, не трагедия: лёгкий привкус счастья — " + info.high; } // ВАШЕ ИЗМЕНЕНИЕ
+        else if (val === 7) { status = `ЗНАЧИТЕЛЬНОЕ ОТКЛОНЕНИЕ (7/10)`; impact = "Герой считает ситуацию благом, но читатель видит проблемы: " + info.high; } // ВАШЕ ИЗМЕНЕНИЕ
         else if (val === 8) { status = `ОЧЕВИДНЫЕ ПРОБЛЕМЫ (8/10)`; impact = "Даже герой видит перебор: " + info.high; }
-        else if (val === 9) { status = `ТРАГИЗМ ситуации (9/10)`; impact = "На грани катастрофы, пипец в любой момент: " + info.high; }
+        else if (val === 9) { status = `ТРАГИЗМ ситуации (9/10)`; impact = "На грани катастрофы, пипец в любой момент: " + info.high; } // ВАШЕ ИЗМЕНЕНИЕ
         else if (val === 10) { status = `GAME OVER (10/10)`; impact = "Полный крах от избытка: " + info.high; }
 
         desc += `- **${info.name}**: ${status} — ${impact}\n`;
@@ -525,7 +664,7 @@ function advanceTime() {
 function buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount) {
     const statsDesc = buildStatsDescription();
     const genderInfo = GENDER_INFO[state.gender];
-    const locInfo = getLocationInfo();
+    const locInfo = getLocationInfo(); // ИСПРАВЛЕНО: используем getLocationInfo()
     const contextBlock = buildContextBlock();
     const summaryBlock = buildSummaryBlock();
     
@@ -535,6 +674,7 @@ function buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount) {
         if (i < choicesCount) choicesTemplate += ',\n';
     }
     
+    // ВАШ ПОЛНЫЙ ПРОМПТ СО ВСЕМИ ИЗМЕНЕНИЯМИ
     return `
 Ты — мастер драматической и детально атмосферной текстовой RPG о жизни в России 90-х. драма и атмосферная ностальгия - это вся твоя суть.
 
@@ -653,7 +793,7 @@ ${choicesTemplate}
 
 async function generateLifeSummary() {
     const genderInfo = GENDER_INFO[state.gender];
-    const locationInfo = LOCATION_INFO[state.location];
+    const locInfo = getLocationInfo(); // ИСПРАВЛЕНО: используем getLocationInfo()
 
     const fullHistory = state.history
         .map(h => h.role === "user" ? `>> Выбор: ${h.content}` : `<< ${h.content}`)
@@ -667,7 +807,7 @@ async function generateLifeSummary() {
 Ты — архивариус. Твоя задача — составить КРАТКУЮ СВОДКУ жизни персонажа.
 
 ГЕРОЙ: ${genderInfo.name}, сейчас ${state.age} лет
-ЛОКАЦИЯ: ${locationInfo.name}
+ЛОКАЦИЯ: ${locInfo.fullName}
 СТАТЫ: ${JSON.stringify(state.stats)}
 ${prevSummary}
 БЛИЗКИЕ ЛЮДИ:
@@ -706,11 +846,9 @@ ${fullHistory}
         const data = parseJSON(completion.choices[0].message.content);
         if (data && data.summary) {
             state.lifeSummary = data.summary;
-
             if (state.history.length > 6) {
                 state.history = state.history.slice(-6);
             }
-
             state.lastSummaryTurn = state.turnCount;
         }
     } catch (e) {
@@ -738,15 +876,16 @@ async function turn(action) {
     const systemPrompt = buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount);
     
     try {
+        // ВАШЕ ИЗМЕНЕНИЕ: "атмосферно описанный результат"
         const completion = await openai.chat.completions.create({
             model: MODEL,
             messages: [
                 { role: "system", content: systemPrompt },
                 ...state.history,
-                { role: "user", content: `Мой выбор: ${action}. (Сгенерируй атмосферно описанный  результат выбранного мною действия и последующий переход в ${nextSeasonName} ${nextYear})` }
+                { role: "user", content: `Мой выбор: ${action}. (Сгенерируй атмосферно описанный результат выбранного мною действия и последующий переход в ${nextSeasonName} ${nextYear})` }
             ],
             max_tokens: 2500,
-            temperature: 0.5,
+            temperature: 0.5, // ВАШЕ ИЗМЕНЕНИЕ: 0.5 вместо 0.6
             response_format: { type: "json_object" }
         });
         
@@ -805,7 +944,6 @@ async function checkCriticalStats(precedingStory) {
 
     if (crits.length === 0) return;
 
-    // Чудесное спасение (только в режиме "Норма", один раз)
     if (state.difficulty === 'normal' && state.miracleAvailable && !state.miracleUsed) {
         state.miracleUsed = true;
         state.miracleAvailable = false;
@@ -816,11 +954,9 @@ async function checkCriticalStats(precedingStory) {
         }
 
         await generateMiracleStory(crits, precedingStory);
-        
         return true;
     }
 
-    // Настоящий Game Over
     state.gameOver = true;
     await generateGameOverStory(crits, precedingStory);
     return true;
@@ -830,7 +966,7 @@ async function generateMiracleStory(crits, precedingStory) {
     setLoading(true);
     
     const genderInfo = GENDER_INFO[state.gender];
-    const locationInfo = LOCATION_INFO[state.location];
+    const locInfo = getLocationInfo(); // ИСПРАВЛЕНО: используем getLocationInfo()
     const npcsDesc = state.npcs.map(n => `- ${n.name}: ${n.desc}`).join("\n");
     const choicesCount = getChoicesCount();
     
@@ -849,6 +985,7 @@ async function generateMiracleStory(crits, precedingStory) {
         "Взять дело в свои руки и разобраться самому, без взрослых"
     ];
     for (let i = 1; i <= choicesCount; i++) {
+        // ВАШЕ ИЗМЕНЕНИЕ: "в 2 предложениях"
         const ex = exampleTexts[i - 1] || `Подробное описание действия ${i} в 2 предложениях`;
         choicesTemplate += `        {"text": "${ex}", "action": "Подробная инструкция что именно делает герой, к кому идёт, что говорит"}`;
         if (i < choicesCount) choicesTemplate += ',\n';
@@ -860,7 +997,7 @@ async function generateMiracleStory(crits, precedingStory) {
 === ГЕРОЙ ===
 Пол: ${genderInfo.name}
 Возраст: ${state.age} лет
-Локация: ${locationInfo.name} — ${locationInfo.desc}
+Локация: ${locInfo.fullName} — ${locInfo.desc}
 
 === КРИТИЧЕСКИЕ ПАРАМЕТРЫ (должны были привести к гибели, но чудо спасло ===
 ${critsDesc}
@@ -946,7 +1083,7 @@ async function generateGameOverStory(crits, precedingStory) {
     const npcsDesc = state.npcs.map(n => `- ${n.name}: ${n.desc}`).join("\n");
     const invDesc = state.inventory.map(i => `- ${i.name}: ${i.desc}`).join("\n");
     const genderInfo = GENDER_INFO[state.gender];
-    const locationInfo = LOCATION_INFO[state.location];
+    const locInfo = getLocationInfo(); // ИСПРАВЛЕНО: используем getLocationInfo()
 
     let critsDesc = crits.map(c => {
         const isLow = c.value <= 0;
@@ -961,7 +1098,7 @@ async function generateGameOverStory(crits, precedingStory) {
 === ГЕРОЙ ===
 Пол: ${genderInfo.name}
 Возраст: ${state.age} лет
-Локация: ${locationInfo.name} — ${locationInfo.desc}
+Локация: ${locInfo.fullName} — ${locInfo.desc}
 
 === КРИТИЧЕСКИЕ ПАРАМЕТРЫ (привели к Game Over) ===
 ${critsDesc}
@@ -991,7 +1128,7 @@ ${fullHistory}
 5. НЕ ВЫДУМЫВАЙ новых персонажей!
 6. Опиши последствия для каждого близкого человека
 7. Объясни, как критические параметры привели к трагедии
-8. Соответствуй локации (${locationInfo.name}) и времени (90-е)
+8. Соответствуй локации (${locInfo.fullName}) и времени (90-е)
 
 ОТВЕТ В JSON:
 {
@@ -1017,7 +1154,7 @@ ${fullHistory}
     } catch (e) {
         console.error("Game Over error:", e);
         state.gameOverData = {
-            epilogue: `Судьба ${genderInfo.name} оборвалась в ${state.age} лет. ${locationInfo.name} 90-х не пощадил${genderInfo.pronoun === 'он' ? '' : 'а'} ${genderInfo.pronoun === 'он' ? 'его' : 'её'}...`,
+            epilogue: `Судьба ${genderInfo.name} оборвалась в ${state.age} лет. ${locInfo.fullName} 90-х не пощадил${genderInfo.pronoun === 'он' ? '' : 'а'} ${genderInfo.pronoun === 'он' ? 'его' : 'её'}...`,
             reasons: crits.map(c => c.name + " достиг критического уровня"),
             epitaph: "Эпоха перемен забрала рано"
         };
@@ -1028,13 +1165,10 @@ ${fullHistory}
 
 // ========== ПРИМЕНЕНИЕ ОБНОВЛЕНИЙ ==========
 
-// ========== ПРИМЕНЕНИЕ ОБНОВЛЕНИЙ ==========
-// ========== ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ ТЕКУЩЕЙ ДАТЫ ==========
 function getCurrentDateString() {
     return `${SEASONS[state.seasonIdx]} ${state.year}`;
 }
 
-// ========== ПРИМЕНЕНИЕ ОБНОВЛЕНИЙ ==========
 function applyUpdates(u) {
     if (!u) return;
     
@@ -1044,27 +1178,22 @@ function applyUpdates(u) {
             let delta = u[k];
             if (typeof delta !== 'number') continue;
             
-            // Ограничение изменения за ход
             if (delta > 2) delta = 2;
             if (delta < -2) delta = -2;
             
             const current = state.stats[k];
             let apply = true;
             
-            // Вязкость: экстремальные значения сложнее менять
             if (delta > 0 && current >= 6) {
-                // Повышение при высоком значении — шанс 50%
                 apply = Math.random() < 0.5;
                 if (!apply) console.log(`🛡️ Вязкость: повышение ${STATS_INFO[k]?.name || k} заблокировано (${current} → ${current+delta})`);
             } else if (delta < 0 && current <= 4) {
-                // Понижение при низком значении — шанс 50%
                 apply = Math.random() < 0.5;
                 if (!apply) console.log(`🛡️ Вязкость: понижение ${STATS_INFO[k]?.name || k} заблокировано (${current} → ${current+delta})`);
             }
             
             if (apply) {
                 state.stats[k] = current + delta;
-                // Ограничиваем в пределах 0-10
                 if (state.stats[k] > 10) state.stats[k] = 10;
                 if (state.stats[k] < 0) state.stats[k] = 0;
             }
@@ -1083,12 +1212,11 @@ function applyUpdates(u) {
         state.inventory = state.inventory.filter(i => i.name !== u.remove_item);
     }
     
-    // Обновление описания предмета (ДОПОЛНЯЕМ, а не заменяем)
+    // Обновление описания предмета
     if (u.update_item && typeof u.update_item === 'object' && u.update_item.name) {
         const item = state.inventory.find(i => i.name === u.update_item.name);
         if (item && u.update_item.desc) {
             const dateStr = getCurrentDateString();
-            // Добавляем новую запись с датой, сохраняя старое описание
             item.desc = item.desc + `\n\n*(${dateStr})* ${u.update_item.desc}`;
         }
     }
@@ -1105,7 +1233,7 @@ function applyUpdates(u) {
         state.npcs = state.npcs.filter(n => n.name !== u.remove_npc);
     }
     
-    // Обновление описания NPC (ДОПОЛНЯЕМ, а не заменяем)
+    // Обновление описания NPC
     if (u.update_npc && typeof u.update_npc === 'object' && u.update_npc.name) {
         const npc = state.npcs.find(n => n.name === u.update_npc.name);
         if (npc && u.update_npc.desc) {
@@ -1118,11 +1246,10 @@ function applyUpdates(u) {
 // ========== ОТРИСОВКА ИНТЕРФЕЙСА ==========
 
 function renderUI() {
-    const locInfo = getLocationInfo(); // получаем информацию о локации
+    const locInfo = getLocationInfo();
     els.dateText.innerText = `${SEASONS[state.seasonIdx]} ${state.year} | ${state.age} лет`;
-    els.locationDisplay.textContent = locInfo.fullName; // ← исправлено
-    
-    // Режим и чудо
+    els.locationDisplay.textContent = locInfo.fullName;
+
     let modeHTML = '';
     if (state.difficulty === 'hardcore') {
         modeHTML = `<span class="mode-badge hardcore">💀 ХАРДКОР</span>`;
@@ -1138,9 +1265,7 @@ function renderUI() {
         modeHTML += `<span class="summary-badge">📝 Сводка: ход ${state.lastSummaryTurn}</span>`;
     }
     els.modeDisplay.innerHTML = modeHTML;
-    
-    // ... остальная часть функции без изменений ..
-    // Рендер истории
+
     if (state.gameOver && state.gameOverData) {
         const god = state.gameOverData;
         const storyHtml = renderMarkdown(state.lastStory || '');
@@ -1183,27 +1308,24 @@ function renderUI() {
         els.story.innerHTML = renderMarkdown(state.lastStory || 'Загрузка...');
     }
 
-    // Варианты выбора
-    // Варианты выбора
-els.choices.innerHTML = "";
-if (state.gameOver) {
-    const btn = document.createElement('button');
-    btn.className = "choice-btn";
-    btn.style.borderColor = "var(--danger)";
-    btn.innerText = "🔄 Начать новую жизнь";
-    btn.onclick = () => resetGame();
-    els.choices.appendChild(btn);
-} else if (state.lastChoices) {
-    state.lastChoices.forEach(ch => {
+    els.choices.innerHTML = "";
+    if (state.gameOver) {
         const btn = document.createElement('button');
         btn.className = "choice-btn";
-        btn.innerText = ch.action || ch.text; // ← теперь используем длинное описание
-        btn.onclick = () => turn(ch.action);
+        btn.style.borderColor = "var(--danger)";
+        btn.innerText = "🔄 Начать новую жизнь";
+        btn.onclick = () => resetGame();
         els.choices.appendChild(btn);
-    });
-}
+    } else if (state.lastChoices) {
+        state.lastChoices.forEach(ch => {
+            const btn = document.createElement('button');
+            btn.className = "choice-btn";
+            btn.innerText = ch.action || ch.text;
+            btn.onclick = () => turn(ch.action);
+            els.choices.appendChild(btn);
+        });
+    }
 
-    // Статы
     els.stats.innerHTML = "";
     for (let [k, v] of Object.entries(state.stats)) {
         if (!STATS_INFO[k]) continue;
@@ -1227,149 +1349,6 @@ if (state.gameOver) {
     renderLoreList(els.npcs, state.npcs);
 }
 
-function generateRandomNPCs(location) {
-    const pool = NPC_POOLS[location];
-    const result = [];
-    const usedDescs = new Set(); // чтобы не было двух одинаковых
-
-// Мама — 90% (бывает что воспитывает бабушка, отец-одиночка, или детдом)
-if (rollChance(90)) {
-    const mom = pick(pool.mothers);
-    result.push({ ...mom });
-    usedDescs.add(mom.desc);
-}
-
-// Папа — 70% (ушёл, погиб, в тюрьме, неизвестен)
-if (rollChance(70)) {
-    const dad = pick(pool.fathers);
-    result.push({ ...dad });
-    usedDescs.add(dad.desc);
-}
-
-// Если нет ни мамы ни папы — гарантированно бабушка/дедушка (кто-то должен растить)
-const hasParent = result.length > 0;
-if (!hasParent) {
-    const gp = pick(pool.grandparents);
-    result.push({ ...gp });
-    usedDescs.add(gp.desc);
-}
-
-    // 60% — один дедушка/бабушка
-    if (rollChance(60)) {
-        const gp = pick(pool.grandparents);
-        if (!usedDescs.has(gp.desc)) {
-            result.push({ ...gp });
-            usedDescs.add(gp.desc);
-        }
-    }
-
-    // 30% — второй дедушка/бабушка
-    if (rollChance(30)) {
-        const gp2Options = pool.grandparents.filter(g => !usedDescs.has(g.desc));
-        if (gp2Options.length > 0) {
-            const gp2 = pick(gp2Options);
-            result.push({ ...gp2 });
-            usedDescs.add(gp2.desc);
-        }
-    }
-
-    // 50% — один брат/сестра
-    if (rollChance(50)) {
-        const sib = pick(pool.siblings);
-        if (!usedDescs.has(sib.desc)) {
-            result.push({ ...sib });
-            usedDescs.add(sib.desc);
-        }
-    }
-
-    // 25% — второй брат/сестра
-    if (rollChance(25)) {
-        const sib2Options = pool.siblings.filter(s => !usedDescs.has(s.desc));
-        if (sib2Options.length > 0) {
-            const sib2 = pick(sib2Options);
-            result.push({ ...sib2 });
-            usedDescs.add(sib2.desc);
-        }
-    }
-
-    // 1-2 друга (70% первый, 40% второй)
-    if (rollChance(70)) {
-        const fr = pick(pool.friends);
-        if (!usedDescs.has(fr.desc)) {
-            result.push({ ...fr });
-            usedDescs.add(fr.desc);
-        }
-    }
-    if (rollChance(40)) {
-        const fr2Options = pool.friends.filter(f => !usedDescs.has(f.desc));
-        if (fr2Options.length > 0) {
-            const fr2 = pick(fr2Options);
-            result.push({ ...fr2 });
-            usedDescs.add(fr2.desc);
-        }
-    }
-
-    // 50% — сосед/учитель
-    if (rollChance(50)) {
-        const nb = pick(pool.neighbors);
-        if (!usedDescs.has(nb.desc)) {
-            result.push({ ...nb });
-            usedDescs.add(nb.desc);
-        }
-    }
-
-    // 45% — животное
-    if (rollChance(45)) {
-        const an = pick(pool.animals);
-        if (!usedDescs.has(an.desc)) {
-            result.push({ ...an });
-            usedDescs.add(an.desc);
-        }
-    }
-
-    return result;
-}
-
-// ==================== СЛУЧАЙНАЯ ГЕНЕРАЦИЯ ПРЕДМЕТОВ ====================
-function generateRandomItems(location, gender) {
-    const poolData = ITEM_POOLS[location];
-    let pool = [...poolData.common];
-
-    // Добавляем гендерные предметы
-    if (gender === 'male' && poolData.boys) {
-        pool = pool.concat(poolData.boys);
-    } else if (gender === 'female' && poolData.girls) {
-        pool = pool.concat(poolData.girls);
-    }
-
-    const result = [];
-    const usedNames = new Set();
-    const statMods = {};
-
-    let shuffled = pool.sort(() => Math.random() - 0.5);
-
-    // Гарантированно 1 предмет
-    const first = shuffled[0];
-    result.push({ name: first.name, desc: first.desc, stat: first.stat, mod: first.mod });
-    usedNames.add(first.name);
-    statMods[first.stat] = (statMods[first.stat] || 0) + first.mod;
-
-    // Дальше — каждый следующий с убывающей вероятностью
-    let chance = 75;
-    for (let i = 1; i < shuffled.length && chance > 10; i++) {
-        if (!rollChance(chance)) break;
-        if (usedNames.has(shuffled[i].name)) continue;
-        const item = shuffled[i];
-        result.push({ name: item.name, desc: item.desc, stat: item.stat, mod: item.mod });
-        usedNames.add(item.name);
-        statMods[item.stat] = (statMods[item.stat] || 0) + item.mod;
-        chance -= 12; // 75 → 63 → 51 → 39 → 27 → 15...
-    }
-
-    return { items: result, statMods };
-}
-
-
 function renderLoreList(container, items) {
     container.innerHTML = "";
     if (!items || items.length === 0) {
@@ -1386,11 +1365,8 @@ function renderLoreList(container, items) {
     });
 }
 
-// ... (весь предыдущий код до renderLoreList включительно)
-
 // ========== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ==========
 
-// Функция для загрузки сохранённой игры
 function tryLoadSavedGame() {
     const saved = localStorage.getItem('rpg90_state');
     const key = localStorage.getItem('rpg90_key');
@@ -1400,7 +1376,6 @@ function tryLoadSavedGame() {
     try {
         state = JSON.parse(saved);
         
-        // Обратная совместимость с разными версиями
         if (!state.locationType) {
             state.locationType = state.location || 'capital';
             state.region = 'central';
@@ -1415,18 +1390,15 @@ function tryLoadSavedGame() {
         if (state.stats.wealth === undefined) state.stats.wealth = 5;
         if (state.stats.authority === undefined) state.stats.authority = 5;
         
-        // Инициализация OpenAI
         openai = new OpenAI({
             baseURL: "https://api.hydraai.ru/v1",
             apiKey: key,
             dangerouslyAllowBrowser: true
         });
         
-        // Переключение на игровой интерфейс
         els.setup.classList.add('hidden');
         els.game.classList.remove('hidden');
         
-        // Обновление отображения
         const locInfo = getLocationInfo();
         els.locationDisplay.textContent = locInfo.fullName;
         renderUI();
@@ -1434,26 +1406,62 @@ function tryLoadSavedGame() {
         return true;
     } catch (e) {
         console.error('Ошибка загрузки сохранения:', e);
-        localStorage.removeItem('rpg90_state'); // удаляем повреждённое сохранение
+        localStorage.removeItem('rpg90_state');
         return false;
     }
 }
 
-// Пытаемся загрузить сохранение
+// ========== КОПИРОВАНИЕ ИСТОРИИ ==========
+window.copyHistoryToClipboard = async function() {
+    try {
+        let historyText = '';
+        
+        if (state.history && state.history.length > 0) {
+            historyText = state.history.map(entry => {
+                const role = entry.role === 'user' ? '👉 ВЫ' : '📖 ПОВЕСТВОВАНИЕ';
+                let content = entry.content;
+                if (entry.role === 'assistant') {
+                    try {
+                        const parsed = JSON.parse(entry.content);
+                        if (parsed.story) content = parsed.story;
+                    } catch (e) {}
+                }
+                return `${role}:\n${content}\n`;
+            }).join('\n---\n');
+        } else {
+            historyText = 'История пока пуста.';
+        }
+        
+        const locInfo = getLocationInfo();
+        const header = `=== ЭПОХА ПЕРЕМЕН: 1993 ===\nПерсонаж: ${GENDER_INFO[state.gender].name}, ${state.age} лет\nЛокация: ${locInfo.fullName}\nДата: ${SEASONS[state.seasonIdx]} ${state.year}\n\n`;
+        
+        const statsText = Object.entries(state.stats)
+            .map(([k, v]) => `${STATS_INFO[k].name}: ${v}`)
+            .join(', ');
+        
+        const fullText = header + 
+                        `Текущие параметры: ${statsText}\n\n` +
+                        `=== ИСТОРИЯ ===\n${historyText}`;
+        
+        await navigator.clipboard.writeText(fullText);
+        alert('✅ История скопирована в буфер обмена!');
+    } catch (err) {
+        console.error('Ошибка копирования:', err);
+        alert('❌ Не удалось скопировать историю.');
+    }
+};
+
+// Инициализация при загрузке
 const savedGameLoaded = tryLoadSavedGame();
 
-// Если сохранения нет — показываем экран настройки и настраиваем его
 if (!savedGameLoaded) {
-    // Убеждаемся, что экран настройки виден, а игровой скрыт
     els.setup.classList.remove('hidden');
     els.game.classList.add('hidden');
     
-    // Заполняем поле API ключа, если есть сохранённый ключ
     if (localStorage.getItem('rpg90_key')) {
         els.keyInput.value = localStorage.getItem('rpg90_key');
     }
     
-    // Настройка кнопок-переключателей
     setupOptionButtons('gender-btns', 'gender');
     setupOptionButtons('location-type-btns', 'locationType', (value) => {
         updateLocationDescription();
@@ -1462,7 +1470,6 @@ if (!savedGameLoaded) {
     setupOptionButtons('pace-btns', 'pace');
     setupOptionButtons('difficulty-btns', 'difficulty');
     
-    // Обработчики для селектов региона и города
     els.regionSelect.onchange = (e) => {
         state.region = e.target.value;
         updateLocationDescription();
@@ -1475,72 +1482,18 @@ if (!savedGameLoaded) {
         rollStartPreview();
     };
     
-    // Обработчик возраста
     document.getElementById('start-age').onchange = (e) => {
         state.startAge = parseInt(e.target.value);
     };
     
-    // Первоначальное отображение
     updateLocationDescription();
     rollStartPreview();
 }
 
-// Обработчик кнопки "Начать игру" (сработает только если экран настройки виден)
 els.startBtn.onclick = () => {
     const key = els.keyInput.value.trim();
     if (!key) return alert("Нужен ключ API");
     localStorage.setItem('rpg90_key', key);
+    applyStartSettings();
     initGame(key);
-};
-
-// Загружаем сохранённый ключ API, если есть
-if (localStorage.getItem('rpg90_key')) {
-    els.keyInput.value = localStorage.getItem('rpg90_key');
-}
-
-// ========== КОПИРОВАНИЕ ИСТОРИИ ==========
-window.copyHistoryToClipboard = async function() {
-    try {
-        // Собираем историю из state.history
-        let historyText = '';
-        
-        if (state.history && state.history.length > 0) {
-            historyText = state.history.map(entry => {
-                const role = entry.role === 'user' ? '👉 ВЫ' : '📖 ПОВЕСТВОВАНИЕ';
-                // Пытаемся извлечь текст из JSON, если это ответ ассистента
-                let content = entry.content;
-                if (entry.role === 'assistant') {
-                    try {
-                        const parsed = JSON.parse(entry.content);
-                        if (parsed.story) content = parsed.story;
-                    } catch (e) {
-                        // не JSON, оставляем как есть
-                    }
-                }
-                return `${role}:\n${content}\n`;
-            }).join('\n---\n');
-        } else {
-            historyText = 'История пока пуста.';
-        }
-        
-        // Добавляем информацию о текущем состоянии для контекста
-        const locInfo = getLocationInfo();
-        const header = `=== ЭПОХА ПЕРЕМЕН: 1993 ===\nПерсонаж: ${GENDER_INFO[state.gender].name}, ${state.age} лет\nЛокация: ${locInfo.fullName}\nДата: ${SEASONS[state.seasonIdx]} ${state.year}\n\n`;
-        
-        const statsText = Object.entries(state.stats)
-            .map(([k, v]) => `${STATS_INFO[k].name}: ${v}`)
-            .join(', ');
-        
-        const fullText = header +
-            `Текущие параметры: ${statsText}\n\n` +
-            `=== ИСТОРИЯ ===\n${historyText}`;
-        
-        await navigator.clipboard.writeText(fullText);
-        
-        // Визуальное подтверждение (можно добавить всплывающее уведомление)
-        alert('✅ История скопирована в буфер обмена!');
-    } catch (err) {
-        console.error('Ошибка копирования:', err);
-        alert('❌ Не удалось скопировать историю.');
-    }
 };
