@@ -251,7 +251,7 @@ function updatePaceInfo(pace) {
     if (pace === 'season') {
         info.innerHTML = `<strong>По сезонам:</strong> каждый ход = новый сезон<br><span class="pace-example">Зима 1993 → Весна 1993 → Лето 1993 → …</span>`;
     } else {
-        info.innerHTML = `<strong>По годам:</strong> каждый ход = год + сезон<br><span class="pace-example">Зима 1993 → Весна 1994 → Лето 1995 → …</span>`;
+        info.innerHTML = `<strong>По годам:</strong> каждый ход = 9 месяцев <br><span class="pace-example">лето 1993 → Весна 1994 → Зима 1995 → …</span>`;
     }
 }
 
@@ -1029,6 +1029,12 @@ ${fullHistory}
 // ========== ПРИМЕНЕНИЕ ОБНОВЛЕНИЙ ==========
 
 // ========== ПРИМЕНЕНИЕ ОБНОВЛЕНИЙ ==========
+// ========== ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ ТЕКУЩЕЙ ДАТЫ ==========
+function getCurrentDateString() {
+    return `${SEASONS[state.seasonIdx]} ${state.year}`;
+}
+
+// ========== ПРИМЕНЕНИЕ ОБНОВЛЕНИЙ ==========
 function applyUpdates(u) {
     if (!u) return;
     
@@ -1077,11 +1083,13 @@ function applyUpdates(u) {
         state.inventory = state.inventory.filter(i => i.name !== u.remove_item);
     }
     
-    // Обновление описания предмета
+    // Обновление описания предмета (ДОПОЛНЯЕМ, а не заменяем)
     if (u.update_item && typeof u.update_item === 'object' && u.update_item.name) {
         const item = state.inventory.find(i => i.name === u.update_item.name);
         if (item && u.update_item.desc) {
-            item.desc = u.update_item.desc;
+            const dateStr = getCurrentDateString();
+            // Добавляем новую запись с датой, сохраняя старое описание
+            item.desc = item.desc + `\n\n*(${dateStr})* ${u.update_item.desc}`;
         }
     }
     
@@ -1097,11 +1105,12 @@ function applyUpdates(u) {
         state.npcs = state.npcs.filter(n => n.name !== u.remove_npc);
     }
     
-    // Обновление описания NPC
+    // Обновление описания NPC (ДОПОЛНЯЕМ, а не заменяем)
     if (u.update_npc && typeof u.update_npc === 'object' && u.update_npc.name) {
         const npc = state.npcs.find(n => n.name === u.update_npc.name);
         if (npc && u.update_npc.desc) {
-            npc.desc = u.update_npc.desc;
+            const dateStr = getCurrentDateString();
+            npc.desc = npc.desc + `\n\n*(${dateStr})* ${u.update_npc.desc}`;
         }
     }
 }
