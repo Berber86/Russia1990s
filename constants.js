@@ -1,7 +1,7 @@
 // ========== constants.js ==========
 // Константы игры
 export const MODEL = "glm-4.7";
-export const SEASONS = ["Осень", "Зима", "Весна", "Лето"];
+export const SEASONS = ["Зима", "Весна", "Лето", "Осень"];
 export const HISTORY_LIMIT = 40;
 export const SUMMARY_INTERVAL = 20;
 
