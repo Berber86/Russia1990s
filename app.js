@@ -4,8 +4,10 @@ import {
     MODEL, SEASONS, HISTORY_LIMIT, SUMMARY_INTERVAL,
     STATS_INFO, GENDER_INFO,
     LOCATION_TYPES, REGIONS, CITIES, LOCATION_DETAILS,
-    NPC_POOLS, ITEM_POOLS
+    NPC_POOLS, ITEM_POOLS, REGIONAL_ITEM_POOLS  // ← добавить сюда
 } from './constants.js';
+
+console.log('REGIONAL_ITEM_POOLS после импорта:', REGIONAL_ITEM_POOLS);
 
 // ========== СОСТОЯНИЕ ИГРЫ ==========
 
@@ -339,42 +341,133 @@ function generateRandomNPCs(locationType, region = null, city = null) {
 /**
  * Генерирует случайные предметы для указанной локации и пола
  */
-function generateRandomItems(location, gender) {
-    const poolData = ITEM_POOLS[location];
-    if (!poolData) return { items: [], statMods: {} };
+// ========== ГЕНЕРАЦИЯ ПРЕДМЕТОВ С УЧЁТОМ РЕГИОНА ==========
+function generateRandomItems(locationType, gender, region = null, city = null) {
+    console.log('=== Генерация предметов ===');
+    console.log('Параметры:', { locationType, gender, region, city });
     
-    let pool = [...(poolData.common || [])];
-
-    if (gender === 'male' && poolData.boys) {
-        pool = pool.concat(poolData.boys);
-    } else if (gender === 'female' && poolData.girls) {
-        pool = pool.concat(poolData.girls);
+    let allItems = [];
+    
+    // 1. Базовый пул по типу населённого пункта
+    if (locationType === 'capital' && ITEM_POOLS.capital) {
+        console.log('Добавляем базовый столичный пул');
+        allItems = allItems.concat(ITEM_POOLS.capital.common || []);
+        if (gender === 'male') allItems = allItems.concat(ITEM_POOLS.capital.boys || []);
+        if (gender === 'female') allItems = allItems.concat(ITEM_POOLS.capital.girls || []);
+    } else if (locationType === 'town' && ITEM_POOLS.town) {
+        console.log('Добавляем базовый городской пул');
+        allItems = allItems.concat(ITEM_POOLS.town.common || []);
+        if (gender === 'male') allItems = allItems.concat(ITEM_POOLS.town.boys || []);
+        if (gender === 'female') allItems = allItems.concat(ITEM_POOLS.town.girls || []);
+    } else if (locationType === 'village' && ITEM_POOLS.village) {
+        console.log('Добавляем базовый сельский пул');
+        allItems = allItems.concat(ITEM_POOLS.village.common || []);
+        if (gender === 'male') allItems = allItems.concat(ITEM_POOLS.village.boys || []);
+        if (gender === 'female') allItems = allItems.concat(ITEM_POOLS.village.girls || []);
+    } else {
+        console.warn('Нет базового пула для типа:', locationType);
     }
-
+    
+    // 2. Региональный пул (если есть)
+    if (region) {
+        console.log('Регион указан:', region);
+        if (REGIONAL_ITEM_POOLS && REGIONAL_ITEM_POOLS[region]) {
+            console.log('Найден региональный пул для', region);
+            const regional = REGIONAL_ITEM_POOLS[region];
+            
+            // Для городов и столиц
+            if ((locationType === 'town' || locationType === 'capital') && regional.town) {
+                console.log('Добавляем региональные городские предметы');
+                if (regional.town.common) {
+                    console.log(' - common:', regional.town.common.length);
+                    allItems = allItems.concat(regional.town.common);
+                }
+                if (gender === 'male' && regional.town.boys) {
+                    console.log(' - boys:', regional.town.boys.length);
+                    allItems = allItems.concat(regional.town.boys);
+                }
+                if (gender === 'female' && regional.town.girls) {
+                    console.log(' - girls:', regional.town.girls.length);
+                    allItems = allItems.concat(regional.town.girls);
+                }
+            }
+            
+            // Для сёл
+            if (locationType === 'village' && regional.village) {
+                console.log('Добавляем региональные сельские предметы');
+                if (regional.village.common) {
+                    console.log(' - common:', regional.village.common.length);
+                    allItems = allItems.concat(regional.village.common);
+                }
+                if (gender === 'male' && regional.village.boys) {
+                    console.log(' - boys:', regional.village.boys.length);
+                    allItems = allItems.concat(regional.village.boys);
+                }
+                if (gender === 'female' && regional.village.girls) {
+                    console.log(' - girls:', regional.village.girls.length);
+                    allItems = allItems.concat(regional.village.girls);
+                }
+            }
+        } else {
+            console.warn('Региональный пул не найден для региона:', region);
+            console.log('Доступные регионы:', REGIONAL_ITEM_POOLS ? Object.keys(REGIONAL_ITEM_POOLS) : 'REGIONAL_ITEM_POOLS не определён');
+        }
+    } else {
+        console.log('Регион не указан, региональные предметы не добавляются');
+    }
+    
+    // Убираем дубликаты по названию
+    const uniqueItems = [];
+    const names = new Set();
+    for (const item of allItems) {
+        if (!names.has(item.name)) {
+            names.add(item.name);
+            uniqueItems.push(item);
+        }
+    }
+    console.log(`Всего уникальных предметов: ${uniqueItems.length}`);
+    
+    if (uniqueItems.length === 0) {
+        console.warn('Нет предметов для генерации!');
+        return { items: [], statMods: {} };
+    }
+    
+    // Перемешиваем
+    const shuffled = uniqueItems.sort(() => Math.random() - 0.5);
+    
     const result = [];
     const usedNames = new Set();
     const statMods = {};
-
-    let shuffled = pool.sort(() => Math.random() - 0.5);
-
-    if (shuffled.length > 0) {
-        const first = shuffled[0];
-        result.push({ name: first.name, desc: first.desc, stat: first.stat, mod: first.mod });
-        usedNames.add(first.name);
-        statMods[first.stat] = (statMods[first.stat] || 0) + first.mod;
-
-        let chance = 75;
-        for (let i = 1; i < shuffled.length && chance > 10; i++) {
-            if (!rollChance(chance)) break;
-            if (usedNames.has(shuffled[i].name)) continue;
-            const item = shuffled[i];
-            result.push({ name: item.name, desc: item.desc, stat: item.stat, mod: item.mod });
-            usedNames.add(item.name);
-            statMods[item.stat] = (statMods[item.stat] || 0) + item.mod;
-            chance -= 12;
+    
+    // Первый предмет гарантирован
+    const first = shuffled[0];
+    result.push({ name: first.name, desc: first.desc, stat: first.stat, mod: first.mod });
+    usedNames.add(first.name);
+    statMods[first.stat] = (statMods[first.stat] || 0) + first.mod;
+    console.log('Выбран первый предмет:', first.name, 'стат:', first.stat, 'мод:', first.mod);
+    
+    // Остальные с убывающей вероятностью
+    let chance = 75;
+    for (let i = 1; i < shuffled.length && chance > 10; i++) {
+        if (!rollChance(chance)) {
+            console.log(`Шанс ${chance}% не сработал, остановка`);
+            break;
         }
+        if (usedNames.has(shuffled[i].name)) {
+            console.log('Предмет уже использован:', shuffled[i].name);
+            continue;
+        }
+        const item = shuffled[i];
+        result.push({ name: item.name, desc: item.desc, stat: item.stat, mod: item.mod });
+        usedNames.add(item.name);
+        statMods[item.stat] = (statMods[item.stat] || 0) + item.mod;
+        console.log('Добавлен предмет:', item.name, 'стат:', item.stat, 'мод:', item.mod, 'шанс:', chance);
+        chance -= 12;
     }
-
+    
+    console.log('Итоговые предметы:', result.map(i => i.name));
+    console.log('Модификаторы статов:', statMods);
+    
     return { items: result, statMods };
 }
 
@@ -474,12 +567,35 @@ function updateDifficultyInfo(diff) {
 
 function rollStartPreview() {
     const locInfo = getLocationInfo();
+    
+    // Определяем регион: если столица, берём из CITIES, иначе из state.region
+    let region = null;
+    if (locInfo.type === 'capital') {
+        if (CITIES && state.city && CITIES[state.city]) {
+            region = CITIES[state.city].region;
+            console.log(`Столица ${state.city}, регион из CITIES: ${region}`);
+        } else {
+            console.warn('Не удалось определить регион для столицы', state.city);
+            region = 'central'; // запасной вариант
+        }
+    } else {
+        region = state.region;
+        console.log(`Не столица, регион из state: ${region}`);
+    }
+    
+    console.log('rollStartPreview: итоговый регион =', region);
+    
     const npcs = generateRandomNPCs(
-        locInfo.legacyLocation, 
-        locInfo.type !== 'capital' ? state.region : null,
+        locInfo.legacyLocation,
+        region,
         locInfo.type === 'capital' ? state.city : null
     );
-    const { items, statMods } = generateRandomItems(locInfo.legacyLocation, state.gender);
+    const { items, statMods } = generateRandomItems(
+        locInfo.legacyLocation,
+        state.gender,
+        region,
+        locInfo.type === 'capital' ? state.city : null
+    );
     generatedStart = { npcs, items, statMods };
     renderStartPreview();
 }
@@ -552,7 +668,7 @@ function initGame(key) {
 
 function applyStartSettings() {
     state.age = state.startAge;
-    state.year = 1992;
+    state.year = 1993;
     state.seasonIdx = 0;
     state.miracleUsed = false;
     state.miracleAvailable = (state.difficulty === 'normal');
@@ -560,7 +676,7 @@ function applyStartSettings() {
     state.lifeSummary = "";
     state.lastSummaryTurn = 0;
     state.stats = { mind: 5, body: 5, family: 5, friends: 5, health: 5, looks: 5, wealth: 5, authority: 5 };
-
+    
     if (generatedStart) {
         state.npcs = generatedStart.npcs.map(n => ({ name: n.name, desc: n.desc }));
         state.inventory = generatedStart.items.map(i => ({ name: i.name, desc: i.desc }));
