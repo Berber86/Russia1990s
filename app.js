@@ -4,10 +4,8 @@ import {
     MODEL, SEASONS, HISTORY_LIMIT, SUMMARY_INTERVAL,
     STATS_INFO, GENDER_INFO,
     LOCATION_TYPES, REGIONS, CITIES, LOCATION_DETAILS,
-    NPC_POOLS, ITEM_POOLS, REGIONAL_ITEM_POOLS  // ← добавить сюда
+    NPC_POOLS, ITEM_POOLS, REGIONAL_ITEM_POOLS
 } from './constants.js';
-
-console.log('REGIONAL_ITEM_POOLS после импорта:', REGIONAL_ITEM_POOLS);
 
 // ========== СОСТОЯНИЕ ИГРЫ ==========
 
@@ -20,7 +18,7 @@ const DEFAULT_STATE = {
     pace: 'season',
     difficulty: 'normal',
     startAge: 7,
-    year: 1992, // Исправлено: 1992 вместо 1993
+    year: 1992,
     seasonIdx: 0,
     age: 7,
     stats: { mind: 5, body: 5, family: 5, friends: 5, health: 5, looks: 5, wealth: 5, authority: 5 },
@@ -37,8 +35,8 @@ const DEFAULT_STATE = {
 
 // Текущее состояние игры
 let state = { ...DEFAULT_STATE };
-let openai = null;
 let generatedStart = null;
+let userApiKey = null; // Храним ключ пользователя, если он ввёл
 
 // ========== ЭЛЕМЕНТЫ DOM ==========
 const els = {
@@ -121,6 +119,7 @@ function parseJSON(text) {
         }
     }
 }
+
 /**
  * Конвертирует Markdown-подобный текст в HTML
  */
@@ -181,7 +180,55 @@ window.resetGame = () => {
     location.reload();
 };
 
-// ========== ФУНКЦИИ ГЕНЕРАЦИИ NPC И ПРЕДМЕТОВ (ОБЪЯВЛЯЕМ РАНЬШЕ) ==========
+// ========== УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ВЫЗОВА LLM ==========
+
+async function callLLM({ messages, model, temperature, max_tokens, response_format }) {
+    // Если у пользователя есть свой ключ, используем SDK напрямую
+    if (userApiKey && userApiKey.trim() !== '') {
+        try {
+            console.log('Используем пользовательский API ключ');
+            const openai = new OpenAI({
+                baseURL: "https://api.hydraai.ru/v1",
+                apiKey: userApiKey,
+                dangerouslyAllowBrowser: true
+            });
+            return await openai.chat.completions.create({
+                model: model || MODEL,
+                messages: messages,
+                temperature: temperature || 0.6,
+                max_tokens: max_tokens || 2500,
+                response_format: response_format
+            });
+        } catch (error) {
+            console.error('Ошибка при использовании пользовательского ключа, пробуем серверный вариант:', error);
+            // Если ошибка (например, неверный ключ), пробуем через сервер
+        }
+    }
+
+    // Иначе отправляем запрос на серверный эндпоинт
+    console.log('Используем серверный API ключ (через /api/hydra)');
+    const response = await fetch('/api/hydra', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            messages,
+            model: model || MODEL,
+            temperature: temperature || 0.6,
+            max_tokens: max_tokens || 2500,
+            response_format: response_format
+            // apiKey не передаём, сервер использует свой ключ из env
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Server error: ${errorData.error || response.status}`);
+    }
+
+    return await response.json();
+}
+
+// ========== ФУНКЦИИ ГЕНЕРАЦИИ NPC И ПРЕДМЕТОВ ==========
 
 /**
  * Генерирует случайных NPC для указанной локации
@@ -339,15 +386,14 @@ function generateRandomNPCs(locationType, region = null, city = null) {
 }
 
 /**
- * Генерирует случайные предметы для указанной локации и пола
+ * Генерирует случайные предметы для указанной локации и пола с учётом региона
  */
-// ========== ГЕНЕРАЦИЯ ПРЕДМЕТОВ С УЧЁТОМ РЕГИОНА ==========
 function generateRandomItems(locationType, gender, region = null, city = null) {
     console.log('=== Генерация предметов ===');
     console.log('Параметры:', { locationType, gender, region, city });
-    
+
     let allItems = [];
-    
+
     // 1. Базовый пул по типу населённого пункта
     if (locationType === 'capital' && ITEM_POOLS.capital) {
         console.log('Добавляем базовый столичный пул');
@@ -367,7 +413,7 @@ function generateRandomItems(locationType, gender, region = null, city = null) {
     } else {
         console.warn('Нет базового пула для типа:', locationType);
     }
-    
+
     // 2. Региональный пул (если есть)
     if (region) {
         console.log('Регион указан:', region);
@@ -415,7 +461,7 @@ function generateRandomItems(locationType, gender, region = null, city = null) {
     } else {
         console.log('Регион не указан, региональные предметы не добавляются');
     }
-    
+
     // Убираем дубликаты по названию
     const uniqueItems = [];
     const names = new Set();
@@ -426,26 +472,26 @@ function generateRandomItems(locationType, gender, region = null, city = null) {
         }
     }
     console.log(`Всего уникальных предметов: ${uniqueItems.length}`);
-    
+
     if (uniqueItems.length === 0) {
         console.warn('Нет предметов для генерации!');
         return { items: [], statMods: {} };
     }
-    
+
     // Перемешиваем
     const shuffled = uniqueItems.sort(() => Math.random() - 0.5);
     
     const result = [];
     const usedNames = new Set();
     const statMods = {};
-    
+
     // Первый предмет гарантирован
     const first = shuffled[0];
     result.push({ name: first.name, desc: first.desc, stat: first.stat, mod: first.mod });
     usedNames.add(first.name);
     statMods[first.stat] = (statMods[first.stat] || 0) + first.mod;
     console.log('Выбран первый предмет:', first.name, 'стат:', first.stat, 'мод:', first.mod);
-    
+
     // Остальные с убывающей вероятностью
     let chance = 75;
     for (let i = 1; i < shuffled.length && chance > 10; i++) {
@@ -464,7 +510,7 @@ function generateRandomItems(locationType, gender, region = null, city = null) {
         console.log('Добавлен предмет:', item.name, 'стат:', item.stat, 'мод:', item.mod, 'шанс:', chance);
         chance -= 12;
     }
-    
+
     console.log('Итоговые предметы:', result.map(i => i.name));
     console.log('Модификаторы статов:', statMods);
     
@@ -548,9 +594,8 @@ function updatePaceInfo(pace) {
     const info = document.getElementById('pace-info');
     if (!info) return;
     if (pace === 'season') {
-        info.innerHTML = `<strong>По сезонам:</strong> каждый ход = новый сезон<br><span class="pace-example">Зима 1992 → Весна 1992 → Лето 1992 → …</span>`;
+        info.innerHTML = `<strong>По сезонам:</strong> каждый ход = новый сезон<br><span class="pace-example">Зима 1993 → Весна 1993 → Лето 1993 → …</span>`;
     } else {
-        // ВАШЕ ИЗМЕНЕНИЕ: каждый ход = 9 месяцев
         info.innerHTML = `<strong>По годам:</strong> каждый ход = 9 месяцев <br><span class="pace-example">лето 1993 → Весна 1994 → Зима 1995 → …</span>`;
     }
 }
@@ -582,16 +627,16 @@ function rollStartPreview() {
         region = state.region;
         console.log(`Не столица, регион из state: ${region}`);
     }
-    
+
     console.log('rollStartPreview: итоговый регион =', region);
-    
+
     const npcs = generateRandomNPCs(
-        locInfo.legacyLocation,
+        locInfo.legacyLocation, 
         region,
         locInfo.type === 'capital' ? state.city : null
     );
     const { items, statMods } = generateRandomItems(
-        locInfo.legacyLocation,
+        locInfo.legacyLocation, 
         state.gender,
         region,
         locInfo.type === 'capital' ? state.city : null
@@ -647,11 +692,7 @@ function renderStartPreview() {
 // ========== ЗАПУСК ИГРЫ ==========
 
 function initGame(key) {
-    openai = new OpenAI({
-        baseURL: "https://api.hydraai.ru/v1",
-        apiKey: key,
-        dangerouslyAllowBrowser: true
-    });
+    userApiKey = key; // Сохраняем ключ пользователя
     
     els.setup.classList.add('hidden');
     els.game.classList.remove('hidden');
@@ -676,7 +717,7 @@ function applyStartSettings() {
     state.lifeSummary = "";
     state.lastSummaryTurn = 0;
     state.stats = { mind: 5, body: 5, family: 5, friends: 5, health: 5, looks: 5, wealth: 5, authority: 5 };
-    
+
     if (generatedStart) {
         state.npcs = generatedStart.npcs.map(n => ({ name: n.name, desc: n.desc }));
         state.inventory = generatedStart.items.map(i => ({ name: i.name, desc: i.desc }));
@@ -692,7 +733,6 @@ function applyStartSettings() {
 // ========== ФОРМИРОВАНИЕ КОНТЕКСТА ДЛЯ НЕЙРОСЕТИ ==========
 
 function buildContextBlock() {
-    // ВАШЕ ИЗМЕНЕНИЕ: "ЛЮДИ вокруг" вместо "БЛИЗКИЕ ЛЮДИ"
     let ctx = "\n=== ЛЮДИ вокруг ===\n";
     if (state.npcs.length > 0) {
         state.npcs.forEach(n => { ctx += `- ${n.name}: ${n.desc}\n`; });
@@ -700,7 +740,6 @@ function buildContextBlock() {
         ctx += "Никого рядом нет.\n";
     }
 
-    // ВАШЕ ИЗМЕНЕНИЕ: "ВЕЩИ и перки ГЕРОЯ" вместо "ВЕЩИ ГЕРОЯ"
     ctx += "\n=== ВЕЩИ и перки ГЕРОЯ ===\n";
     if (state.inventory.length > 0) {
         state.inventory.forEach(i => { ctx += `- ${i.name}: ${i.desc}\n`; });
@@ -725,15 +764,15 @@ function buildStatsDescription() {
         let impact = "";
 
         if (val === 0) { status = `GAME OVER (0/10)`; impact = "Полный крах: " + info.low; }
-        else if (val === 1) { status = `ТРАГИЗМ ситуации (1/10)`; impact = "На грани гибели, катастрофа в любой момент: " + info.low; } // ВАШЕ ИЗМЕНЕНИЕ
-        else if (val === 2) { status = `ОЧЕВИДНЫЕ и сильные ПРОБЛЕМЫ (2/10)`; impact = "Даже герой видит беду: " + info.low; } // ВАШЕ ИЗМЕНЕНИЕ
+        else if (val === 1) { status = `ТРАГИЗМ ситуации (1/10)`; impact = "На грани гибели, катастрофа в любой момент: " + info.low; }
+        else if (val === 2) { status = `ОЧЕВИДНЫЕ и сильные ПРОБЛЕМЫ (2/10)`; impact = "Даже герой видит беду: " + info.low; }
         else if (val === 3) { status = `ЗНАЧИТЕЛЬНОЕ ОТКЛОНЕНИЕ (3/10)`; impact = "Герой считает нормой, читатель видит проблемы: " + info.low; }
-        else if (val === 4) { status = `ЛЁГКОЕ ОТКЛОНЕНИЕ (4/10)`; impact = "Пока еще не трагедия: — " + info.low; } // ВАШЕ ИЗМЕНЕНИЕ
+        else if (val === 4) { status = `ЛЁГКОЕ ОТКЛОНЕНИЕ (4/10)`; impact = "Пока еще не трагедия: — " + info.low; }
         else if (val === 5) { status = `НОРМА (5/10)`; impact = "Средний уровень, обычная жизнь"; }
-        else if (val === 6) { status = `ЛЁГКОЕ ОТКЛОНЕНИЕ (6/10)`; impact = "Придаёт характер, не трагедия: лёгкий привкус счастья — " + info.high; } // ВАШЕ ИЗМЕНЕНИЕ
-        else if (val === 7) { status = `ЗНАЧИТЕЛЬНОЕ ОТКЛОНЕНИЕ (7/10)`; impact = "Герой считает ситуацию благом, но читатель видит проблемы: " + info.high; } // ВАШЕ ИЗМЕНЕНИЕ
+        else if (val === 6) { status = `ЛЁГКОЕ ОТКЛОНЕНИЕ (6/10)`; impact = "Придаёт характер, не трагедия: лёгкий привкус счастья — " + info.high; }
+        else if (val === 7) { status = `ЗНАЧИТЕЛЬНОЕ ОТКЛОНЕНИЕ (7/10)`; impact = "Герой считает ситуацию благом, но читатель видит проблемы: " + info.high; }
         else if (val === 8) { status = `ОЧЕВИДНЫЕ ПРОБЛЕМЫ (8/10)`; impact = "Даже герой видит перебор: " + info.high; }
-        else if (val === 9) { status = `ТРАГИЗМ ситуации (9/10)`; impact = "На грани катастрофы, пипец в любой момент: " + info.high; } // ВАШЕ ИЗМЕНЕНИЕ
+        else if (val === 9) { status = `ТРАГИЗМ ситуации (9/10)`; impact = "На грани катастрофы, пипец в любой момент: " + info.high; }
         else if (val === 10) { status = `GAME OVER (10/10)`; impact = "Полный крах от избытка: " + info.high; }
 
         desc += `- **${info.name}**: ${status} — ${impact}\n`;
@@ -780,7 +819,7 @@ function advanceTime() {
 function buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount) {
     const statsDesc = buildStatsDescription();
     const genderInfo = GENDER_INFO[state.gender];
-    const locInfo = getLocationInfo(); // ИСПРАВЛЕНО: используем getLocationInfo()
+    const locInfo = getLocationInfo();
     const contextBlock = buildContextBlock();
     const summaryBlock = buildSummaryBlock();
     
@@ -790,7 +829,6 @@ function buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount) {
         if (i < choicesCount) choicesTemplate += ',\n';
     }
     
-    // ВАШ ПОЛНЫЙ ПРОМПТ СО ВСЕМИ ИЗМЕНЕНИЯМИ
     return `
 Ты — мастер драматической и детально атмосферной текстовой RPG о жизни в России 90-х. драма и атмосферная ностальгия - это вся твоя суть.
 
@@ -909,7 +947,7 @@ ${choicesTemplate}
 
 async function generateLifeSummary() {
     const genderInfo = GENDER_INFO[state.gender];
-    const locInfo = getLocationInfo(); // ИСПРАВЛЕНО: используем getLocationInfo()
+    const locInfo = getLocationInfo();
 
     const fullHistory = state.history
         .map(h => h.role === "user" ? `>> Выбор: ${h.content}` : `<< ${h.content}`)
@@ -950,12 +988,12 @@ ${fullHistory}
 }`;
 
     try {
-        const completion = await openai.chat.completions.create({
-            model: MODEL,
+        const completion = await callLLM({
             messages: [
                 { role: "system", content: prompt },
                 { role: "user", content: "Составь сводку." }
             ],
+            model: MODEL,
             response_format: { type: "json_object" }
         });
 
@@ -992,16 +1030,15 @@ async function turn(action) {
     const systemPrompt = buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount);
     
     try {
-        // ВАШЕ ИЗМЕНЕНИЕ: "атмосферно описанный результат"
-        const completion = await openai.chat.completions.create({
-            model: MODEL,
+        const completion = await callLLM({
             messages: [
                 { role: "system", content: systemPrompt },
                 ...state.history,
                 { role: "user", content: `Мой выбор: ${action}. (Сгенерируй атмосферно описанный результат выбранного мною действия и последующий переход в ${nextSeasonName} ${nextYear})` }
             ],
+            model: MODEL,
+            temperature: 0.5,
             max_tokens: 2500,
-            temperature: 0.5, // ВАШЕ ИЗМЕНЕНИЕ: 0.5 вместо 0.6
             response_format: { type: "json_object" }
         });
         
@@ -1082,7 +1119,7 @@ async function generateMiracleStory(crits, precedingStory) {
     setLoading(true);
     
     const genderInfo = GENDER_INFO[state.gender];
-    const locInfo = getLocationInfo(); // ИСПРАВЛЕНО: используем getLocationInfo()
+    const locInfo = getLocationInfo();
     const npcsDesc = state.npcs.map(n => `- ${n.name}: ${n.desc}`).join("\n");
     const choicesCount = getChoicesCount();
     
@@ -1101,7 +1138,6 @@ async function generateMiracleStory(crits, precedingStory) {
         "Взять дело в свои руки и разобраться самому, без взрослых"
     ];
     for (let i = 1; i <= choicesCount; i++) {
-        // ВАШЕ ИЗМЕНЕНИЕ: "в 2 предложениях"
         const ex = exampleTexts[i - 1] || `Подробное описание действия ${i} в 2 предложениях`;
         choicesTemplate += `        {"text": "${ex}", "action": "Подробная инструкция что именно делает герой, к кому идёт, что говорит"}`;
         if (i < choicesCount) choicesTemplate += ',\n';
@@ -1148,12 +1184,12 @@ ${choicesTemplate}
 }`;
     
     try {
-        const completion = await openai.chat.completions.create({
-            model: MODEL,
+        const completion = await callLLM({
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: "Продолжи историю — опиши чудесное спасение и предложи варианты действий после него." }
             ],
+            model: MODEL,
             response_format: { type: "json_object" }
         });
         
@@ -1199,7 +1235,7 @@ async function generateGameOverStory(crits, precedingStory) {
     const npcsDesc = state.npcs.map(n => `- ${n.name}: ${n.desc}`).join("\n");
     const invDesc = state.inventory.map(i => `- ${i.name}: ${i.desc}`).join("\n");
     const genderInfo = GENDER_INFO[state.gender];
-    const locInfo = getLocationInfo(); // ИСПРАВЛЕНО: используем getLocationInfo()
+    const locInfo = getLocationInfo();
 
     let critsDesc = crits.map(c => {
         const isLow = c.value <= 0;
@@ -1254,12 +1290,12 @@ ${fullHistory}
 }`;
 
     try {
-        const completion = await openai.chat.completions.create({
-            model: MODEL,
+        const completion = await callLLM({
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: "Продолжи историю — напиши трагический финал, который логично вытекает из событий выше. Пиши МНОГО, подробно." }
             ],
+            model: MODEL,
             response_format: { type: "json_object" }
         });
 
@@ -1506,11 +1542,7 @@ function tryLoadSavedGame() {
         if (state.stats.wealth === undefined) state.stats.wealth = 5;
         if (state.stats.authority === undefined) state.stats.authority = 5;
         
-        openai = new OpenAI({
-            baseURL: "https://api.hydraai.ru/v1",
-            apiKey: key,
-            dangerouslyAllowBrowser: true
-        });
+        userApiKey = key; // Сохраняем ключ пользователя
         
         els.setup.classList.add('hidden');
         els.game.classList.remove('hidden');
@@ -1608,7 +1640,12 @@ if (!savedGameLoaded) {
 
 els.startBtn.onclick = () => {
     const key = els.keyInput.value.trim();
-    if (!key) return alert("Нужен ключ API");
+    if (!key) {
+        // Если поле пустое, всё равно начинаем игру, userApiKey останется null
+        // и будет использован серверный ключ
+        console.log('Поле API ключа пусто, будет использован серверный ключ');
+    }
+    userApiKey = key || null;
     localStorage.setItem('rpg90_key', key);
     applyStartSettings();
     initGame(key);
