@@ -729,7 +729,7 @@ ${statsGuidance}` : ''}`;
     try {
         const completion2 = await callLLM({
             messages: [{ role: "user", content: enhancementPrompt }],
-            model: "hydra-gemini-3-pro",
+            model: "gemini-3.1-pro",
             temperature: 0.7,
             max_tokens: 3000
         });
