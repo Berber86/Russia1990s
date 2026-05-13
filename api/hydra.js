@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   
   try {
     const requestBody = {
-      model: model || 'glm-4.7',
+      model: model || 'glm-4.6',
       messages: messages,
       temperature: temperature || 0.6,
       max_tokens: max_tokens || 2500,
