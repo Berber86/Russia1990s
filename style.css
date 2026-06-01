@@ -53,6 +53,12 @@ body[data-season="autumn"] {
     --accent-4: #a18cff;
 }
 
+body[data-provider="hybrid"] {
+    --accent: #8ec5ff;
+    --accent-2: #ffd88e;
+    --accent-4: #ae8dff;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -510,6 +516,7 @@ button.primary:hover,
 
 .provider-buttons {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 12px;
 }
@@ -1068,6 +1075,7 @@ button.primary {
 .provider-badge { color: #f3f6ff; }
 .provider-badge.hydra { background: linear-gradient(135deg, #2563eb, #4f46e5); }
 .provider-badge.openrouter { background: linear-gradient(135deg, #7c3aed, #9333ea); }
+.provider-badge.hybrid { background: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #f59e0b 100%); }
 .mode-badge.normal { background: rgba(121, 221, 166, 0.14); color: var(--safe); }
 .mode-badge.hardcore { background: rgba(255, 123, 131, 0.14); color: var(--danger); }
 .miracle-badge.available { background: rgba(255, 202, 99, 0.18); color: var(--warning); }

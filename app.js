@@ -291,6 +291,11 @@ function getProviderModel(kind = 'main', provider = getActiveProvider()) {
     return cfg.models?.[kind] || cfg.models.main || MODEL;
 }
 
+function resolveExecutionProvider(kind = 'main', provider = getActiveProvider()) {
+    const cfg = getProviderConfig(provider);
+    return cfg.executionProviders?.[kind] || cfg.executionProviders?.main || provider;
+}
+
 function syncCurrentApiKey() {
     userApiKey = userApiKeys[getActiveProvider()] || null;
 }
@@ -302,8 +307,14 @@ function loadStoredApiKeys() {
 
 function saveApiKey(provider, key) {
     const cfg = getProviderConfig(provider);
+
+    if (provider === 'hybrid') {
+        syncCurrentApiKey();
+        return;
+    }
+
     userApiKeys[provider] = key || '';
-    localStorage.setItem(cfg.storageKey, key || '');
+    if (cfg.storageKey) localStorage.setItem(cfg.storageKey, key || '');
 
     if (provider === 'hydra') {
         localStorage.setItem(LEGACY_KEY_STORAGE, key || '');
@@ -321,18 +332,33 @@ function updateApiKeyInput() {
     }
 
     if (els.apiKeyHint) {
-        els.apiKeyHint.textContent = `Можно оставить пустым, если на сервере настроен ключ ${cfg.label}.`;
+        if (provider === 'hybrid') {
+            els.apiKeyHint.textContent = 'Hybrid использует два сохранённых ключа: OpenRouter для первого ответа и Hydra для полировки. Если env настроены на сервере, поля можно не заполнять.';
+        } else {
+            els.apiKeyHint.textContent = `Можно оставить пустым, если на сервере настроен ключ ${cfg.label}.`;
+        }
     }
 
     if (els.keyInput) {
-        els.keyInput.value = userApiKeys[provider] || '';
-        els.keyInput.placeholder = provider === 'openrouter' ? 'OpenRouter API key' : 'Hydra API key';
+        if (provider === 'hybrid') {
+            els.keyInput.value = '';
+            els.keyInput.placeholder = 'Hybrid использует сохранённые ключи Hydra и OpenRouter';
+            els.keyInput.disabled = true;
+        } else {
+            els.keyInput.disabled = false;
+            els.keyInput.value = userApiKeys[provider] || '';
+            els.keyInput.placeholder = provider === 'openrouter' ? 'OpenRouter API key' : 'Hydra API key';
+        }
     }
 }
 
 function renderProviderSwitcher() {
     const provider = getActiveProvider();
     const cfg = getProviderConfig(provider);
+    const mainExec = resolveExecutionProvider('main', provider);
+    const enhanceExec = resolveExecutionProvider('enhance', provider);
+    const mainExecCfg = getProviderConfig(mainExec);
+    const enhanceExecCfg = getProviderConfig(enhanceExec);
 
     document.querySelectorAll('.provider-btn').forEach((btn) => {
         btn.classList.toggle('selected', btn.dataset.provider === provider);
@@ -341,8 +367,8 @@ function renderProviderSwitcher() {
     document.querySelectorAll('[data-provider-models]').forEach((el) => {
         el.innerHTML = `
             <div><strong>${cfg.icon} ${cfg.label}</strong></div>
-            <div>Основная: <code>${cfg.models.main}</code></div>
-            <div>Улучшение: <code>${cfg.models.enhance}</code></div>
+            <div>Первый ответ: <code>${cfg.models.main}</code> · ${mainExecCfg.icon} ${mainExecCfg.label}</div>
+            <div>Полировка: <code>${cfg.models.enhance}</code> · ${enhanceExecCfg.icon} ${enhanceExecCfg.label}</div>
         `;
     });
 }
@@ -967,13 +993,15 @@ async function callLLM({
     max_tokens = 2500,
     response_format
 }, retries = 3) {
-    const cfg = getProviderConfig(provider);
+    const logicalCfg = getProviderConfig(provider);
+    const executionProvider = resolveExecutionProvider(modelKind, provider);
+    const cfg = getProviderConfig(executionProvider);
     const resolvedModel = model || getProviderModel(modelKind, provider) || MODEL;
-    const providerApiKey = (userApiKeys[provider] || '').trim();
+    const providerApiKey = (userApiKeys[executionProvider] || '').trim();
     const isLocal = isLocalEnvironment();
 
     console.log('========== ПОЛНЫЙ ПРОМПТ К LLM ==========');
-    console.log('Провайдер:', cfg.label, 'Модель:', resolvedModel, 'Темп:', temperature, 'Max tokens:', max_tokens);
+    console.log('Режим:', logicalCfg.label, '| Исполнитель:', cfg.label, '| Модель:', resolvedModel, 'Темп:', temperature, 'Max tokens:', max_tokens);
 
     messages.forEach((msg, i) => {
         console.log(`[${i}] ${msg.role}:`);
@@ -994,7 +1022,7 @@ async function callLLM({
 
             // OpenRouter всегда гоним через серверный маршрут.
             // Так надёжнее на мобилках, нет проблем с browser headers и можно использовать env-ключ.
-            if (provider === 'openrouter') {
+            if (executionProvider === 'openrouter') {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 600000);
 
@@ -1019,7 +1047,7 @@ async function callLLM({
             }
 
             // Hydra можно вызывать напрямую пользовательским ключом.
-            if (providerApiKey) {
+            if (executionProvider === 'hydra' && providerApiKey) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 600000);
 
@@ -1828,10 +1856,12 @@ if (!savedGameLoaded) {
 }
 
 els.startBtn.onclick = () => {
-    const key = els.keyInput.value.trim();
     const provider = getActiveProvider();
+    const key = els.keyInput.disabled ? '' : els.keyInput.value.trim();
 
-    if (!key) {
+    if (provider === 'hybrid') {
+        console.log('Hybrid режим использует сохранённые ключи OpenRouter и Hydra либо серверные env-ключи.');
+    } else if (!key) {
         console.log(`Поле API ключа пусто, будет использован серверный ключ ${getProviderConfig(provider).label}`);
     }
 
