@@ -23,7 +23,6 @@ body {
     line-height: 1.6;
 }
 
-/* ========== Основной контейнер игры ========== */
 .container {
     width: 100%;
     max-width: 1200px;
@@ -33,12 +32,11 @@ body {
 }
 
 @media (max-width: 850px) {
-    .container { 
-        grid-template-columns: 1fr; 
+    .container {
+        grid-template-columns: 1fr;
     }
 }
 
-/* ========== Общие панели ========== */
 .panel {
     background: var(--panel-bg);
     border: 1px solid var(--border-color);
@@ -48,7 +46,6 @@ body {
     flex-direction: column;
 }
 
-/* ========== ЭКРАН НАСТРОЙКИ ========== */
 #setup-screen {
     position: fixed;
     inset: 0;
@@ -62,7 +59,7 @@ body {
 }
 
 .setup-container {
-    max-width: 520px;
+    max-width: 560px;
     width: 100%;
     margin-top: auto;
     margin-bottom: auto;
@@ -102,28 +99,31 @@ body {
     color: var(--text-dim);
 }
 
-.setup-row input, 
-.setup-row select {
+.setup-row input,
+.setup-row select,
+.api-section input {
     flex: 1;
-    padding: 10px;
+    width: 100%;
+    padding: 10px 12px;
     border-radius: 6px;
     border: 1px solid var(--border-color);
     background: #010409;
     color: white;
     font-size: 0.95rem;
+    box-sizing: border-box;
 }
 
-.setup-row select { 
-    cursor: pointer; 
+.setup-row select {
+    cursor: pointer;
 }
 
-.setup-row input:focus, 
-.setup-row select:focus {
+.setup-row input:focus,
+.setup-row select:focus,
+.api-section input:focus {
     outline: none;
     border-color: var(--accent);
 }
 
-/* Кнопки-переключатели */
 .option-buttons {
     display: flex;
     gap: 8px;
@@ -142,8 +142,8 @@ body {
     font-size: 0.9rem;
 }
 
-.option-btn:hover { 
-    border-color: var(--accent); 
+.option-btn:hover {
+    border-color: var(--accent);
 }
 
 .option-btn.selected {
@@ -153,8 +153,7 @@ body {
     font-weight: bold;
 }
 
-/* Информационные блоки */
-.pace-info, 
+.pace-info,
 .difficulty-info {
     font-size: 0.8rem;
     color: var(--text-dim);
@@ -169,7 +168,6 @@ body {
     color: var(--accent);
 }
 
-/* Превью старта */
 .start-preview {
     background: #21262d;
     border: 1px solid var(--border-color);
@@ -197,14 +195,14 @@ body {
     margin-left: 6px;
 }
 
-.stat-mod.pos { 
-    background: rgba(35,134,54,0.3); 
-    color: var(--safe); 
+.stat-mod.pos {
+    background: rgba(35, 134, 54, 0.3);
+    color: var(--safe);
 }
 
-.stat-mod.neg { 
-    background: rgba(248,81,73,0.2); 
-    color: var(--danger); 
+.stat-mod.neg {
+    background: rgba(248, 81, 73, 0.2);
+    color: var(--danger);
 }
 
 .reroll-btn {
@@ -218,19 +216,11 @@ body {
     margin-top: 8px;
 }
 
-.reroll-btn:hover { 
-    border-color: var(--accent); 
-    color: var(--accent); 
+.reroll-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
-/* Поле API */
-.api-section input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 10px;
-}
-
-/* Кнопка запуска */
 button.primary {
     background: var(--safe);
     color: white;
@@ -243,18 +233,15 @@ button.primary {
     border-radius: 6px;
 }
 
-button.primary:hover { 
-    background: #2ea043; 
+button.primary:hover {
+    background: #2ea043;
 }
 
-button.primary:disabled { 
-    background: #333; 
-    cursor: not-allowed; 
+button.primary:disabled {
+    background: #333;
+    cursor: not-allowed;
 }
 
-/* ========== ИГРОВОЙ ИНТЕРФЕЙС ========== */
-
-/* Шапка с датой */
 .date-badge {
     font-family: monospace;
     color: var(--accent);
@@ -266,22 +253,23 @@ button.primary:disabled {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
 }
 
 .date-badge .location {
     color: var(--text-dim);
     font-size: 0.85rem;
+    text-align: right;
 }
 
-/* Текст истории */
 .story-content {
     font-size: 1.05rem;
     margin-bottom: 30px;
     line-height: 1.7;
 }
 
-.story-content h1, 
-.story-content h2, 
+.story-content h1,
+.story-content h2,
 .story-content h3 {
     color: var(--accent);
     margin: 20px 0 10px 0;
@@ -303,13 +291,15 @@ button.primary:disabled {
     font-style: italic;
 }
 
-.story-content ul, 
+.story-content ul,
 .story-content ol {
     padding-left: 20px;
     margin: 8px 0;
 }
 
-.story-content li { margin-bottom: 4px; }
+.story-content li {
+    margin-bottom: 4px;
+}
 
 .story-content hr {
     border: none;
@@ -317,7 +307,6 @@ button.primary:disabled {
     margin: 20px 0;
 }
 
-/* Блок вариантов выбора */
 .choices {
     display: flex;
     flex-direction: column;
@@ -337,17 +326,16 @@ button.primary:disabled {
     font-family: sans-serif;
 }
 
-.choice-btn:hover { 
-    border-color: var(--accent); 
-    background: #292e36; 
+.choice-btn:hover {
+    border-color: var(--accent);
+    background: #292e36;
 }
 
-.choice-btn:disabled { 
-    opacity: 0.5; 
-    cursor: wait; 
+.choice-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
 }
 
-/* Статистика */
 .stat-row {
     display: flex;
     justify-content: space-between;
@@ -356,69 +344,83 @@ button.primary:disabled {
     border-bottom: 1px solid #21262d;
     font-family: sans-serif;
     font-size: 0.9rem;
+    gap: 10px;
 }
 
-/* Цветовые классы для значений статов */
 .val-norm { color: var(--safe); }
 .val-flavor { color: #6cb4ee; }
 .val-skew { color: var(--warning); }
 .val-bad { color: var(--danger); font-weight: bold; }
 .val-crit { color: #ff0000; text-shadow: 0 0 8px red; font-weight: 900; }
 
-/* Бейджи режимов */
-.mode-badge {
+.mode-badge,
+.miracle-badge,
+.summary-badge,
+.provider-badge {
     font-family: sans-serif;
-    font-size: 0.75rem;
-    padding: 3px 8px;
-    border-radius: 4px;
     display: inline-block;
     margin-bottom: 10px;
 }
 
-.mode-badge.hardcore { 
-    background: var(--danger); 
-    color: white; 
-}
-
-.mode-badge.normal { 
-    background: var(--safe); 
-    color: white; 
-}
-
-/* Бейдж чуда */
-.miracle-badge {
-    font-family: sans-serif;
+.mode-badge {
     font-size: 0.75rem;
     padding: 3px 8px;
     border-radius: 4px;
-    display: inline-block;
+}
+
+.mode-badge.hardcore {
+    background: var(--danger);
+    color: white;
+}
+
+.mode-badge.normal {
+    background: var(--safe);
+    color: white;
+}
+
+.miracle-badge {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 4px;
     margin-left: 8px;
 }
 
-.miracle-badge.available { 
-    background: #d4a017; 
-    color: #000; 
+.miracle-badge.available {
+    background: #d4a017;
+    color: #000;
 }
 
-.miracle-badge.used { 
-    background: #333; 
-    color: #666; 
-    text-decoration: line-through; 
+.miracle-badge.used {
+    background: #333;
+    color: #666;
+    text-decoration: line-through;
 }
 
-/* Бейдж суммаризации */
 .summary-badge {
-    font-family: sans-serif;
     font-size: 0.7rem;
     padding: 2px 6px;
     border-radius: 3px;
     background: #30363d;
     color: var(--text-dim);
-    display: inline-block;
     margin-left: 8px;
 }
 
-/* Баннер чуда */
+.provider-badge {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+    color: white;
+}
+
+.provider-badge.hydra {
+    background: #1f6feb;
+}
+
+.provider-badge.openrouter {
+    background: #8250df;
+}
+
 .miracle-banner {
     background: linear-gradient(135deg, #1a1a00, #2d2a0a, #1a1a00);
     border: 2px solid #d4a017;
@@ -434,7 +436,6 @@ button.primary:disabled {
     text-shadow: 0 0 10px rgba(212, 160, 23, 0.5);
 }
 
-/* Раздел лора (NPC и предметы) */
 .lore-section h3 {
     font-size: 1rem;
     color: var(--text-dim);
@@ -443,7 +444,6 @@ button.primary:disabled {
     padding-bottom: 5px;
 }
 
-/* Сворачиваемые блоки NPC/предметов */
 details {
     background: #21262d;
     margin-bottom: 8px;
@@ -461,7 +461,9 @@ summary {
     align-items: center;
 }
 
-summary::-webkit-details-marker { display: none; }
+summary::-webkit-details-marker {
+    display: none;
+}
 
 summary::before {
     content: "►";
@@ -471,12 +473,12 @@ summary::before {
     transition: transform 0.2s;
 }
 
-details[open] summary::before { 
-    transform: rotate(90deg); 
+details[open] summary::before {
+    transform: rotate(90deg);
 }
 
-details[open] summary { 
-    background: #2c333e; 
+details[open] summary {
+    background: #2c333e;
 }
 
 .lore-desc {
@@ -488,7 +490,6 @@ details[open] summary {
     font-style: italic;
 }
 
-/* Индикатор загрузки */
 .loading-bar {
     height: 4px;
     background: linear-gradient(90deg, var(--bg-color), var(--accent), var(--bg-color));
@@ -498,12 +499,11 @@ details[open] summary {
     margin: 10px 0;
 }
 
-@keyframes loading { 
-    0% { background-position: 100% 0; } 
-    100% { background-position: -100% 0; } 
+@keyframes loading {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
 }
 
-/* Баннер Game Over */
 .game-over-banner {
     background: linear-gradient(135deg, #1a0000, #2d0a0a, #1a0000);
     border: 2px solid var(--danger);
@@ -521,14 +521,80 @@ details[open] summary {
 
 .game-over-reasons {
     text-align: left;
-    background: rgba(0,0,0,0.3);
+    background: rgba(0, 0, 0, 0.3);
     padding: 15px;
     border-radius: 4px;
     margin: 15px 0;
     font-size: 0.95rem;
 }
 
-/* Утилита */
-.hidden { 
-    display: none !important; 
+.provider-switch {
+    background: #21262d;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 14px;
+}
+
+.provider-switch-title {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: sans-serif;
+}
+
+.provider-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.provider-btn {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: #161b22;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 0.9rem;
+    font-family: sans-serif;
+}
+
+.provider-btn:hover {
+    border-color: var(--accent);
+}
+
+.provider-btn.selected {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: bold;
+}
+
+.provider-models {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+    font-family: sans-serif;
+}
+
+.provider-models code {
+    color: var(--text-main);
+    background: #161b22;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.provider-hint {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.hidden {
+    display: none !important;
 }

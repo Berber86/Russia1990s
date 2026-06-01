@@ -8,20 +8,29 @@
     <script type="module" src="app.js"></script>
 </head>
 <body>
-
-    <!-- ЭКРАН НАСТРОЙКИ -->
     <div id="setup-screen">
         <div class="setup-container">
             <h2>Эпоха Перемен</h2>
             <p style="text-align:center; color:var(--text-dim); margin-bottom:20px;">Текстовая RPG о жизни в России 90-х</p>
 
-            <!-- Секция API ключа -->
             <div class="setup-section api-section">
-                <h3>🔑 API Ключ</h3>
-                <input type="password" id="api-key" placeholder="sk-or-... (OpenRouter)">
+                <h3 id="api-provider-title">🔑 API ключ</h3>
+
+                <div class="provider-switch provider-switch-setup">
+                    <div class="provider-switch-title">Провайдер запросов</div>
+                    <div class="provider-buttons">
+                        <button type="button" class="provider-btn selected" data-provider="hydra">🌀 Hydra</button>
+                        <button type="button" class="provider-btn" data-provider="openrouter">🧭 OpenRouter</button>
+                    </div>
+                    <div class="provider-models" data-provider-models></div>
+                </div>
+
+                <input type="password" id="api-key" placeholder="Hydra API key">
+                <div id="api-key-hint" class="provider-hint">
+                    Можно оставить пустым, если на сервере настроен ключ для выбранного провайдера.
+                </div>
             </div>
 
-            <!-- Секция Сложности -->
             <div class="setup-section">
                 <h3>⚔️ Сложность</h3>
                 <div class="setup-row">
@@ -35,7 +44,6 @@
                 </div>
             </div>
 
-            <!-- Секция Персонажа -->
             <div class="setup-section">
                 <h3>👤 Персонаж</h3>
                 <div class="setup-row">
@@ -60,11 +68,9 @@
                 </div>
             </div>
 
-            <!-- Секция Локации -->
             <div class="setup-section">
                 <h3>📍 Локация</h3>
-                
-                <!-- Тип населенного пункта -->
+
                 <div class="setup-row">
                     <label>Тип:</label>
                     <div class="option-buttons" id="location-type-btns" style="flex-wrap:wrap;">
@@ -73,9 +79,8 @@
                         <button class="option-btn selected" data-value="capital">🏙️ Столица</button>
                     </div>
                 </div>
-                
-                <!-- Регион (для сел и городов) - по умолчанию скрыт -->
-                <div class="setup-row" id="region-select-row" style="display: none;">
+
+                <div class="setup-row" id="region-select-row" style="display:none;">
                     <label>Регион:</label>
                     <select id="region-select" class="region-select">
                         <option value="central">🌲 Центральная Россия</option>
@@ -86,8 +91,7 @@
                         <option value="north_caucasus">🏔️ Северный Кавказ</option>
                     </select>
                 </div>
-                
-                <!-- Город (для столиц) - по умолчанию видим -->
+
                 <div class="setup-row" id="city-select-row">
                     <label>Город:</label>
                     <select id="city-select" class="city-select">
@@ -100,14 +104,12 @@
                         <option value="grozny">🕌 Грозный</option>
                     </select>
                 </div>
-                
-                <!-- Краткое описание выбранной локации -->
-<div class="location-description" id="location-description" style="margin-top:10px; padding:12px 16px; background:#f0e9de; border:1px solid var(--border-color); border-radius:40px; font-size:0.85rem; color:var(--text-dim);">
-    Москва — столица, огромный муравейник...
-</div>
+
+                <div class="location-description" id="location-description" style="margin-top:10px; padding:12px 16px; background:#f0e9de; border:1px solid var(--border-color); border-radius:40px; font-size:0.85rem; color:var(--text-dim);">
+                    Москва — столица, огромный муравейник...
+                </div>
             </div>
 
-            <!-- Секция Темпа -->
             <div class="setup-section">
                 <h3>⏱️ Темп повествования</h3>
                 <div class="setup-row">
@@ -118,30 +120,25 @@
                 </div>
                 <div class="pace-info" id="pace-info">
                     <strong>По сезонам:</strong> каждый ход = новый сезон<br>
-                    <span class="pace-example">Зима 1992 → Весна 1992 → Лето 1992 → …</span>
+                    <span class="pace-example">Зима 1993 → Весна 1993 → Лето 1993 → …</span>
                 </div>
             </div>
 
-            <!-- Блок предпросмотра стартовой генерации -->
             <div class="start-preview" id="start-preview"></div>
 
-            <!-- Кнопка запуска -->
             <button id="start-btn" class="primary">Начать игру</button>
-            
-            <!-- Плашка поддержки на экране настроек (только здесь) -->
-            <div style="margin-top: 20px; padding: 12px; background: rgba(212, 160, 23, 0.1); border: 1px solid #d4a017; border-radius: 6px; text-align: center; font-size: 0.85rem;">
-                <p style="margin: 0 0 5px 0; color: #d4a017;">💖 Поддержать проект</p>
-                <p style="margin: 0; color: var(--text-dim);">
+
+            <div style="margin-top:20px; padding:12px; background:rgba(212, 160, 23, 0.1); border:1px solid #d4a017; border-radius:6px; text-align:center; font-size:0.85rem;">
+                <p style="margin:0 0 5px 0; color:#d4a017;">💖 Поддержать проект</p>
+                <p style="margin:0; color:var(--text-dim);">
                     Ответы нейросети не бесплатны для автора проекта. Помочь с оплатой API:<br>
-                    <strong style="color: var(--text-main);">+7 950 004-88-24</strong> (Озон, Дарья)
+                    <strong style="color:var(--text-main);">+7 950 004-88-24</strong> (Озон, Дарья)
                 </p>
             </div>
         </div>
     </div>
 
-    <!-- ОСНОВНОЙ ИНТЕРФЕЙС ИГРЫ (скрыт до начала) -->
     <div class="container hidden" id="game-ui">
-        <!-- Левая панель (основная) - без внутренних скроллов и дополнительных плашек -->
         <div class="panel">
             <div class="date-badge" id="date-display">
                 <span id="date-text">...</span>
@@ -152,28 +149,33 @@
             <div class="choices" id="choices-display"></div>
         </div>
 
-        <!-- Правая панель (статы и мир) - здесь можно разместить плашку внизу, не мешая -->
-        <div class="panel" style="max-height: 95vh; overflow-y: auto;">
+        <div class="panel" style="max-height:95vh; overflow-y:auto;">
+            <div class="provider-switch">
+                <div class="provider-switch-title">LLM маршрут</div>
+                <div class="provider-buttons">
+                    <button type="button" class="provider-btn selected" data-provider="hydra">🌀 Hydra</button>
+                    <button type="button" class="provider-btn" data-provider="openrouter">🧭 OpenRouter</button>
+                </div>
+                <div class="provider-models" data-provider-models></div>
+            </div>
+
             <div id="mode-display"></div>
             <h3 style="margin-top:0">Личность</h3>
             <div id="stats-display"></div>
             <div class="lore-section"><h3>Близкие люди</h3><div id="npcs-display"></div></div>
             <div class="lore-section"><h3>Вещи и Память</h3><div id="inventory-display"></div></div>
-            
-            <!-- Кнопки управления -->
-           <div style="display: flex; gap: 10px; margin: 25px 0 15px;">
-    <button onclick="copyHistoryToClipboard()" style="flex:1; background:#f0e9de; color:var(--text-dim); border:1px solid var(--border-color); padding:10px 12px; font-size:0.8rem; cursor:pointer; border-radius:40px; font-family:var(--font-serif); transition:0.2s;">📋 Копировать историю</button>
-    <button onclick="resetGame()" style="flex:1; background:#f0e9de; color:var(--text-dim); border:1px solid var(--border-color); padding:10px 12px; font-size:0.8rem; cursor:pointer; border-radius:40px; font-family:var(--font-serif); transition:0.2s;">🔄 Сброс</button>
-</div>
-            
-            <!-- Единственная плашка поддержки в игровом интерфейсе (компактная) -->
-            <div style="padding: 8px; background: rgba(212, 160, 23, 0.1); border: 1px solid #d4a017; border-radius: 4px; text-align: center; font-size: 0.7rem;">
-                <span style="color: var(--text-dim);">💖 </span>
-                <span style="color: #d4a017; font-weight: bold;">+7 950 004-88-24</span>
-                <span style="color: var(--text-dim);"> (Дарья, Озон)</span>
+
+            <div style="display:flex; gap:10px; margin:25px 0 15px;">
+                <button onclick="copyHistoryToClipboard()" style="flex:1; background:#f0e9de; color:var(--text-dim); border:1px solid var(--border-color); padding:10px 12px; font-size:0.8rem; cursor:pointer; border-radius:40px; font-family:var(--font-serif); transition:0.2s;">📋 Копировать историю</button>
+                <button onclick="resetGame()" style="flex:1; background:#f0e9de; color:var(--text-dim); border:1px solid var(--border-color); padding:10px 12px; font-size:0.8rem; cursor:pointer; border-radius:40px; font-family:var(--font-serif); transition:0.2s;">🔄 Сброс</button>
+            </div>
+
+            <div style="padding:8px; background:rgba(212, 160, 23, 0.1); border:1px solid #d4a017; border-radius:4px; text-align:center; font-size:0.7rem;">
+                <span style="color:var(--text-dim);">💖 </span>
+                <span style="color:#d4a017; font-weight:bold;">+7 950 004-88-24</span>
+                <span style="color:var(--text-dim);"> (Дарья, Озон)</span>
             </div>
         </div>
     </div>
-
 </body>
 </html>
