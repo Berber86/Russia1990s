@@ -38,7 +38,7 @@ export default async function handler(req, res) {
         Authorization: `Bearer ${apiKeyToUse}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
-        'X-Title': 'Эпоха Перемен'
+        'X-Title': '1990s'
       },
       body: JSON.stringify(requestBody)
     });
