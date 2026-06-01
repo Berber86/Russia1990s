@@ -1,4 +1,4 @@
-// /api/hydra.js
+// /api/openrouter.js
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,15 +14,15 @@ export default async function handler(req, res) {
   }
 
   const { messages, model, temperature, max_tokens, response_format, apiKey } = req.body || {};
-  const apiKeyToUse = apiKey || process.env.HYDRA_API_KEY;
+  const apiKeyToUse = apiKey || process.env.OPENROUTER_API_KEY;
 
   if (!apiKeyToUse) {
-    return res.status(500).json({ error: 'No API key available' });
+    return res.status(500).json({ error: 'No OpenRouter API key available' });
   }
 
   try {
     const requestBody = {
-      model: model || 'glm-4.6',
+      model: model || 'google/gemini-2.5-flash',
       messages,
       temperature: temperature ?? 0.6,
       max_tokens: max_tokens ?? 2500
@@ -32,11 +32,13 @@ export default async function handler(req, res) {
       requestBody.response_format = response_format;
     }
 
-    const response = await fetch('https://api.hydraai.ru/v1/chat/completions', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKeyToUse}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
+        'X-Title': 'Эпоха Перемен'
       },
       body: JSON.stringify(requestBody)
     });
@@ -44,7 +46,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     return res.status(response.status).json(data);
   } catch (error) {
-    console.error('[Hydra API] Error:', error);
+    console.error('[OpenRouter API] Error:', error);
     return res.status(500).json({ error: error.message });
   }
 }
