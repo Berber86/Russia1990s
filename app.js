@@ -188,6 +188,70 @@ function renderMarkdown(text) {
     return paragraphs.join('\n');
 }
 
+
+function escapeHTML(value = '') {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+const STAT_VISUALS = {
+    mind: { icon: '🧠', short: 'мышление' },
+    body: { icon: '💪', short: 'сила и ловкость' },
+    family: { icon: '🏠', short: 'дом и опора' },
+    friends: { icon: '🫂', short: 'свои люди' },
+    health: { icon: '🩺', short: 'самочувствие' },
+    looks: { icon: '✨', short: 'впечатление' },
+    wealth: { icon: '💸', short: 'деньги и быт' },
+    authority: { icon: '👑', short: 'вес во дворе' }
+};
+
+function getStatClass(value) {
+    const dist = Math.abs(value - 5);
+    if (dist === 0) return 'val-norm';
+    if (dist === 1) return 'val-flavor';
+    if (dist === 2) return 'val-skew';
+    if (dist === 3) return 'val-bad';
+    return 'val-crit';
+}
+
+function getStatDescriptor(value) {
+    if (value <= 1) return 'крайняя точка';
+    if (value <= 3) return 'опасный перекос';
+    if (value === 4) return 'лёгкая трещина';
+    if (value === 5) return 'условная норма';
+    if (value === 6) return 'заметный сдвиг';
+    if (value <= 8) return 'тревожный избыток';
+    return 'почти катастрофа';
+}
+
+function buildChoiceMarkup(choice, index = 0) {
+    const title = choice.text || choice.action || `Выбор ${index + 1}`;
+    const body = choice.action || choice.text || '';
+    const showBody = body && body !== title;
+
+    return `
+        <span class="choice-btn__index">Выбор ${String(index + 1).padStart(2, '0')}</span>
+        <span class="choice-btn__body">
+            <span class="choice-btn__title">${escapeHTML(title)}</span>
+            ${showBody ? `<span class="choice-btn__text">${escapeHTML(body)}</span>` : ''}
+        </span>
+    `;
+}
+
+function applyVisualMood(screen = (els.game.classList.contains('hidden') ? 'setup' : 'game')) {
+    const seasonMap = ['winter', 'spring', 'summer', 'autumn'];
+    document.body.dataset.season = seasonMap[state.seasonIdx] || 'winter';
+    document.body.dataset.provider = getActiveProvider();
+    document.body.dataset.difficulty = state.difficulty || 'normal';
+    document.body.dataset.locationType = state.locationType || 'capital';
+    document.body.dataset.screen = screen;
+}
+
+
 function setLoading(value) {
     els.loader.style.display = value ? 'block' : 'none';
     document.querySelectorAll('.choice-btn').forEach((btn) => {
@@ -293,6 +357,7 @@ function switchProvider(nextProvider) {
     syncCurrentApiKey();
     updateApiKeyInput();
     renderProviderSwitcher();
+    applyVisualMood(hasActiveRun() ? 'game' : 'setup');
 
     if (hasActiveRun()) {
         save();
@@ -552,6 +617,8 @@ function updateLocationDescription() {
         els.regionRow.style.display = 'flex';
         els.cityRow.style.display = 'none';
     }
+
+    applyVisualMood(els.game.classList.contains('hidden') ? 'setup' : 'game');
 }
 
 // ========== НАСТРОЙКА ИНТЕРФЕЙСА ==========
@@ -607,45 +674,77 @@ function rollStartPreview() {
     renderStartPreview();
 }
 
+
 function renderStartPreview() {
     if (!generatedStart) return;
 
     const { npcs, items, statMods } = generatedStart;
     const locInfo = getLocationInfo();
 
-    let html = '<h4>🎲 Стартовые данные</h4>';
-    html += `<div style="margin-bottom:10px; padding:8px; background:#1c2128; border-radius:6px;"><strong>📍 ${locInfo.fullName}</strong><br><span style="font-size:0.8rem; color:var(--text-dim);">${locInfo.desc.substring(0, 120)}...</span></div>`;
+    const peopleHtml = npcs.length
+        ? npcs.map((n) => `
+            <div class="preview-item">
+                <span class="preview-item__dot"></span>
+                <div><strong>${escapeHTML(n.name)}</strong> — ${escapeHTML(n.desc)}</div>
+            </div>
+        `).join('')
+        : '<div class="preview-empty">Пока рядом никого нет — только воздух, снег и ожидание.</div>';
 
-    html += '<div style="margin-bottom:10px"><strong style="color:var(--text-main);font-size:0.85rem;">Близкие люди:</strong></div>';
-    if (npcs.length) {
-        npcs.forEach((n) => {
-            html += `<div class="preview-item">• <strong>${n.name}</strong> — ${n.desc}</div>`;
-        });
-    } else {
-        html += `<div class="preview-item">Пока никого рядом нет.</div>`;
-    }
-
-    html += '<div style="margin:10px 0 5px 0"><strong style="color:var(--text-main);font-size:0.85rem;">Вещи:</strong></div>';
-    if (items.length) {
-        items.forEach((i) => {
+    const itemsHtml = items.length
+        ? items.map((i) => {
             const modSign = i.mod > 0 ? '+' : '';
             const modClass = i.mod > 0 ? 'pos' : 'neg';
             const statName = STATS_INFO[i.stat]?.name || i.stat;
-            html += `<div class="preview-item">• <strong>${i.name}</strong> — ${i.desc} <span class="stat-mod ${modClass}">${modSign}${i.mod} ${statName}</span></div>`;
-        });
-    } else {
-        html += `<div class="preview-item">Стартовых вещей нет.</div>`;
-    }
+            return `
+                <div class="preview-item">
+                    <span class="preview-item__dot"></span>
+                    <div>
+                        <strong>${escapeHTML(i.name)}</strong> — ${escapeHTML(i.desc)}
+                        <div><span class="stat-mod ${modClass}">${modSign}${i.mod} ${escapeHTML(statName)}</span></div>
+                    </div>
+                </div>
+            `;
+        }).join('')
+        : '<div class="preview-empty">Стартовых вещей не выпало — жизнь начнётся почти с пустыми карманами.</div>';
 
     const modEntries = Object.entries(statMods).filter(([, value]) => value !== 0);
-    if (modEntries.length) {
-        html += '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border-color);font-size:0.8rem;color:var(--text-dim);">Итого статы: ';
-        html += modEntries.map(([key, value]) => `${STATS_INFO[key].name} ${value > 0 ? '+' : ''}${value}`).join(', ');
-        html += ' (от базы 5)</div>';
-    }
+    const totalHtml = modEntries.length
+        ? `
+            <div class="preview-total">
+                <span class="preview-total__label">Итог стартовых модификаторов</span>
+                ${modEntries.map(([key, value]) => `${escapeHTML(STATS_INFO[key].name)} ${value > 0 ? '+' : ''}${value}`).join(' · ')}
+            </div>
+        `
+        : '';
 
-    html += '<button class="reroll-btn" id="reroll-btn">🎲 Перебросить</button>';
-    els.preview.innerHTML = html;
+    els.preview.innerHTML = `
+        <div class="preview-head">
+            <div>
+                <div class="preview-kicker">Стартовая судьба</div>
+                <h4>Первый слепок жизни героя</h4>
+            </div>
+            <button class="reroll-btn" id="reroll-btn" type="button">🎲 Перебросить</button>
+        </div>
+
+        <div class="preview-location">
+            <div class="preview-location__label">Локация</div>
+            <div class="preview-location__title">${escapeHTML(locInfo.fullName)}</div>
+            <div class="preview-location__desc">${escapeHTML(locInfo.desc)}</div>
+        </div>
+
+        <div class="preview-grid">
+            <div class="preview-column">
+                <div class="preview-column__title">Близкие люди</div>
+                ${peopleHtml}
+            </div>
+            <div class="preview-column">
+                <div class="preview-column__title">Вещи и привычки</div>
+                ${itemsHtml}
+            </div>
+        </div>
+
+        ${totalHtml}
+    `;
 
     const reroll = document.getElementById('reroll-btn');
     if (reroll) reroll.onclick = rollStartPreview;
@@ -896,7 +995,7 @@ async function callLLM({
 
                 if (provider === 'openrouter') {
                     headers['HTTP-Referer'] = window.location.origin;
-                    headers['X-Title'] = 'Эпоха Перемен';
+                    headers['X-Title'] = 'Epoch of Change';
                 }
 
                 const requestBody = {
@@ -1209,9 +1308,13 @@ ${statsGuidance ? `\nОсобые указания по параметрам п�
 function showRetryButton(action) {
     els.choices.innerHTML = '';
     const btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = 'choice-btn';
     btn.style.borderColor = 'var(--warning)';
-    btn.innerText = '🔄 Повторить ход';
+    btn.innerHTML = buildChoiceMarkup({
+        text: 'Повторить ход',
+        action: 'Попробовать ещё раз и вернуть историю на нужные рельсы.'
+    }, 0);
     btn.onclick = () => turn(action);
     els.choices.appendChild(btn);
 }
@@ -1467,10 +1570,12 @@ function applyUpdates(u) {
 
 // ========== ОТРИСОВКА ==========
 
+
 function renderUI() {
     const locInfo = getLocationInfo();
     const providerCfg = getProviderConfig();
 
+    applyVisualMood('game');
     renderProviderSwitcher();
 
     els.dateText.innerText = `${SEASONS[state.seasonIdx]} ${state.year} | ${state.age} лет`;
@@ -1480,9 +1585,9 @@ function renderUI() {
     modeHTML += `<span class="provider-badge ${getActiveProvider()}">${providerCfg.icon} ${providerCfg.label}</span>`;
 
     if (state.difficulty === 'hardcore') {
-        modeHTML += `<span class="mode-badge hardcore">💀 ХАРДКОР</span>`;
+        modeHTML += `<span class="mode-badge hardcore">💀 Хардкор</span>`;
     } else {
-        modeHTML += `<span class="mode-badge normal">🛡️ НОРМА</span>`;
+        modeHTML += `<span class="mode-badge normal">🛡️ Норма</span>`;
         if (!state.miracleUsed) modeHTML += `<span class="miracle-badge available">✨ Спасение доступно</span>`;
         else modeHTML += `<span class="miracle-badge used">✨ Спасение использовано</span>`;
     }
@@ -1498,14 +1603,13 @@ function renderUI() {
         els.story.innerHTML = renderMarkdown(state.lastStory || '') +
             `<hr><div class="game-over-banner"><h2>💀 GAME OVER</h2><p>${SEASONS[state.seasonIdx]} ${state.year}, ${state.age} лет</p></div>` +
             `<h2 style="color:var(--accent);">🕯️ Эпилог</h2>${renderMarkdown(god.epilogue || '')}` +
-            `<div class="game-over-reasons"><strong>Что привело:</strong><ul>${(god.reasons || []).map((r) => `<li>${r}</li>`).join('')}</ul></div>` +
+            `<div class="game-over-reasons"><strong>Что привело:</strong><ul>${(god.reasons || []).map((r) => `<li>${escapeHTML(r)}</li>`).join('')}</ul></div>` +
             renderMarkdown(`> "${god.epitaph || ''}"`);
     } else if (state.lastMiracle) {
         els.story.innerHTML = renderMarkdown(state.lastStory || '') +
             `<hr><div class="miracle-banner"><h2>✨ ЧУДЕСНОЕ СПАСЕНИЕ</h2><p>Судьба смилостивилась...</p></div>` +
             renderMarkdown(state.lastMiracle) +
             '<hr><p><em>Спасение использовано.</em></p>';
-
         state.lastMiracle = null;
     } else {
         els.story.innerHTML = renderMarkdown(state.lastStory || 'Загрузка...');
@@ -1514,16 +1618,24 @@ function renderUI() {
     els.choices.innerHTML = '';
     if (state.gameOver) {
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'choice-btn';
         btn.style.borderColor = 'var(--danger)';
-        btn.innerText = '🔄 Начать новую жизнь';
+        btn.innerHTML = `
+            <span class="choice-btn__index">Финал</span>
+            <span class="choice-btn__body">
+                <span class="choice-btn__title">Начать новую жизнь</span>
+                <span class="choice-btn__text">Сбросить хронику и вновь прожить свою версию 90-х с самого начала.</span>
+            </span>
+        `;
         btn.onclick = resetGame;
         els.choices.appendChild(btn);
     } else if (state.lastChoices) {
-        state.lastChoices.forEach((choice) => {
+        state.lastChoices.forEach((choice, index) => {
             const btn = document.createElement('button');
+            btn.type = 'button';
             btn.className = 'choice-btn';
-            btn.innerText = choice.action || choice.text;
+            btn.innerHTML = buildChoiceMarkup(choice, index);
             btn.onclick = () => turn(choice.action || choice.text);
             els.choices.appendChild(btn);
         });
@@ -1533,14 +1645,26 @@ function renderUI() {
     for (const [key, value] of Object.entries(state.stats)) {
         if (!STATS_INFO[key]) continue;
 
-        const dist = Math.abs(value - 5);
-        let colorClass = 'val-norm';
-        if (dist === 1) colorClass = 'val-flavor';
-        else if (dist === 2) colorClass = 'val-skew';
-        else if (dist === 3) colorClass = 'val-bad';
-        else if (dist >= 4) colorClass = 'val-crit';
+        const toneClass = getStatClass(value);
+        const visual = STAT_VISUALS[key] || { icon: '•', short: 'состояние' };
 
-        els.stats.innerHTML += `<div class="stat-row"><span>${STATS_INFO[key].name}</span><span class="${colorClass}">${value}</span></div>`;
+        els.stats.innerHTML += `
+            <div class="stat-card ${toneClass}">
+                <div class="stat-card__top">
+                    <div class="stat-card__label">
+                        <span class="stat-card__icon">${visual.icon}</span>
+                        <div>
+                            <div class="stat-card__name">${escapeHTML(STATS_INFO[key].name)}</div>
+                            <div class="stat-card__desc">${escapeHTML(visual.short)} · ${escapeHTML(getStatDescriptor(value))}</div>
+                        </div>
+                    </div>
+                    <span class="stat-card__value ${toneClass}">${value}</span>
+                </div>
+                <div class="stat-meter">
+                    <span class="stat-meter__fill ${toneClass}" style="width:${Math.max(4, value * 10)}%"></span>
+                </div>
+            </div>
+        `;
     }
 
     renderLoreList(els.inv, state.inventory);
@@ -1551,13 +1675,23 @@ function renderLoreList(container, items) {
     container.innerHTML = '';
 
     if (!items?.length) {
-        container.innerHTML = "<div style='font-size:0.8em; color:#555'>Пусто...</div>";
+        container.innerHTML = `<div class="lore-empty">Пока пусто. В этой жизни ещё не накопилось следов.</div>`;
         return;
     }
 
-    items.forEach((item) => {
+    items.forEach((item, index) => {
         const d = document.createElement('details');
-        d.innerHTML = `<summary>${item.name}</summary><div class="lore-desc">${renderMarkdown(item.desc || 'Нет описания.')}</div>`;
+        d.className = 'lore-card';
+        d.innerHTML = `
+            <summary>
+                <span class="lore-summary-main">
+                    <span class="lore-chip">${String(index + 1).padStart(2, '0')}</span>
+                    <span class="lore-title">${escapeHTML(item.name)}</span>
+                </span>
+                <span class="lore-expand">развернуть</span>
+            </summary>
+            <div class="lore-desc">${renderMarkdown(item.desc || 'Нет описания.')}</div>
+        `;
         container.appendChild(d);
     });
 }
@@ -1632,6 +1766,7 @@ syncCurrentApiKey();
 setupProviderSwitcher();
 renderProviderSwitcher();
 updateApiKeyInput();
+applyVisualMood('setup');
 
 const savedGameLoaded = tryLoadSavedGame();
 

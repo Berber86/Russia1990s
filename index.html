@@ -8,16 +8,224 @@
     <script type="module" src="app.js"></script>
 </head>
 <body>
+    <div class="screen-noise" aria-hidden="true"></div>
+    <div class="screen-vignette" aria-hidden="true"></div>
+
     <div id="setup-screen">
-        <div class="setup-container">
-            <h2>Эпоха Перемен</h2>
-            <p style="text-align:center; color:var(--text-dim); margin-bottom:20px;">Текстовая RPG о жизни в России 90-х</p>
+        <div class="setup-shell">
+            <section class="setup-showcase">
+                <div class="setup-hero-art"></div>
+                <div class="setup-hero-copy">
+                    <div class="setup-eyebrow">Интерактивная хроника детства</div>
+                    <h1>Эпоха Перемен</h1>
+                    <p class="setup-lead">
+                        Атмосферная текстовая RPG о жизни в России 90-х — с бытовыми деталями, улицей, двором,
+                        страхами, дружбой, дефицитом и настоящими маленькими трагедиями.
+                    </p>
 
-            <div class="setup-section api-section">
-                <h3 id="api-provider-title">🔑 API ключ</h3>
+                    <div class="setup-feature-grid">
+                        <div class="setup-feature-card">
+                            <span class="setup-feature-icon">📼</span>
+                            <div>
+                                <strong>Ностальгия с нервом</strong>
+                                <p>Не открытка, а живая эпоха — с холодными подъездами, ларьками и запахом зимы.</p>
+                            </div>
+                        </div>
+                        <div class="setup-feature-card">
+                            <span class="setup-feature-icon">🧒</span>
+                            <div>
+                                <strong>Взгляд ребёнка</strong>
+                                <p>Повествование идёт изнутри возраста, а не с высоты взрослого послезнания.</p>
+                            </div>
+                        </div>
+                        <div class="setup-feature-card">
+                            <span class="setup-feature-icon">🗺️</span>
+                            <div>
+                                <strong>География имеет значение</strong>
+                                <p>Москва, Сибирь, Кавказ или дальневосточное село — каждая жизнь звучит по-разному.</p>
+                            </div>
+                        </div>
+                        <div class="setup-feature-card">
+                            <span class="setup-feature-icon">🎭</span>
+                            <div>
+                                <strong>Статы с подвохом</strong>
+                                <p>Крайности не спасают: слишком много и слишком мало — одинаково опасны.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-                <div class="provider-switch provider-switch-setup">
-                    <div class="provider-switch-title">Провайдер запросов</div>
+            <section class="setup-form-wrap">
+                <div class="setup-form-head">
+                    <div>
+                        <div class="setup-eyebrow">Настрой старт</div>
+                        <h2>Собери свою версию 1993-го</h2>
+                    </div>
+                    <div class="setup-badge">✦ Хроника начнётся с первого зимнего вдоха</div>
+                </div>
+
+                <div class="setup-section api-section">
+                    <h3 id="api-provider-title">🔑 API ключ</h3>
+
+                    <div class="provider-switch provider-switch-setup">
+                        <div class="provider-switch-title">Провайдер запросов</div>
+                        <div class="provider-buttons">
+                            <button type="button" class="provider-btn selected" data-provider="hydra">🌀 Hydra</button>
+                            <button type="button" class="provider-btn" data-provider="openrouter">🧭 OpenRouter</button>
+                        </div>
+                        <div class="provider-models" data-provider-models></div>
+                    </div>
+
+                    <input type="password" id="api-key" placeholder="Hydra API key">
+                    <div id="api-key-hint" class="provider-hint">
+                        Можно оставить пустым, если на сервере настроен ключ для выбранного провайдера.
+                    </div>
+                </div>
+
+                <div class="setup-section">
+                    <h3>⚔️ Сложность</h3>
+                    <div class="setup-row">
+                        <div class="option-buttons" id="difficulty-btns">
+                            <button class="option-btn selected" data-value="normal">🛡️ Норма</button>
+                            <button class="option-btn" data-value="hardcore">💀 Хардкор</button>
+                        </div>
+                    </div>
+                    <div class="difficulty-info" id="difficulty-info">
+                        <strong>Норма:</strong> 4 варианта выбора. Одно чудесное спасение за игру.
+                    </div>
+                </div>
+
+                <div class="setup-grid-2">
+                    <div class="setup-section">
+                        <h3>👤 Персонаж</h3>
+                        <div class="setup-row setup-row-stack-mobile">
+                            <label>Пол:</label>
+                            <div class="option-buttons" id="gender-btns">
+                                <button class="option-btn selected" data-value="male">♂ Мальчик</button>
+                                <button class="option-btn" data-value="female">♀ Девочка</button>
+                            </div>
+                        </div>
+                        <div class="setup-row">
+                            <label>Возраст:</label>
+                            <select id="start-age">
+                                <option value="5">5 лет (детсад)</option>
+                                <option value="6">6 лет (подготовка)</option>
+                                <option value="7" selected>7 лет (1 класс)</option>
+                                <option value="8">8 лет (2 класс)</option>
+                                <option value="9">9 лет (3 класс)</option>
+                                <option value="10">10 лет (4 класс)</option>
+                                <option value="11">11 лет (5 класс)</option>
+                                <option value="12">12 лет (6 класс)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="setup-section">
+                        <h3>⏱️ Темп повествования</h3>
+                        <div class="setup-row">
+                            <div class="option-buttons" id="pace-btns">
+                                <button class="option-btn selected" data-value="season">По сезонам</button>
+                                <button class="option-btn" data-value="year">По годам</button>
+                            </div>
+                        </div>
+                        <div class="pace-info" id="pace-info">
+                            <strong>По сезонам:</strong> каждый ход = новый сезон<br>
+                            <span class="pace-example">Зима 1993 → Весна 1993 → Лето 1993 → …</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-section location-section">
+                    <h3>📍 Локация</h3>
+
+                    <div class="setup-row setup-row-stack-mobile">
+                        <label>Тип:</label>
+                        <div class="option-buttons option-buttons-wrap" id="location-type-btns">
+                            <button class="option-btn" data-value="village">🏡 Село</button>
+                            <button class="option-btn" data-value="town">🏘️ Город</button>
+                            <button class="option-btn selected" data-value="capital">🏙️ Столица</button>
+                        </div>
+                    </div>
+
+                    <div class="setup-row" id="region-select-row" style="display:none;">
+                        <label>Регион:</label>
+                        <select id="region-select" class="region-select">
+                            <option value="central">🌲 Центральная Россия</option>
+                            <option value="siberia">❄️ Сибирь</option>
+                            <option value="far_east">🌊 Дальний Восток</option>
+                            <option value="ural">⛰️ Урал</option>
+                            <option value="black_sea">🏖️ Черноморское побережье</option>
+                            <option value="north_caucasus">🏔️ Северный Кавказ</option>
+                        </select>
+                    </div>
+
+                    <div class="setup-row" id="city-select-row">
+                        <label>Город:</label>
+                        <select id="city-select" class="city-select">
+                            <option value="moscow">🏛️ Москва</option>
+                            <option value="spb">🌉 Санкт-Петербург</option>
+                            <option value="novosibirsk">🏭 Новосибирск</option>
+                            <option value="vladivostok">⚓ Владивосток</option>
+                            <option value="ekaterinburg">🏗️ Екатеринбург</option>
+                            <option value="rostov">🌻 Ростов-на-Дону</option>
+                            <option value="grozny">🕌 Грозный</option>
+                        </select>
+                    </div>
+
+                    <div class="location-description" id="location-description">
+                        Москва — столица, огромный муравейник...
+                    </div>
+                </div>
+
+                <div class="start-preview" id="start-preview"></div>
+
+                <button id="start-btn" class="primary">Начать игру</button>
+
+                <div class="support-card support-card--setup">
+                    <p class="support-card__title">💖 Поддержать проект</p>
+                    <p>
+                        Ответы нейросети не бесплатны для автора проекта. Помочь с оплатой API:<br>
+                        <strong>+7 950 004-88-24</strong> (Озон, Дарья)
+                    </p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="container app-shell hidden" id="game-ui">
+        <section class="panel panel-main">
+            <div class="date-badge" id="date-display">
+                <div class="date-badge__time">
+                    <span id="date-text">...</span>
+                </div>
+                <div class="date-badge__location">
+                    <span class="location" id="location-display"></span>
+                </div>
+            </div>
+
+            <div class="story-stage">
+                <div class="story-shell">
+                    <div class="story-shell__eyebrow">Жизнь продолжается</div>
+                    <div id="story-display" class="story-content"></div>
+                </div>
+                <div class="loading-bar" id="loader"></div>
+                <div class="choices-wrap">
+                    <div class="choices-head">
+                        <div>
+                            <div class="choices-kicker">Следующий шаг</div>
+                            <h3>Что делать дальше?</h3>
+                        </div>
+                    </div>
+                    <div class="choices" id="choices-display"></div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="panel panel-sidebar">
+            <div class="sidebar-scroll">
+                <div class="provider-switch sidebar-card">
+                    <div class="provider-switch-title">LLM маршрут</div>
                     <div class="provider-buttons">
                         <button type="button" class="provider-btn selected" data-provider="hydra">🌀 Hydra</button>
                         <button type="button" class="provider-btn" data-provider="openrouter">🧭 OpenRouter</button>
@@ -25,157 +233,49 @@
                     <div class="provider-models" data-provider-models></div>
                 </div>
 
-                <input type="password" id="api-key" placeholder="Hydra API key">
-                <div id="api-key-hint" class="provider-hint">
-                    Можно оставить пустым, если на сервере настроен ключ для выбранного провайдера.
-                </div>
-            </div>
+                <div id="mode-display" class="status-stack"></div>
 
-            <div class="setup-section">
-                <h3>⚔️ Сложность</h3>
-                <div class="setup-row">
-                    <div class="option-buttons" id="difficulty-btns">
-                        <button class="option-btn selected" data-value="normal">🛡️ Норма</button>
-                        <button class="option-btn" data-value="hardcore">💀 Хардкор</button>
+                <section class="sidebar-card personality-card">
+                    <div class="sidebar-card__head">
+                        <div>
+                            <div class="sidebar-kicker">Герой</div>
+                            <h3>Личность</h3>
+                        </div>
                     </div>
-                </div>
-                <div class="difficulty-info" id="difficulty-info">
-                    <strong>Норма:</strong> 4 варианта выбора. Одно чудесное спасение за игру.
-                </div>
-            </div>
+                    <div id="stats-display" class="stats-grid"></div>
+                </section>
 
-            <div class="setup-section">
-                <h3>👤 Персонаж</h3>
-                <div class="setup-row">
-                    <label>Пол:</label>
-                    <div class="option-buttons" id="gender-btns">
-                        <button class="option-btn selected" data-value="male">♂ Мальчик</button>
-                        <button class="option-btn" data-value="female">♀ Девочка</button>
+                <section class="sidebar-card">
+                    <div class="sidebar-card__head">
+                        <div>
+                            <div class="sidebar-kicker">Мир рядом</div>
+                            <h3>Близкие люди</h3>
+                        </div>
                     </div>
-                </div>
-                <div class="setup-row">
-                    <label>Возраст:</label>
-                    <select id="start-age">
-                        <option value="5">5 лет (детсад)</option>
-                        <option value="6">6 лет (подготовка)</option>
-                        <option value="7" selected>7 лет (1 класс)</option>
-                        <option value="8">8 лет (2 класс)</option>
-                        <option value="9">9 лет (3 класс)</option>
-                        <option value="10">10 лет (4 класс)</option>
-                        <option value="11">11 лет (5 класс)</option>
-                        <option value="12">12 лет (6 класс)</option>
-                    </select>
-                </div>
-            </div>
+                    <div id="npcs-display" class="lore-list"></div>
+                </section>
 
-            <div class="setup-section">
-                <h3>📍 Локация</h3>
-
-                <div class="setup-row">
-                    <label>Тип:</label>
-                    <div class="option-buttons" id="location-type-btns" style="flex-wrap:wrap;">
-                        <button class="option-btn" data-value="village">🏡 Село</button>
-                        <button class="option-btn" data-value="town">🏘️ Город</button>
-                        <button class="option-btn selected" data-value="capital">🏙️ Столица</button>
+                <section class="sidebar-card">
+                    <div class="sidebar-card__head">
+                        <div>
+                            <div class="sidebar-kicker">Следы эпохи</div>
+                            <h3>Вещи и память</h3>
+                        </div>
                     </div>
+                    <div id="inventory-display" class="lore-list"></div>
+                </section>
+
+                <div class="controls-row">
+                    <button onclick="copyHistoryToClipboard()" class="control-btn">📋 Копировать историю</button>
+                    <button onclick="resetGame()" class="control-btn control-btn--danger">🔄 Сброс</button>
                 </div>
 
-                <div class="setup-row" id="region-select-row" style="display:none;">
-                    <label>Регион:</label>
-                    <select id="region-select" class="region-select">
-                        <option value="central">🌲 Центральная Россия</option>
-                        <option value="siberia">❄️ Сибирь</option>
-                        <option value="far_east">🌊 Дальний Восток</option>
-                        <option value="ural">⛰️ Урал</option>
-                        <option value="black_sea">🏖️ Черноморское побережье</option>
-                        <option value="north_caucasus">🏔️ Северный Кавказ</option>
-                    </select>
-                </div>
-
-                <div class="setup-row" id="city-select-row">
-                    <label>Город:</label>
-                    <select id="city-select" class="city-select">
-                        <option value="moscow">🏛️ Москва</option>
-                        <option value="spb">🌉 Санкт-Петербург</option>
-                        <option value="novosibirsk">🏭 Новосибирск</option>
-                        <option value="vladivostok">⚓ Владивосток</option>
-                        <option value="ekaterinburg">🏗️ Екатеринбург</option>
-                        <option value="rostov">🌻 Ростов-на-Дону</option>
-                        <option value="grozny">🕌 Грозный</option>
-                    </select>
-                </div>
-
-                <div class="location-description" id="location-description" style="margin-top:10px; padding:12px 16px; background:#f0e9de; border:1px solid var(--border-color); border-radius:40px; font-size:0.85rem; color:var(--text-dim);">
-                    Москва — столица, огромный муравейник...
+                <div class="support-card support-card--sidebar">
+                    <p class="support-card__title">💖 Поддержать проект</p>
+                    <p><strong>+7 950 004-88-24</strong> (Дарья, Озон)</p>
                 </div>
             </div>
-
-            <div class="setup-section">
-                <h3>⏱️ Темп повествования</h3>
-                <div class="setup-row">
-                    <div class="option-buttons" id="pace-btns">
-                        <button class="option-btn selected" data-value="season">По сезонам</button>
-                        <button class="option-btn" data-value="year">По годам</button>
-                    </div>
-                </div>
-                <div class="pace-info" id="pace-info">
-                    <strong>По сезонам:</strong> каждый ход = новый сезон<br>
-                    <span class="pace-example">Зима 1993 → Весна 1993 → Лето 1993 → …</span>
-                </div>
-            </div>
-
-            <div class="start-preview" id="start-preview"></div>
-
-            <button id="start-btn" class="primary">Начать игру</button>
-
-            <div style="margin-top:20px; padding:12px; background:rgba(212, 160, 23, 0.1); border:1px solid #d4a017; border-radius:6px; text-align:center; font-size:0.85rem;">
-                <p style="margin:0 0 5px 0; color:#d4a017;">💖 Поддержать проект</p>
-                <p style="margin:0; color:var(--text-dim);">
-                    Ответы нейросети не бесплатны для автора проекта. Помочь с оплатой API:<br>
-                    <strong style="color:var(--text-main);">+7 950 004-88-24</strong> (Озон, Дарья)
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <div class="container hidden" id="game-ui">
-        <div class="panel">
-            <div class="date-badge" id="date-display">
-                <span id="date-text">...</span>
-                <span class="location" id="location-display"></span>
-            </div>
-            <div id="story-display" class="story-content"></div>
-            <div class="loading-bar" id="loader"></div>
-            <div class="choices" id="choices-display"></div>
-        </div>
-
-        <div class="panel" style="max-height:95vh; overflow-y:auto;">
-            <div class="provider-switch">
-                <div class="provider-switch-title">LLM маршрут</div>
-                <div class="provider-buttons">
-                    <button type="button" class="provider-btn selected" data-provider="hydra">🌀 Hydra</button>
-                    <button type="button" class="provider-btn" data-provider="openrouter">🧭 OpenRouter</button>
-                </div>
-                <div class="provider-models" data-provider-models></div>
-            </div>
-
-            <div id="mode-display"></div>
-            <h3 style="margin-top:0">Личность</h3>
-            <div id="stats-display"></div>
-            <div class="lore-section"><h3>Близкие люди</h3><div id="npcs-display"></div></div>
-            <div class="lore-section"><h3>Вещи и Память</h3><div id="inventory-display"></div></div>
-
-            <div style="display:flex; gap:10px; margin:25px 0 15px;">
-                <button onclick="copyHistoryToClipboard()" style="flex:1; background:#f0e9de; color:var(--text-dim); border:1px solid var(--border-color); padding:10px 12px; font-size:0.8rem; cursor:pointer; border-radius:40px; font-family:var(--font-serif); transition:0.2s;">📋 Копировать историю</button>
-                <button onclick="resetGame()" style="flex:1; background:#f0e9de; color:var(--text-dim); border:1px solid var(--border-color); padding:10px 12px; font-size:0.8rem; cursor:pointer; border-radius:40px; font-family:var(--font-serif); transition:0.2s;">🔄 Сброс</button>
-            </div>
-
-            <div style="padding:8px; background:rgba(212, 160, 23, 0.1); border:1px solid #d4a017; border-radius:4px; text-align:center; font-size:0.7rem;">
-                <span style="color:var(--text-dim);">💖 </span>
-                <span style="color:#d4a017; font-weight:bold;">+7 950 004-88-24</span>
-                <span style="color:var(--text-dim);"> (Дарья, Озон)</span>
-            </div>
-        </div>
+        </aside>
     </div>
 </body>
 </html>
