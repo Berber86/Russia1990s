@@ -984,33 +984,58 @@ async function callLLM({
 
     const makeRequest = async (attempt) => {
         try {
+            const requestBody = {
+                messages,
+                model: resolvedModel,
+                temperature,
+                max_tokens,
+                response_format
+            };
+
+            // OpenRouter всегда гоним через серверный маршрут.
+            // Так надёжнее на мобилках, нет проблем с browser headers и можно использовать env-ключ.
+            if (provider === 'openrouter') {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 600000);
+
+                const response = await fetch(cfg.serverPath, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...requestBody,
+                        apiKey: providerApiKey || undefined
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Сервер вернул ${response.status}`);
+                }
+
+                return data;
+            }
+
+            // Hydra можно вызывать напрямую пользовательским ключом.
             if (providerApiKey) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 600000);
 
-                const headers = {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${providerApiKey}`
-                };
-
-                if (provider === 'openrouter') {
-                    headers['HTTP-Referer'] = window.location.origin;
-                    headers['X-Title'] = 'Epoch of Change';
-                }
-
-                const requestBody = {
-                    model: resolvedModel,
-                    messages,
-                    temperature,
-                    max_tokens
-                };
-
-                if (response_format) requestBody.response_format = response_format;
-
                 const response = await fetch(cfg.directUrl, {
                     method: 'POST',
-                    headers,
-                    body: JSON.stringify(requestBody),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${providerApiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: resolvedModel,
+                        messages,
+                        temperature,
+                        max_tokens,
+                        ...(response_format ? { response_format } : {})
+                    }),
                     signal: controller.signal
                 });
 
@@ -1034,13 +1059,7 @@ async function callLLM({
             const response = await fetch(cfg.serverPath, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages,
-                    model: resolvedModel,
-                    temperature,
-                    max_tokens,
-                    response_format
-                }),
+                body: JSON.stringify(requestBody),
                 signal: controller.signal
             });
 
