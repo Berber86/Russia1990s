@@ -811,6 +811,8 @@ function setupOptionButtons(containerId, stateKey, callback) {
             if (stateKey === 'pace') updatePaceInfo(btn.dataset.value);
             if (stateKey === 'difficulty') updateDifficultyInfo(btn.dataset.value);
             if (stateKey === 'locationType' || stateKey === 'gender') rollStartPreview();
+            // Сразу обновляем data-атрибуты на body, чтобы CSS подхватил нужный фон (city/village).
+            if (stateKey === 'locationType') applyVisualMood();
         };
     });
 }
@@ -2093,3 +2095,24 @@ els.startBtn.onclick = () => {
     applyStartSettings();
     initGame();
 };
+
+// ========== ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ ==========
+(function setupThemeToggle() {
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    const THEME_KEY = 'rpg90_theme';
+    const getTheme = () => {
+        try { return localStorage.getItem(THEME_KEY) || 'dark'; } catch { return 'dark'; }
+    };
+    const setTheme = (t) => {
+        document.body.dataset.theme = t;
+        try { localStorage.setItem(THEME_KEY, t); } catch {}
+        btn.textContent = t === 'paper' ? '◑' : '◐';
+        btn.setAttribute('aria-label', t === 'paper' ? 'Включить тёмную тему' : 'Включить светлую тему');
+    };
+    setTheme(getTheme());
+    btn.addEventListener('click', () => {
+        const next = (document.body.dataset.theme === 'paper') ? 'dark' : 'paper';
+        setTheme(next);
+    });
+})();

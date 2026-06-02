@@ -4,10 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Эпоха Перемен</title>
-    <link rel="stylesheet" href="style.css">
-    <script type="module" src="app.js"></script>
+    <link rel="stylesheet" href="style.css?v=20260603-3">
+    <script type="module" src="app.js?v=20260603-2"></script>
+    <link rel="preload" href="fonts/EBGaramond-400-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/EBGaramond-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/JetBrainsMono-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+    <script>
+        // Применяем тему до отрисовки, чтобы не было мигания
+        (function() {
+            try {
+                var t = localStorage.getItem('rpg90_theme') || 'dark';
+                document.documentElement.dataset.themePref = t;
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.body.dataset.theme = t;
+                });
+            } catch(e) {}
+        })();
+    </script>
 </head>
 <body>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Переключить тему" title="Переключить тему">◐</button>
     <div class="screen-noise" aria-hidden="true"></div>
     <div class="screen-vignette" aria-hidden="true"></div>
 
