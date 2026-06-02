@@ -246,15 +246,19 @@ function escapeHTML(value = '') {
 }
 
 const STAT_VISUALS = {
-    mind: { icon: '🧠', short: 'мышление' },
-    body: { icon: '💪', short: 'сила и ловкость' },
-    family: { icon: '🏠', short: 'дом и опора' },
-    friends: { icon: '🫂', short: 'свои люди' },
-    health: { icon: '🩺', short: 'самочувствие' },
-    looks: { icon: '✨', short: 'впечатление' },
-    wealth: { icon: '💸', short: 'деньги и быт' },
-    authority: { icon: '👑', short: 'вес во дворе' }
+    mind:      { iconId: 'stat-mind',      short: 'мышление' },
+    body:      { iconId: 'stat-body',      short: 'сила и ловкость' },
+    family:    { iconId: 'stat-family',    short: 'дом и опора' },
+    friends:   { iconId: 'stat-friends',   short: 'свои люди' },
+    health:    { iconId: 'stat-health',    short: 'самочувствие' },
+    looks:     { iconId: 'stat-looks',     short: 'впечатление' },
+    wealth:    { iconId: 'stat-wealth',    short: 'деньги и быт' },
+    authority: { iconId: 'stat-authority', short: 'вес во дворе' }
 };
+
+function statIconSVG(iconId) {
+    return `<svg class="stat-svg-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#${iconId}"/></svg>`;
+}
 
 function getStatClass(value) {
     const dist = Math.abs(value - 5);
@@ -292,6 +296,52 @@ function applyVisualMood(screen = (els.game.classList.contains('hidden') ? 'setu
     document.body.dataset.difficulty = state.difficulty || 'normal';
     document.body.dataset.locationType = state.locationType || 'capital';
     document.body.dataset.screen = screen;
+    updateGameBackdrop();
+}
+
+// ========== CROSSFADE СМЕНЫ СЕЗОНА ==========
+let _bgActiveLayer = null; // 'a' | 'b' | null
+let _bgCurrentUrl = null;
+
+function getCurrentBgUrl() {
+    const season = ['winter', 'spring', 'summer', 'autumn'][state.seasonIdx] || 'winter';
+    const isVillage = state.locationType === 'village';
+    const prefix = isVillage ? 'village' : 'city';
+    return `images/${prefix}_${season}.jpg`;
+}
+
+function updateGameBackdrop() {
+    // Работаем только если игровой экран виден
+    if (!els.game || els.game.classList.contains('hidden')) return;
+    const layerA = document.querySelector('.panel-bg-layer[data-bg-layer="a"]');
+    const layerB = document.querySelector('.panel-bg-layer[data-bg-layer="b"]');
+    if (!layerA || !layerB) return;
+
+    const url = getCurrentBgUrl();
+    if (url === _bgCurrentUrl) return; // ничего не изменилось
+
+    const next = _bgActiveLayer === 'a' ? layerB : layerA;
+    const prev = _bgActiveLayer === 'a' ? layerA : layerB;
+
+    // Загружаем картинку перед показом, чтобы избежать вспышки
+    const img = new Image();
+    img.onload = () => {
+        next.style.backgroundImage = `url("${url}")`;
+        next.setAttribute('data-bg-active', '');
+        if (prev) {
+            // снимаем активность через малую задержку, чтобы оба были видимы в момент перехода
+            requestAnimationFrame(() => {
+                prev.removeAttribute('data-bg-active');
+            });
+        }
+        _bgActiveLayer = next.dataset.bgLayer;
+        _bgCurrentUrl = url;
+    };
+    img.onerror = () => {
+        // Если картинки нет — просто очищаем
+        next.style.backgroundImage = 'none';
+    };
+    img.src = url;
 }
 
 function cloneData(obj) {
@@ -1895,12 +1945,13 @@ function renderUI() {
     for (const [key, value] of Object.entries(state.stats)) {
         if (!STATS_INFO[key]) continue;
         const toneClass = getStatClass(value);
-        const visual = STAT_VISUALS[key] || { icon: '•', short: 'состояние' };
+        const visual = STAT_VISUALS[key] || { iconId: null, short: 'состояние' };
+        const iconHTML = visual.iconId ? statIconSVG(visual.iconId) : '<span style="opacity:0.4">•</span>';
         els.stats.innerHTML += `
             <div class="stat-card ${toneClass}">
                 <div class="stat-card__top">
                     <div class="stat-card__label">
-                        <span class="stat-card__icon">${visual.icon}</span>
+                        <span class="stat-card__icon">${iconHTML}</span>
                         <div>
                             <div class="stat-card__name">${escapeHTML(STATS_INFO[key].name)}</div>
                             <div class="stat-card__desc">${escapeHTML(visual.short)}</div>
@@ -1922,6 +1973,9 @@ function renderUI() {
     // refresh open panels
     if (els.npcsPanel && !els.npcsPanel.classList.contains('hidden')) renderNpcPanel();
     if (els.itemsPanel && !els.itemsPanel.classList.contains('hidden')) renderItemsPanel();
+
+    // typewriter hook (если включён) — печатает первый абзац новой истории
+    if (typeof window.tryTypewriter === 'function') window.tryTypewriter();
 }
 
 function renderLoreList(container, items) {
@@ -2116,3 +2170,88 @@ els.startBtn.onclick = () => {
         setTheme(next);
     });
 })();
+
+// ========== TYPEWRITER (печатная машинка для первого абзаца) ==========
+const TYPEWRITER_KEY = 'rpg90_typewriter';
+function isTypewriterOn() {
+    try { return localStorage.getItem(TYPEWRITER_KEY) === '1'; } catch { return false; }
+}
+function setTypewriter(on) {
+    try { localStorage.setItem(TYPEWRITER_KEY, on ? '1' : '0'); } catch {}
+}
+
+(function setupTypewriterToggle() {
+    const cb = document.getElementById('typewriter-toggle');
+    if (!cb) return;
+    cb.checked = isTypewriterOn();
+    cb.addEventListener('change', () => setTypewriter(cb.checked));
+})();
+
+let _typewriterAbort = null;
+let _lastTypedStory = null;
+
+function runTypewriter(storyEl, storyText) {
+    if (!storyEl || !storyText) return;
+    if (_typewriterAbort) _typewriterAbort();
+    let aborted = false;
+    _typewriterAbort = () => { aborted = true; };
+
+    // Печатаем только первый абзац — берём текст до первого \n\n или до конца, ограничиваем 240 символами для UX
+    const firstParaEnd = storyText.indexOf('\n\n');
+    const fullFirst = (firstParaEnd === -1 ? storyText : storyText.slice(0, firstParaEnd)).trim();
+    const cap = 280;
+    const first = fullFirst.length > cap ? fullFirst.slice(0, cap) : fullFirst;
+    const rest = (firstParaEnd === -1 ? '' : storyText.slice(firstParaEnd + 2))
+        + (fullFirst.length > cap ? fullFirst.slice(cap) : '');
+
+    const restHTML = renderMarkdown(rest);
+
+    // Готовим контейнер: первый абзац — пусто + каретка, остальное — после печати
+    storyEl.innerHTML = `<p class="typewriter-host"><span class="typewriter-line"></span><span class="typewriter-caret">▋</span></p>`;
+    const lineEl = storyEl.querySelector('.typewriter-line');
+    const caretEl = storyEl.querySelector('.typewriter-caret');
+
+    let i = 0;
+    const baseDelay = 18; // мс на символ
+    const punctPause = 110; // пауза на ,.!?;:
+    const lineBreakPause = 220;
+
+    function step() {
+        if (aborted) return;
+        if (i >= first.length) {
+            // Закончили первый абзац — дописываем остальное и убираем каретку
+            caretEl.remove();
+            if (restHTML) {
+                const tmp = document.createElement('div');
+                tmp.innerHTML = restHTML;
+                // Все дочерние ноды добавляем по очереди
+                while (tmp.firstChild) storyEl.appendChild(tmp.firstChild);
+            }
+            return;
+        }
+        const ch = first[i];
+        lineEl.appendChild(document.createTextNode(ch));
+        i++;
+        let delay = baseDelay;
+        if (',.!?;:—'.includes(ch)) delay += punctPause;
+        else if (ch === '\n') delay += lineBreakPause;
+        setTimeout(step, delay);
+    }
+    step();
+}
+
+// Хук вызывается из конца renderUI()
+function tryTypewriter() {
+    try {
+        if (!isTypewriterOn()) return;
+        if (isArchiveMode()) return;
+        if (state.gameOver) return;
+        const story = state.lastStory || '';
+        if (!story || story === _lastTypedStory) return;
+        _lastTypedStory = story;
+        runTypewriter(els.story, story);
+    } catch (e) {
+        console.warn('typewriter error', e);
+    }
+}
+window.tryTypewriter = tryTypewriter;

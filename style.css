@@ -1078,18 +1078,69 @@ button.primary:hover::after { transform: translateX(4px); }
     box-shadow: var(--shadow-deep);
 }
 
-/* Атмосферные фоны игрового экрана — едва видимы, как след плёнки */
-body[data-season="winter"]:not([data-location-type="village"]) .panel-main::before { content: ""; position: absolute; inset: 0; background: url("images/city_winter.jpg") center/cover no-repeat; opacity: 0.10; pointer-events: none; z-index: 0; filter: blur(2px) saturate(0.4) brightness(0.9); }
-body[data-season="spring"]:not([data-location-type="village"]) .panel-main::before { content: ""; position: absolute; inset: 0; background: url("images/city_spring.jpg") center/cover no-repeat; opacity: 0.09; pointer-events: none; z-index: 0; filter: blur(2px) saturate(0.4) brightness(0.9); }
-body[data-season="summer"]:not([data-location-type="village"]) .panel-main::before { content: ""; position: absolute; inset: 0; background: url("images/city_summer.jpg") center/cover no-repeat; opacity: 0.08; pointer-events: none; z-index: 0; filter: blur(2px) saturate(0.5) brightness(0.9); }
-body[data-season="autumn"]:not([data-location-type="village"]) .panel-main::before { content: ""; position: absolute; inset: 0; background: url("images/city_autumn.jpg") center/cover no-repeat; opacity: 0.10; pointer-events: none; z-index: 0; filter: blur(2px) saturate(0.4) brightness(0.9); }
+/* Текстура «жатой бумаги» — едва заметная, для глубины поверхности. Создаётся через SVG-фильтр.
+   Подключается ко всем .panel и большим карточкам как накладной слой. */
+.panel::before,
+.setup-showcase::after,
+.setup-form-wrap::after,
+.lore-panel__sheet::after,
+.settings-sheet::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    border-radius: inherit;
+    opacity: 0.45;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='paper'><feTurbulence type='fractalNoise' baseFrequency='0.012 0.018' numOctaves='3' seed='7'/><feDisplacementMap in='SourceGraphic' scale='8'/><feColorMatrix values='0 0 0 0 0.95  0 0 0 0 0.88  0 0 0 0 0.75  0 0 0 0.35 0'/><feSpecularLighting surfaceScale='3' specularConstant='0.5' specularExponent='12' lighting-color='%23fff5dc'><feDistantLight azimuth='235' elevation='55'/></feSpecularLighting><feComposite in2='SourceGraphic' operator='in'/></filter><rect width='100%25' height='100%25' fill='%23000' filter='url(%23paper)'/></svg>");
+    background-size: 400px 400px;
+}
 
-body[data-location-type="village"][data-season="winter"] .panel-main::before { content: ""; position: absolute; inset: 0; background: url("images/village_winter.jpg") center/cover no-repeat; opacity: 0.11; pointer-events: none; z-index: 0; filter: blur(2px) saturate(0.4) brightness(0.9); }
-body[data-location-type="village"][data-season="spring"] .panel-main::before { content: ""; position: absolute; inset: 0; background: url("images/village_spring.jpg") center/cover no-repeat; opacity: 0.10; pointer-events: none; z-index: 0; filter: blur(2px) saturate(0.4) brightness(0.9); }
-body[data-location-type="village"][data-season="summer"] .panel-main::before { content: ""; position: absolute; inset: 0; background: url("images/village_summer.jpg") center/cover no-repeat; opacity: 0.09; pointer-events: none; z-index: 0; filter: blur(2px) saturate(0.5) brightness(0.9); }
-body[data-location-type="village"][data-season="autumn"] .panel-main::before { content: ""; position: absolute; inset: 0; background: url("images/village_autumn.jpg") center/cover no-repeat; opacity: 0.11; pointer-events: none; z-index: 0; filter: blur(2px) saturate(0.4) brightness(0.9); }
+/* В paper-теме текстура чуть видимее (как у настоящей бумаги) */
+body[data-theme="paper"] .panel::before,
+body[data-theme="paper"] .setup-showcase::after,
+body[data-theme="paper"] .setup-form-wrap::after,
+body[data-theme="paper"] .lore-panel__sheet::after,
+body[data-theme="paper"] .settings-sheet::after {
+    opacity: 0.32;
+    mix-blend-mode: multiply;
+}
 
-body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter: blur(2px) saturate(0.3) brightness(1.05) sepia(0.2) !important; }
+/* Контент панелей должен лежать поверх текстуры */
+.panel > *,
+.setup-showcase > *,
+.setup-form-wrap > *,
+.lore-panel__sheet > *,
+.settings-sheet > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Атмосферные фоны игрового экрана — два слоя для crossfade при смене сезона */
+.panel-bg-layer {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(2px) saturate(0.5) brightness(0.9);
+    transition: opacity 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity;
+}
+.panel-bg-layer[data-bg-active] {
+    opacity: var(--bg-layer-opacity, 0.10);
+}
+
+body[data-theme="paper"] .panel-bg-layer {
+    filter: blur(2px) saturate(0.3) brightness(1.05) sepia(0.2);
+}
+body[data-theme="paper"] .panel-bg-layer[data-bg-active] {
+    opacity: var(--bg-layer-opacity-paper, 0.06);
+}
 
 .panel-main {
     position: relative;
@@ -1579,15 +1630,31 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
 .stat-card__label { display: flex; align-items: center; gap: 10px; min-width: 0; }
 
 .stat-card__icon {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     display: grid;
     place-items: center;
     border-radius: var(--radius-xs);
-    font-size: 0.95rem;
     background: var(--paper-2);
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-warm);
+    color: var(--amber);
+    transition: color 0.3s ease, border-color 0.3s ease;
 }
+
+.stat-svg-icon {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    fill: none;
+    display: block;
+}
+
+/* Цвет иконки подкрашиваем тоном стата, но мягко */
+.stat-card.val-norm   .stat-card__icon { color: var(--moss); border-color: color-mix(in srgb, var(--moss) 32%, var(--line)); }
+.stat-card.val-flavor .stat-card__icon { color: var(--amber); border-color: var(--line-warm); }
+.stat-card.val-skew   .stat-card__icon { color: var(--amber-deep); border-color: color-mix(in srgb, var(--amber-deep) 32%, var(--line)); }
+.stat-card.val-bad    .stat-card__icon { color: var(--rust); border-color: color-mix(in srgb, var(--rust) 32%, var(--line)); }
+.stat-card.val-crit   .stat-card__icon { color: var(--rust); border-color: color-mix(in srgb, var(--rust) 50%, transparent); box-shadow: 0 0 10px color-mix(in srgb, var(--rust) 30%, transparent); }
 
 .stat-card__name {
     font-family: var(--serif);
@@ -1788,6 +1855,88 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
 }
 
 .settings-key-block { margin-top: 22px; }
+
+/* ---------- TOGGLE SWITCH ---------- */
+
+.settings-toggle-block {
+    margin-top: 22px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+}
+
+.settings-switch {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 14px;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    margin-top: 12px;
+}
+.settings-switch input { display: none; }
+
+.settings-switch__track {
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--paper-0);
+    border: 1px solid var(--line-strong);
+    position: relative;
+    transition: background 0.25s ease, border-color 0.25s ease;
+}
+.settings-switch__thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: var(--ink-dim);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s ease;
+}
+.settings-switch input:checked + .settings-switch__track {
+    background: color-mix(in srgb, var(--amber) 30%, var(--paper-0));
+    border-color: var(--amber);
+}
+.settings-switch input:checked + .settings-switch__track .settings-switch__thumb {
+    transform: translateX(20px);
+    background: var(--amber);
+}
+
+.settings-switch__text strong {
+    display: block;
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 0.96rem;
+    color: var(--ink);
+    margin-bottom: 2px;
+}
+.settings-switch__hint {
+    display: block;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 0.84rem;
+    color: var(--ink-dim);
+    line-height: 1.4;
+}
+
+/* ---------- TYPEWRITER ---------- */
+
+.story-content .typewriter-line {
+    display: inline-block;
+    color: var(--ink);
+}
+.story-content .typewriter-caret {
+    display: inline-block;
+    width: 0.5ch;
+    margin-left: 1px;
+    color: var(--amber);
+    animation: typewriterCaret 0.9s steps(2) infinite;
+}
+@keyframes typewriterCaret {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
 
 /* LORE PANELS */
 
