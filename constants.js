@@ -1,4 +1,5 @@
 // ========== constants.js ==========
+
 // Константы игры
 
 export const DEFAULT_PROVIDER = "hybrid";
@@ -22,8 +23,8 @@ export const LLM_PROVIDERS = {
         serverPath: "/api/openrouter",
         storageKey: "rpg90_key_openrouter",
         models: {
-            main: "z-ai/glm-5.1",
-            enhance: "z-ai/glm-5.1"
+            main: "google/gemini-2.5-flash",
+            enhance: "google/gemini-2.5-pro"
         }
     },
     hybrid: {
@@ -35,7 +36,7 @@ export const LLM_PROVIDERS = {
             enhance: "hydra"
         },
         models: {
-            main: "z-ai/glm-5.1",
+            main: "google/gemini-2.5-flash",
             enhance: "gemini-3.1-pro"
         }
     }
@@ -47,7 +48,6 @@ export const HISTORY_LIMIT = 40;
 export const SUMMARY_INTERVAL = 20;
 
 // Информация о характеристиках
-
 export const STATS_INFO = {
     mind:      { name: "Ум",        low: "тугодум, плохо учится, забывает важное",                        high: "гений-одиночка, завистники, «слишком умный — опасный»" },
     body:      { name: "Тело",      low: "слабый, неуклюжий, быстро устаёт",                              high: "агрессия, травмы, «кулаки вместо головы»" },
@@ -60,14 +60,12 @@ export const STATS_INFO = {
 };
 
 // Информация о поле
-
 export const GENDER_INFO = {
     male:   { name: "мальчик", pronoun: "он" },
     female: { name: "девочка", pronoun: "она" }
 };
 
 // ========== СИСТЕМА ЛОКАЦИЙ ==========
-
 export const LOCATION_TYPES = {
     village: { name: "Село", icon: "🏡" },
     town:    { name: "Город", icon: "🏘️" },
@@ -173,7 +171,6 @@ export const LOCATION_DETAILS = {
 };
 
 // ========== ПУЛЫ NPC ==========
-
 export const NPC_POOLS = {
     village: {
         mothers: [
@@ -883,9 +880,6 @@ export const NPC_POOLS = {
 };
 
 // ========== ПУЛЫ ПРЕДМЕТОВ ==========
-// Для краткости контентного файла ниже сохранён весь присланный пользователем пул.
-// Он нужен игре как база стартовой генерации.
-
 export const ITEM_POOLS = {
     village: {
         common: [

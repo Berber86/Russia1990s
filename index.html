@@ -22,7 +22,6 @@
                         Атмосферная текстовая RPG о жизни в России 90-х — с дворами, подъездами, дефицитом,
                         тревогой перемен и теми маленькими событиями, которые потом помнятся всю жизнь.
                     </p>
-
                     <div class="setup-feature-grid">
                         <div class="setup-feature-card">
                             <span class="setup-feature-icon">📼</span>
@@ -60,7 +59,6 @@
                 <div class="setup-form-topbar">
                     <button type="button" class="icon-btn icon-btn--ghost" id="setup-settings-btn" aria-label="Открыть настройки">⚙</button>
                 </div>
-
                 <div class="setup-form-head">
                     <div>
                         <div class="setup-eyebrow">Создание героя</div>
@@ -68,7 +66,6 @@
                     </div>
                     <div class="setup-badge" id="setup-step-hint-badge">Начнём спокойно, шаг за шагом.</div>
                 </div>
-
                 <div class="setup-progress-wrap">
                     <div class="setup-progress-labels">
                         <span id="setup-step-counter">Шаг 1 из 5</span>
@@ -80,6 +77,7 @@
                 </div>
 
                 <div class="setup-wizard" id="setup-wizard">
+                    <!-- Шаг 0: Пролог -->
                     <section class="setup-step active" data-step="0">
                         <div class="setup-section setup-section--focus">
                             <h3>Добро пожаловать</h3>
@@ -94,6 +92,7 @@
                         </div>
                     </section>
 
+                    <!-- Шаг 1: Персонаж -->
                     <section class="setup-step" data-step="1">
                         <div class="setup-section">
                             <h3>Кто твой герой</h3>
@@ -124,6 +123,7 @@
                         </div>
                     </section>
 
+                    <!-- Шаг 2: Локация -->
                     <section class="setup-step" data-step="2">
                         <div class="setup-section location-section">
                             <h3>Где всё начинается</h3>
@@ -135,7 +135,6 @@
                                     <button class="option-btn selected" data-value="capital">🏙️ Столица</button>
                                 </div>
                             </div>
-
                             <div class="setup-row" id="region-select-row" style="display:none;">
                                 <label>Регион:</label>
                                 <select id="region-select" class="region-select">
@@ -147,7 +146,6 @@
                                     <option value="north_caucasus">🏔️ Северный Кавказ</option>
                                 </select>
                             </div>
-
                             <div class="setup-row" id="city-select-row">
                                 <label>Город:</label>
                                 <select id="city-select" class="city-select">
@@ -160,11 +158,9 @@
                                     <option value="grozny">🕌 Грозный</option>
                                 </select>
                             </div>
-
                             <div class="location-description" id="location-description">
                                 Москва — столица, огромный муравейник...
                             </div>
-
                             <div class="setup-tip">
                                 <strong>Подсказка:</strong>
                                 локация влияет не только на декорации. Она меняет быт, темп взросления, уровень опасности и даже то, что считается нормой.
@@ -172,6 +168,7 @@
                         </div>
                     </section>
 
+                    <!-- Шаг 3: Ритм игры -->
                     <section class="setup-step" data-step="3">
                         <div class="setup-grid-2 setup-grid-2--tight">
                             <div class="setup-section">
@@ -187,7 +184,6 @@
                                     <span class="pace-example">Зима 1993 → Весна 1993 → Лето 1993 → …</span>
                                 </div>
                             </div>
-
                             <div class="setup-section">
                                 <h3>Сложность</h3>
                                 <div class="setup-row">
@@ -201,13 +197,13 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="setup-tip">
                             <strong>Подсказка:</strong>
                             сезонный режим даёт больше сцен, нюансов и медленного взросления. Годовой — резче и эпичнее, но многое пролетает быстрее.
                         </div>
                     </section>
 
+                    <!-- Шаг 4: Старт -->
                     <section class="setup-step" data-step="4">
                         <div class="setup-section setup-section--focus">
                             <h3>Твой старт</h3>
@@ -220,7 +216,6 @@
                                 не пытайся собрать «идеальный» старт. В этой игре интереснее всего работают шероховатости, нехватка и странные совпадения.
                             </div>
                         </div>
-
                         <div class="start-preview" id="start-preview"></div>
                         <button id="start-btn" class="primary">Начать игру</button>
                     </section>
@@ -242,6 +237,7 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
     <div class="settings-modal hidden" id="settings-modal" aria-hidden="true">
         <div class="settings-backdrop" id="settings-backdrop"></div>
         <div class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title">
@@ -252,7 +248,6 @@
                 </div>
                 <button type="button" class="icon-btn icon-btn--ghost" id="settings-close-btn" aria-label="Закрыть настройки">✕</button>
             </div>
-
             <div class="provider-switch">
                 <div class="provider-switch-title">Провайдер</div>
                 <div class="provider-buttons">
@@ -262,7 +257,6 @@
                 </div>
                 <div class="provider-models" data-provider-models></div>
             </div>
-
             <div class="settings-key-block">
                 <label id="api-provider-title" class="settings-label">API ключ</label>
                 <input type="password" id="api-key" placeholder="Hydra API key">
@@ -273,6 +267,7 @@
         </div>
     </div>
 
+    <!-- Game UI -->
     <div class="container app-shell hidden" id="game-ui">
         <section class="panel panel-main">
             <div class="date-badge" id="date-display">
@@ -318,15 +313,25 @@
                 <section class="sidebar-card">
                     <div class="sidebar-card__head">
                         <div><h3>Близкие люди</h3></div>
+                        <span class="sidebar-card__count" id="npcs-count">0</span>
                     </div>
-                    <div id="npcs-display" class="lore-list"></div>
+                    <button class="lore-trigger" id="npcs-trigger">
+                        <span class="lore-trigger__icon">📖</span>
+                        <span class="lore-trigger__hint">Открыть альбом памяти</span>
+                        <span class="lore-trigger__arrow">→</span>
+                    </button>
                 </section>
 
                 <section class="sidebar-card">
                     <div class="sidebar-card__head">
                         <div><h3>Вещи и память</h3></div>
+                        <span class="sidebar-card__count" id="items-count">0</span>
                     </div>
-                    <div id="inventory-display" class="lore-list"></div>
+                    <button class="lore-trigger lore-trigger--items" id="items-trigger">
+                        <span class="lore-trigger__icon">🎒</span>
+                        <span class="lore-trigger__hint">Открыть вещи героя</span>
+                        <span class="lore-trigger__arrow">→</span>
+                    </button>
                 </section>
 
                 <div class="controls-row controls-row--stack">
@@ -342,5 +347,40 @@
             </div>
         </aside>
     </div>
+
+    <!-- NPC Panel — Альбом памяти -->
+    <div class="lore-panel hidden" id="npcs-panel" aria-hidden="true">
+        <div class="lore-panel__backdrop" id="npcs-backdrop"></div>
+        <div class="lore-panel__sheet">
+            <div class="lore-panel__topbar">
+                <div class="lore-panel__eyebrow">Альбом памяти</div>
+                <button type="button" class="lore-panel__close" id="npcs-close" aria-label="Закрыть альбом">✕</button>
+            </div>
+            <div class="lore-panel__header">
+                <h2 class="lore-panel__title">👥 Близкие люди</h2>
+                <p class="lore-panel__subtitle">Те, кто рядом. Те, кто был. Те, кто остался в памяти навсегда.</p>
+            </div>
+            <div class="lore-panel__grid" id="npcs-grid"></div>
+            <div class="lore-panel__empty" id="npcs-empty">Пока рядом никого нет. Но это ненадолго — жизнь только начинается.</div>
+        </div>
+    </div>
+
+    <!-- Items Panel — Сундук памяти -->
+    <div class="lore-panel hidden" id="items-panel" aria-hidden="true">
+        <div class="lore-panel__backdrop" id="items-backdrop"></div>
+        <div class="lore-panel__sheet lore-panel__sheet--items">
+            <div class="lore-panel__topbar">
+                <div class="lore-panel__eyebrow">Сундук памяти</div>
+                <button type="button" class="lore-panel__close" id="items-close" aria-label="Закрыть сундук">✕</button>
+            </div>
+            <div class="lore-panel__header">
+                <h2 class="lore-panel__title">🎒 Вещи и память</h2>
+                <p class="lore-panel__subtitle">Предметы, что попали в руки героя. У каждого — своя история.</p>
+            </div>
+            <div class="lore-panel__grid" id="items-grid"></div>
+            <div class="lore-panel__empty" id="items-empty">Карманы пусты. Но это пока — скоро в них появятся сокровища.</div>
+        </div>
+    </div>
+
 </body>
 </html>
