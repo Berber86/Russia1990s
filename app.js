@@ -229,16 +229,13 @@ function getStatDescriptor(value) {
 }
 
 function buildChoiceMarkup(choice, index = 0) {
-    const title = choice.text || choice.action || `Выбор ${index + 1}`;
-    const body = choice.action || choice.text || '';
-    const showBody = body && body !== title;
+    const label = choice.text || choice.action || `Выбор ${index + 1}`;
 
     return `
-        <span class="choice-btn__index">Выбор ${String(index + 1).padStart(2, '0')}</span>
-        <span class="choice-btn__body">
-            <span class="choice-btn__title">${escapeHTML(title)}</span>
-            ${showBody ? `<span class="choice-btn__text">${escapeHTML(body)}</span>` : ''}
+        <span class="choice-btn__body choice-btn__body--single">
+            <span class="choice-btn__title">${escapeHTML(label)}</span>
         </span>
+        <span class="choice-btn__arrow" aria-hidden="true">→</span>
     `;
 }
 
@@ -746,8 +743,7 @@ function renderStartPreview() {
     els.preview.innerHTML = `
         <div class="preview-head">
             <div>
-                <div class="preview-kicker">Стартовая судьба</div>
-                <h4>Первый слепок жизни героя</h4>
+                <h4>Старт героя</h4>
             </div>
             <button class="reroll-btn" id="reroll-btn" type="button">🎲 Перебросить</button>
         </div>
@@ -1358,10 +1354,12 @@ function showRetryButton(action) {
     btn.type = 'button';
     btn.className = 'choice-btn';
     btn.style.borderColor = 'var(--warning)';
-    btn.innerHTML = buildChoiceMarkup({
-        text: 'Повторить ход',
-        action: 'Попробовать ещё раз и вернуть историю на нужные рельсы.'
-    }, 0);
+    btn.innerHTML = `
+        <span class="choice-btn__body choice-btn__body--single">
+            <span class="choice-btn__title">Повторить ход</span>
+        </span>
+        <span class="choice-btn__arrow" aria-hidden="true">↺</span>
+    `;
     btn.onclick = () => turn(action);
     els.choices.appendChild(btn);
 }
@@ -1669,11 +1667,10 @@ function renderUI() {
         btn.className = 'choice-btn';
         btn.style.borderColor = 'var(--danger)';
         btn.innerHTML = `
-            <span class="choice-btn__index">Финал</span>
-            <span class="choice-btn__body">
+            <span class="choice-btn__body choice-btn__body--single">
                 <span class="choice-btn__title">Начать новую жизнь</span>
-                <span class="choice-btn__text">Сбросить хронику и вновь прожить свою версию 90-х с самого начала.</span>
             </span>
+            <span class="choice-btn__arrow" aria-hidden="true">↺</span>
         `;
         btn.onclick = resetGame;
         els.choices.appendChild(btn);
@@ -1702,7 +1699,7 @@ function renderUI() {
                         <span class="stat-card__icon">${visual.icon}</span>
                         <div>
                             <div class="stat-card__name">${escapeHTML(STATS_INFO[key].name)}</div>
-                            <div class="stat-card__desc">${escapeHTML(visual.short)} · ${escapeHTML(getStatDescriptor(value))}</div>
+                            <div class="stat-card__desc">${escapeHTML(visual.short)}</div>
                         </div>
                     </div>
                     <span class="stat-card__value ${toneClass}">${value}</span>

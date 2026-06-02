@@ -958,46 +958,42 @@ button.primary {
 }
 
 .choices-wrap {
-    padding: 18px;
-    border-radius: 28px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-    border: 1px solid rgba(255,255,255,0.08);
+    padding: 14px 0 0;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
 }
 
-.choices-head {
-    margin-bottom: 14px;
-}
-
-.choices-head h3 {
-    margin-top: 6px;
-    font-size: 1.34rem;
+.choices-wrap--minimal {
+    padding-top: 6px;
 }
 
 .choices {
     display: grid;
-    gap: 14px;
+    gap: 10px;
 }
 
 .choices > * {
     opacity: 0;
-    transform: translateY(16px);
-    animation: choiceRise 0.55s ease forwards;
+    transform: translateY(10px);
+    animation: choiceRise 0.42s ease forwards;
 }
 
-.choices > *:nth-child(1) { animation-delay: 0.05s; }
-.choices > *:nth-child(2) { animation-delay: 0.11s; }
-.choices > *:nth-child(3) { animation-delay: 0.17s; }
-.choices > *:nth-child(4) { animation-delay: 0.23s; }
+.choices > *:nth-child(1) { animation-delay: 0.03s; }
+.choices > *:nth-child(2) { animation-delay: 0.07s; }
+.choices > *:nth-child(3) { animation-delay: 0.11s; }
+.choices > *:nth-child(4) { animation-delay: 0.15s; }
 
 .choice-btn {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 16px;
-    align-items: flex-start;
     width: 100%;
-    padding: 18px 18px 18px 16px;
-    border-radius: 24px;
+    padding: 16px 18px;
+    border-radius: 20px;
     border: 1px solid rgba(255,255,255,0.08);
-    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.025));
+    background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.018));
     color: var(--text-main);
     cursor: pointer;
     text-align: left;
@@ -1005,9 +1001,9 @@ button.primary {
 }
 
 .choice-btn:hover {
-    transform: translateY(-4px);
-    border-color: color-mix(in srgb, var(--accent) 42%, transparent);
-    box-shadow: 0 16px 34px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.05);
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .choice-btn:disabled {
@@ -1016,37 +1012,28 @@ button.primary {
     transform: none;
 }
 
-.choice-btn__index {
-    flex: 0 0 92px;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 40px;
-    padding: 8px 10px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-    color: #cfe9ff;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.76rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
 .choice-btn__body {
     display: grid;
-    gap: 6px;
+    gap: 4px;
+    min-width: 0;
+}
+
+.choice-btn__body--single {
+    gap: 0;
 }
 
 .choice-btn__title {
     font-size: 1rem;
     font-weight: 700;
-    color: #fff5dc;
+    color: #f6edd8;
+    line-height: 1.42;
 }
 
-.choice-btn__text {
-    font-size: 0.92rem;
-    line-height: 1.6;
-    color: var(--text-soft);
+.choice-btn__arrow {
+    flex: 0 0 auto;
+    color: color-mix(in srgb, var(--accent) 72%, white 10%);
+    font-size: 1.08rem;
+    opacity: 0.9;
 }
 
 .status-stack {
@@ -1537,15 +1524,12 @@ button.primary {
     }
 
     .choice-btn {
-        flex-direction: column;
         gap: 12px;
-        padding: 16px;
+        padding: 15px 16px;
     }
 
-    .choice-btn__index {
-        min-height: 34px;
-        min-width: 0;
-        width: fit-content;
+    .choice-btn__title {
+        font-size: 0.98rem;
     }
 
     .controls-row {
