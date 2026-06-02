@@ -23,8 +23,8 @@ export const LLM_PROVIDERS = {
         serverPath: "/api/openrouter",
         storageKey: "rpg90_key_openrouter",
         models: {
-            main: "google/gemini-2.5-flash",
-            enhance: "google/gemini-2.5-pro"
+            main: "z-ai/glm-5.1",
+            enhance: "z-ai/glm-5.1"
         }
     },
     hybrid: {
@@ -36,7 +36,7 @@ export const LLM_PROVIDERS = {
             enhance: "hydra"
         },
         models: {
-            main: "google/gemini-2.5-flash",
+            main: "z-ai/glm-5.1",
             enhance: "gemini-3.1-pro"
         }
     }
