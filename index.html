@@ -19,37 +19,37 @@
                     <div class="setup-eyebrow">Интерактивная хроника детства</div>
                     <h1>Эпоха Перемен</h1>
                     <p class="setup-lead">
-                        Атмосферная текстовая RPG о жизни в России 90-х — с бытовыми деталями, улицей, двором,
-                        страхами, дружбой, дефицитом и настоящими маленькими трагедиями.
+                        Атмосферная текстовая RPG о жизни в России 90-х — с дворами, подъездами, дефицитом,
+                        тревогой перемен и теми маленькими событиями, которые потом помнятся всю жизнь.
                     </p>
 
                     <div class="setup-feature-grid">
                         <div class="setup-feature-card">
                             <span class="setup-feature-icon">📼</span>
                             <div>
-                                <strong>Ностальгия с нервом</strong>
-                                <p>Не открытка, а живая эпоха — с холодными подъездами, ларьками и запахом зимы.</p>
+                                <strong>Ностальгия без глянца</strong>
+                                <p>Не открытка, а настоящая эпоха — с холодом лестничных клеток и светом кухонь.</p>
                             </div>
                         </div>
                         <div class="setup-feature-card">
                             <span class="setup-feature-icon">🧒</span>
                             <div>
                                 <strong>Взгляд ребёнка</strong>
-                                <p>Повествование идёт изнутри возраста, а не с высоты взрослого послезнания.</p>
+                                <p>История рассказывается не с высоты взрослого, а изнутри возраста героя.</p>
                             </div>
                         </div>
                         <div class="setup-feature-card">
                             <span class="setup-feature-icon">🗺️</span>
                             <div>
-                                <strong>География имеет значение</strong>
-                                <p>Москва, Сибирь, Кавказ или дальневосточное село — каждая жизнь звучит по-разному.</p>
+                                <strong>Разные судьбы</strong>
+                                <p>Москва, Сибирь, село на Урале или Кавказ — место меняет сам ритм жизни.</p>
                             </div>
                         </div>
                         <div class="setup-feature-card">
                             <span class="setup-feature-icon">🎭</span>
                             <div>
-                                <strong>Статы с подвохом</strong>
-                                <p>Крайности не спасают: слишком много и слишком мало — одинаково опасны.</p>
+                                <strong>Крайности опасны</strong>
+                                <p>Здесь не работает логика «чем больше — тем лучше». Любой перекос чего-то стоит.</p>
                             </div>
                         </div>
                     </div>
@@ -57,131 +57,179 @@
             </section>
 
             <section class="setup-form-wrap">
+                <div class="setup-form-topbar">
+                    <button type="button" class="icon-btn icon-btn--ghost" id="setup-settings-btn" aria-label="Открыть настройки">⚙</button>
+                </div>
+
                 <div class="setup-form-head">
                     <div>
-                        <div class="setup-eyebrow">Настрой старт</div>
-                        <h2>Собери свою версию 1993-го</h2>
+                        <div class="setup-eyebrow">Создание героя</div>
+                        <h2 id="setup-step-title">Пролог</h2>
                     </div>
-                    <div class="setup-badge">✦ Хроника начнётся с первого зимнего вдоха</div>
+                    <div class="setup-badge" id="setup-step-hint-badge">Начнём спокойно, шаг за шагом.</div>
                 </div>
 
-                <div class="setup-section api-section">
-                    <h3 id="api-provider-title">🔑 API ключ</h3>
-
-                    <div class="provider-switch provider-switch-setup">
-                        <div class="provider-switch-title">Провайдер запросов</div>
-                        <div class="provider-buttons">
-                        <button type="button" class="provider-btn selected" data-provider="hydra">🌀 Hydra</button>
-                        <button type="button" class="provider-btn" data-provider="openrouter">🧭 OpenRouter</button>
-                        <button type="button" class="provider-btn" data-provider="hybrid">🧩 Hybrid</button>
+                <div class="setup-progress-wrap">
+                    <div class="setup-progress-labels">
+                        <span id="setup-step-counter">Шаг 1 из 5</span>
+                        <span id="setup-step-caption">Вступление</span>
                     </div>
-                        <div class="provider-models" data-provider-models></div>
-                    </div>
-
-                    <input type="password" id="api-key" placeholder="Hydra API key">
-                    <div id="api-key-hint" class="provider-hint">
-                        Можно оставить пустым, если на сервере настроен ключ для выбранного провайдера.
+                    <div class="setup-progress-track">
+                        <div class="setup-progress-fill" id="setup-progress-fill"></div>
                     </div>
                 </div>
 
-                <div class="setup-section">
-                    <h3>⚔️ Сложность</h3>
-                    <div class="setup-row">
-                        <div class="option-buttons" id="difficulty-btns">
-                            <button class="option-btn selected" data-value="normal">🛡️ Норма</button>
-                            <button class="option-btn" data-value="hardcore">💀 Хардкор</button>
-                        </div>
-                    </div>
-                    <div class="difficulty-info" id="difficulty-info">
-                        <strong>Норма:</strong> 4 варианта выбора. Одно чудесное спасение за игру.
-                    </div>
-                </div>
-
-                <div class="setup-grid-2">
-                    <div class="setup-section">
-                        <h3>👤 Персонаж</h3>
-                        <div class="setup-row setup-row-stack-mobile">
-                            <label>Пол:</label>
-                            <div class="option-buttons" id="gender-btns">
-                                <button class="option-btn selected" data-value="male">♂ Мальчик</button>
-                                <button class="option-btn" data-value="female">♀ Девочка</button>
+                <div class="setup-wizard" id="setup-wizard">
+                    <section class="setup-step active" data-step="0">
+                        <div class="setup-section setup-section--focus">
+                            <h3>Добро пожаловать</h3>
+                            <p class="setup-copy">
+                                Ты проживёшь жизнь ребёнка в России 90-х. Каждый ход — не просто событие, а маленький сдвиг судьбы:
+                                в семье, здоровье, дружбе, самоощущении и месте в мире.
+                            </p>
+                            <div class="setup-tip">
+                                <strong>Подсказка:</strong>
+                                игра любит не «победные» решения, а жизненные. Иногда самый осторожный выбор — тоже драма.
                             </div>
                         </div>
-                        <div class="setup-row">
-                            <label>Возраст:</label>
-                            <select id="start-age">
-                                <option value="5">5 лет (детсад)</option>
-                                <option value="6">6 лет (подготовка)</option>
-                                <option value="7" selected>7 лет (1 класс)</option>
-                                <option value="8">8 лет (2 класс)</option>
-                                <option value="9">9 лет (3 класс)</option>
-                                <option value="10">10 лет (4 класс)</option>
-                                <option value="11">11 лет (5 класс)</option>
-                                <option value="12">12 лет (6 класс)</option>
-                            </select>
-                        </div>
-                    </div>
+                    </section>
 
-                    <div class="setup-section">
-                        <h3>⏱️ Темп повествования</h3>
-                        <div class="setup-row">
-                            <div class="option-buttons" id="pace-btns">
-                                <button class="option-btn selected" data-value="season">По сезонам</button>
-                                <button class="option-btn" data-value="year">По годам</button>
+                    <section class="setup-step" data-step="1">
+                        <div class="setup-section">
+                            <h3>Кто твой герой</h3>
+                            <div class="setup-row setup-row-stack-mobile">
+                                <label>Пол:</label>
+                                <div class="option-buttons" id="gender-btns">
+                                    <button class="option-btn selected" data-value="male">♂ Мальчик</button>
+                                    <button class="option-btn" data-value="female">♀ Девочка</button>
+                                </div>
+                            </div>
+                            <div class="setup-row">
+                                <label>Возраст:</label>
+                                <select id="start-age">
+                                    <option value="5">5 лет (детсад)</option>
+                                    <option value="6">6 лет (подготовка)</option>
+                                    <option value="7" selected>7 лет (1 класс)</option>
+                                    <option value="8">8 лет (2 класс)</option>
+                                    <option value="9">9 лет (3 класс)</option>
+                                    <option value="10">10 лет (4 класс)</option>
+                                    <option value="11">11 лет (5 класс)</option>
+                                    <option value="12">12 лет (6 класс)</option>
+                                </select>
+                            </div>
+                            <div class="setup-tip">
+                                <strong>Подсказка:</strong>
+                                чем младше герой, тем наивнее язык и уже круг влияния. Чем старше — тем больше улицы, стыда, выбора и риска.
                             </div>
                         </div>
-                        <div class="pace-info" id="pace-info">
-                            <strong>По сезонам:</strong> каждый ход = новый сезон<br>
-                            <span class="pace-example">Зима 1993 → Весна 1993 → Лето 1993 → …</span>
+                    </section>
+
+                    <section class="setup-step" data-step="2">
+                        <div class="setup-section location-section">
+                            <h3>Где всё начинается</h3>
+                            <div class="setup-row setup-row-stack-mobile">
+                                <label>Тип:</label>
+                                <div class="option-buttons option-buttons-wrap" id="location-type-btns">
+                                    <button class="option-btn" data-value="village">🏡 Село</button>
+                                    <button class="option-btn" data-value="town">🏘️ Город</button>
+                                    <button class="option-btn selected" data-value="capital">🏙️ Столица</button>
+                                </div>
+                            </div>
+
+                            <div class="setup-row" id="region-select-row" style="display:none;">
+                                <label>Регион:</label>
+                                <select id="region-select" class="region-select">
+                                    <option value="central">🌲 Центральная Россия</option>
+                                    <option value="siberia">❄️ Сибирь</option>
+                                    <option value="far_east">🌊 Дальний Восток</option>
+                                    <option value="ural">⛰️ Урал</option>
+                                    <option value="black_sea">🏖️ Черноморское побережье</option>
+                                    <option value="north_caucasus">🏔️ Северный Кавказ</option>
+                                </select>
+                            </div>
+
+                            <div class="setup-row" id="city-select-row">
+                                <label>Город:</label>
+                                <select id="city-select" class="city-select">
+                                    <option value="moscow">🏛️ Москва</option>
+                                    <option value="spb">🌉 Санкт-Петербург</option>
+                                    <option value="novosibirsk">🏭 Новосибирск</option>
+                                    <option value="vladivostok">⚓ Владивосток</option>
+                                    <option value="ekaterinburg">🏗️ Екатеринбург</option>
+                                    <option value="rostov">🌻 Ростов-на-Дону</option>
+                                    <option value="grozny">🕌 Грозный</option>
+                                </select>
+                            </div>
+
+                            <div class="location-description" id="location-description">
+                                Москва — столица, огромный муравейник...
+                            </div>
+
+                            <div class="setup-tip">
+                                <strong>Подсказка:</strong>
+                                локация влияет не только на декорации. Она меняет быт, темп взросления, уровень опасности и даже то, что считается нормой.
+                            </div>
                         </div>
-                    </div>
+                    </section>
+
+                    <section class="setup-step" data-step="3">
+                        <div class="setup-grid-2 setup-grid-2--tight">
+                            <div class="setup-section">
+                                <h3>Темп повествования</h3>
+                                <div class="setup-row">
+                                    <div class="option-buttons" id="pace-btns">
+                                        <button class="option-btn selected" data-value="season">По сезонам</button>
+                                        <button class="option-btn" data-value="year">По годам</button>
+                                    </div>
+                                </div>
+                                <div class="pace-info" id="pace-info">
+                                    <strong>По сезонам:</strong> каждый ход = новый сезон<br>
+                                    <span class="pace-example">Зима 1993 → Весна 1993 → Лето 1993 → …</span>
+                                </div>
+                            </div>
+
+                            <div class="setup-section">
+                                <h3>Сложность</h3>
+                                <div class="setup-row">
+                                    <div class="option-buttons" id="difficulty-btns">
+                                        <button class="option-btn selected" data-value="normal">🛡️ Норма</button>
+                                        <button class="option-btn" data-value="hardcore">💀 Хардкор</button>
+                                    </div>
+                                </div>
+                                <div class="difficulty-info" id="difficulty-info">
+                                    <strong>Норма:</strong> 4 варианта выбора. Одно чудесное спасение за игру.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setup-tip">
+                            <strong>Подсказка:</strong>
+                            сезонный режим даёт больше сцен, нюансов и медленного взросления. Годовой — резче и эпичнее, но многое пролетает быстрее.
+                        </div>
+                    </section>
+
+                    <section class="setup-step" data-step="4">
+                        <div class="setup-section setup-section--focus">
+                            <h3>Твой старт</h3>
+                            <p class="setup-copy setup-copy--small">
+                                Ниже — случайный стартовый срез жизни героя: близкие люди, вещи, атмосфера дома и то,
+                                как всё это повлияет на первые ощущения от мира.
+                            </p>
+                            <div class="setup-tip">
+                                <strong>Подсказка:</strong>
+                                не пытайся собрать «идеальный» старт. В этой игре интереснее всего работают шероховатости, нехватка и странные совпадения.
+                            </div>
+                        </div>
+
+                        <div class="start-preview" id="start-preview"></div>
+                        <button id="start-btn" class="primary">Начать игру</button>
+                    </section>
                 </div>
 
-                <div class="setup-section location-section">
-                    <h3>📍 Локация</h3>
-
-                    <div class="setup-row setup-row-stack-mobile">
-                        <label>Тип:</label>
-                        <div class="option-buttons option-buttons-wrap" id="location-type-btns">
-                            <button class="option-btn" data-value="village">🏡 Село</button>
-                            <button class="option-btn" data-value="town">🏘️ Город</button>
-                            <button class="option-btn selected" data-value="capital">🏙️ Столица</button>
-                        </div>
-                    </div>
-
-                    <div class="setup-row" id="region-select-row" style="display:none;">
-                        <label>Регион:</label>
-                        <select id="region-select" class="region-select">
-                            <option value="central">🌲 Центральная Россия</option>
-                            <option value="siberia">❄️ Сибирь</option>
-                            <option value="far_east">🌊 Дальний Восток</option>
-                            <option value="ural">⛰️ Урал</option>
-                            <option value="black_sea">🏖️ Черноморское побережье</option>
-                            <option value="north_caucasus">🏔️ Северный Кавказ</option>
-                        </select>
-                    </div>
-
-                    <div class="setup-row" id="city-select-row">
-                        <label>Город:</label>
-                        <select id="city-select" class="city-select">
-                            <option value="moscow">🏛️ Москва</option>
-                            <option value="spb">🌉 Санкт-Петербург</option>
-                            <option value="novosibirsk">🏭 Новосибирск</option>
-                            <option value="vladivostok">⚓ Владивосток</option>
-                            <option value="ekaterinburg">🏗️ Екатеринбург</option>
-                            <option value="rostov">🌻 Ростов-на-Дону</option>
-                            <option value="grozny">🕌 Грозный</option>
-                        </select>
-                    </div>
-
-                    <div class="location-description" id="location-description">
-                        Москва — столица, огромный муравейник...
-                    </div>
+                <div class="setup-nav" id="setup-nav">
+                    <button type="button" class="control-btn control-btn--ghost" id="setup-prev-btn">Назад</button>
+                    <button type="button" class="control-btn" id="setup-next-btn">Дальше</button>
                 </div>
-
-                <div class="start-preview" id="start-preview"></div>
-
-                <button id="start-btn" class="primary">Начать игру</button>
 
                 <div class="support-card support-card--setup">
                     <p class="support-card__title">💖 Поддержать проект</p>
@@ -194,6 +242,37 @@
         </div>
     </div>
 
+    <div class="settings-modal hidden" id="settings-modal" aria-hidden="true">
+        <div class="settings-backdrop" id="settings-backdrop"></div>
+        <div class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <div class="settings-sheet__head">
+                <div>
+                    <div class="setup-eyebrow">Технические настройки</div>
+                    <h3 id="settings-title">Маршрут запросов</h3>
+                </div>
+                <button type="button" class="icon-btn icon-btn--ghost" id="settings-close-btn" aria-label="Закрыть настройки">✕</button>
+            </div>
+
+            <div class="provider-switch">
+                <div class="provider-switch-title">Провайдер</div>
+                <div class="provider-buttons">
+                    <button type="button" class="provider-btn" data-provider="hydra">🌀 Hydra</button>
+                    <button type="button" class="provider-btn" data-provider="openrouter">🧭 OpenRouter</button>
+                    <button type="button" class="provider-btn" data-provider="hybrid">🧩 Hybrid</button>
+                </div>
+                <div class="provider-models" data-provider-models></div>
+            </div>
+
+            <div class="settings-key-block">
+                <label id="api-provider-title" class="settings-label">API ключ</label>
+                <input type="password" id="api-key" placeholder="Hydra API key">
+                <div id="api-key-hint" class="provider-hint">
+                    Можно оставить пустым, если на сервере настроен ключ для выбранного провайдера.
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container app-shell hidden" id="game-ui">
         <section class="panel panel-main">
             <div class="date-badge" id="date-display">
@@ -202,7 +281,16 @@
                 </div>
                 <div class="date-badge__location">
                     <span class="location" id="location-display"></span>
+                    <button type="button" class="icon-btn icon-btn--inline" id="game-settings-btn" aria-label="Открыть настройки">⚙</button>
                 </div>
+            </div>
+
+            <div class="archive-strip" id="archive-strip">
+                <button type="button" class="archive-btn" id="archive-prev-btn" aria-label="Предыдущий период">←</button>
+                <div class="archive-label" id="archive-label">Текущий период</div>
+                <button type="button" class="archive-btn" id="archive-current-btn" aria-label="Вернуться к текущему периоду">●</button>
+                <button type="button" class="archive-btn" id="archive-copy-btn" aria-label="Скопировать текущий период">⧉</button>
+                <button type="button" class="archive-btn" id="archive-next-btn" aria-label="Следующий период">→</button>
             </div>
 
             <div class="story-stage">
@@ -210,7 +298,7 @@
                     <div id="story-display" class="story-content"></div>
                 </div>
                 <div class="loading-bar" id="loader"></div>
-                <div class="choices-wrap choices-wrap--minimal">
+                <div class="choices-wrap choices-wrap--minimal" id="choices-wrap">
                     <div class="choices" id="choices-display"></div>
                 </div>
             </div>
@@ -218,48 +306,33 @@
 
         <aside class="panel panel-sidebar">
             <div class="sidebar-scroll">
-                <div class="provider-switch sidebar-card">
-                    <div class="provider-switch-title">LLM маршрут</div>
-                    <div class="provider-buttons">
-                        <button type="button" class="provider-btn selected" data-provider="hydra">🌀 Hydra</button>
-                        <button type="button" class="provider-btn" data-provider="openrouter">🧭 OpenRouter</button>
-                        <button type="button" class="provider-btn" data-provider="hybrid">🧩 Hybrid</button>
-                    </div>
-                    <div class="provider-models" data-provider-models></div>
-                </div>
-
                 <div id="mode-display" class="status-stack"></div>
 
                 <section class="sidebar-card personality-card">
                     <div class="sidebar-card__head">
-                        <div>
-                            <h3>Личность</h3>
-                        </div>
+                        <div><h3>Личность</h3></div>
                     </div>
                     <div id="stats-display" class="stats-grid"></div>
                 </section>
 
                 <section class="sidebar-card">
                     <div class="sidebar-card__head">
-                        <div>
-                            <h3>Близкие люди</h3>
-                        </div>
+                        <div><h3>Близкие люди</h3></div>
                     </div>
                     <div id="npcs-display" class="lore-list"></div>
                 </section>
 
                 <section class="sidebar-card">
                     <div class="sidebar-card__head">
-                        <div>
-                            <h3>Вещи и память</h3>
-                        </div>
+                        <div><h3>Вещи и память</h3></div>
                     </div>
                     <div id="inventory-display" class="lore-list"></div>
                 </section>
 
-                <div class="controls-row">
-                    <button onclick="copyHistoryToClipboard()" class="control-btn">📋 Копировать историю</button>
-                    <button onclick="resetGame()" class="control-btn control-btn--danger">🔄 Сброс</button>
+                <div class="controls-row controls-row--stack">
+                    <button onclick="copyCurrentPeriodToClipboard()" class="control-btn">⧉ Период</button>
+                    <button onclick="copyHistoryToClipboard()" class="control-btn">📋 Вся история</button>
+                    <button onclick="resetGame()" class="control-btn control-btn--danger">↺ Сброс</button>
                 </div>
 
                 <div class="support-card support-card--sidebar">

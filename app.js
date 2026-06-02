@@ -59,6 +59,8 @@ function createDefaultState() {
         enhancedHistory: [],
         compressedSummary: '',
         lastCompressTurn: 0,
+        archiveEntries: [],
+        archiveViewIndex: null,
         gameOver: false,
         miracleUsed: false,
         miracleAvailable: true,
@@ -79,6 +81,36 @@ let userApiKeys = {
     hydra: '',
     openrouter: ''
 };
+
+let setupStepIndex = 0;
+
+const SETUP_STEPS = [
+    {
+        title: 'Пролог',
+        caption: 'Вступление',
+        badge: 'Начнём спокойно, шаг за шагом.'
+    },
+    {
+        title: 'Кто твой герой',
+        caption: 'Персонаж',
+        badge: 'Пол и возраст определяют интонацию всей жизни.'
+    },
+    {
+        title: 'Где всё начинается',
+        caption: 'Локация',
+        badge: 'Место рождения — это тоже часть судьбы.'
+    },
+    {
+        title: 'Как течёт время',
+        caption: 'Ритм игры',
+        badge: 'Темп и сложность задают драматургию прохождения.'
+    },
+    {
+        title: 'Первый срез жизни',
+        caption: 'Старт',
+        badge: 'Последний взгляд перед тем, как всё начнётся по-настоящему.'
+    }
+];
 
 // ========== ЭЛЕМЕНТЫ DOM ==========
 
@@ -104,7 +136,26 @@ const els = {
     cityRow: document.getElementById('city-select-row'),
     regionSelect: document.getElementById('region-select'),
     citySelect: document.getElementById('city-select'),
-    startAge: document.getElementById('start-age')
+    startAge: document.getElementById('start-age'),
+    choicesWrap: document.getElementById('choices-wrap'),
+    setupPrevBtn: document.getElementById('setup-prev-btn'),
+    setupNextBtn: document.getElementById('setup-next-btn'),
+    setupStepCounter: document.getElementById('setup-step-counter'),
+    setupStepCaption: document.getElementById('setup-step-caption'),
+    setupStepTitle: document.getElementById('setup-step-title'),
+    setupStepHintBadge: document.getElementById('setup-step-hint-badge'),
+    setupSettingsBtn: document.getElementById('setup-settings-btn'),
+    gameSettingsBtn: document.getElementById('game-settings-btn'),
+    settingsModal: document.getElementById('settings-modal'),
+    settingsBackdrop: document.getElementById('settings-backdrop'),
+    settingsCloseBtn: document.getElementById('settings-close-btn'),
+    setupProgressFill: document.getElementById('setup-progress-fill'),
+    archiveStrip: document.getElementById('archive-strip'),
+    archivePrevBtn: document.getElementById('archive-prev-btn'),
+    archiveNextBtn: document.getElementById('archive-next-btn'),
+    archiveCurrentBtn: document.getElementById('archive-current-btn'),
+    archiveCopyBtn: document.getElementById('archive-copy-btn'),
+    archiveLabel: document.getElementById('archive-label')
 };
 
 // ========== УТИЛИТЫ ==========
@@ -248,6 +299,217 @@ function applyVisualMood(screen = (els.game.classList.contains('hidden') ? 'setu
     document.body.dataset.screen = screen;
 }
 
+function cloneData(obj) {
+    return obj ? JSON.parse(JSON.stringify(obj)) : null;
+}
+
+function getDateLabel(seasonIdx = state.seasonIdx, year = state.year) {
+    return `${SEASONS[seasonIdx]} ${year}`;
+}
+
+function buildArchiveStoryMarkup(entry) {
+    if (!entry) return renderMarkdown(state.lastStory || '');
+
+    let html = renderMarkdown(entry.storyEnhanced || entry.story || '');
+
+    if (entry.miracleStory) {
+        html += `<hr><div class="miracle-banner"><h2>✨ ЧУДЕСНОЕ СПАСЕНИЕ</h2><p>Судьба смилостивилась...</p></div>`;
+        html += renderMarkdown(entry.miracleStory);
+    }
+
+    if (entry.gameOverData) {
+        const god = entry.gameOverData;
+        html += `<hr><div class="game-over-banner"><h2>💀 GAME OVER</h2><p>${escapeHTML(entry.dateLabel || '')}, ${escapeHTML(String(entry.age || ''))} лет</p></div>`;
+        html += `<h2 style="color:var(--accent);">🕯️ Эпилог</h2>${renderMarkdown(god.epilogue || '')}`;
+        html += `<div class="game-over-reasons"><strong>Что привело:</strong><ul>${(god.reasons || []).map((r) => `<li>${escapeHTML(r)}</li>`).join('')}</ul></div>`;
+        html += renderMarkdown(`> "${god.epitaph || ''}"`);
+    }
+
+    return html;
+}
+
+function getSelectedArchiveEntry() {
+    if (!state.archiveEntries?.length) return null;
+    if (state.archiveViewIndex === null || state.archiveViewIndex === undefined) {
+        return state.archiveEntries[state.archiveEntries.length - 1] || null;
+    }
+    return state.archiveEntries[state.archiveViewIndex] || null;
+}
+
+function isArchiveMode() {
+    return state.archiveViewIndex !== null && state.archiveViewIndex !== undefined;
+}
+
+function advanceTimeSnapshot(snapshot) {
+    if (snapshot.pace === 'year') {
+        snapshot.year += 1;
+        snapshot.age += 1;
+        snapshot.seasonIdx = (snapshot.seasonIdx + 3) % 4;
+    } else {
+        snapshot.seasonIdx += 1;
+        if (snapshot.seasonIdx > 3) {
+            snapshot.seasonIdx = 0;
+            snapshot.year += 1;
+            snapshot.age += 1;
+        }
+    }
+}
+
+function backfillArchiveEntriesFromHistory() {
+    if (state.archiveEntries?.length || !state.enhancedHistory?.length) return;
+
+    const snapshot = {
+        year: 1993,
+        seasonIdx: 0,
+        age: state.startAge || state.age || 7,
+        pace: state.pace || 'season'
+    };
+
+    state.archiveEntries = state.enhancedHistory.map((story, index) => {
+        advanceTimeSnapshot(snapshot);
+        return {
+            turn: index + 1,
+            dateLabel: getDateLabel(snapshot.seasonIdx, snapshot.year),
+            seasonIdx: snapshot.seasonIdx,
+            year: snapshot.year,
+            age: snapshot.age,
+            storyEnhanced: story,
+            storyOriginal: state.originalHistory?.[index] || story,
+            action: null,
+            miracleStory: null,
+            gameOverData: null
+        };
+    });
+
+    if (state.archiveEntries.length) {
+        const last = state.archiveEntries[state.archiveEntries.length - 1];
+        if (state.lastMiracle) last.miracleStory = state.lastMiracle;
+        if (state.gameOverData) last.gameOverData = cloneData(state.gameOverData);
+    }
+
+    if (state.archiveViewIndex === undefined) state.archiveViewIndex = null;
+}
+
+function pushArchiveEntry(entry) {
+    if (!state.archiveEntries) state.archiveEntries = [];
+    state.archiveEntries.push(entry);
+    state.archiveViewIndex = null;
+}
+
+function renderArchiveStrip() {
+    if (!els.archiveStrip) return;
+
+    const hasArchive = !!state.archiveEntries?.length;
+    els.archiveStrip.style.display = hasArchive ? 'flex' : 'none';
+    if (!hasArchive) return;
+
+    const entry = getSelectedArchiveEntry();
+    const isArchive = isArchiveMode();
+    const currentIndex = isArchive ? state.archiveViewIndex : state.archiveEntries.length - 1;
+
+    els.archiveLabel.textContent = entry
+        ? `${entry.dateLabel || ''}${entry.age ? ` · ${entry.age} лет` : ''}${isArchive ? '' : ' · сейчас'}`
+        : 'Текущий период';
+
+    els.archivePrevBtn.disabled = currentIndex <= 0;
+    els.archiveNextBtn.disabled = !isArchive;
+    els.archiveCurrentBtn.disabled = !isArchive;
+    els.archiveCopyBtn.disabled = !entry;
+}
+
+function setArchiveView(index = null) {
+    state.archiveViewIndex = index;
+    save();
+    renderUI();
+}
+
+async function copyArchiveEntryToClipboard(entry) {
+    if (!entry) return;
+
+    const locInfo = getLocationInfo();
+    let text = `=== ${entry.dateLabel || ''} ===\n`;
+    text += `Персонаж: ${GENDER_INFO[state.gender].name}, ${entry.age || state.age} лет\n`;
+    text += `Локация: ${locInfo.fullName}\n\n`;
+    if (entry.action) text += `Выбор: ${entry.action}\n\n`;
+    text += `${entry.storyEnhanced || entry.story || ''}`;
+    if (entry.miracleStory) text += `\n\n[Чудесное спасение]\n${entry.miracleStory}`;
+    if (entry.gameOverData?.epilogue) text += `\n\n[Эпилог]\n${entry.gameOverData.epilogue}`;
+
+    await navigator.clipboard.writeText(text);
+}
+
+function renderSetupWizard() {
+    const steps = document.querySelectorAll('.setup-step');
+    const lastIndex = SETUP_STEPS.length - 1;
+    const safeIndex = Math.max(0, Math.min(lastIndex, setupStepIndex));
+    setupStepIndex = safeIndex;
+
+    steps.forEach((step, index) => {
+        step.classList.toggle('active', index === safeIndex);
+        step.classList.toggle('hidden', index !== safeIndex);
+    });
+
+    const meta = SETUP_STEPS[safeIndex];
+    if (els.setupStepTitle) els.setupStepTitle.textContent = meta.title;
+    if (els.setupStepCaption) els.setupStepCaption.textContent = meta.caption;
+    if (els.setupStepCounter) els.setupStepCounter.textContent = `Шаг ${safeIndex + 1} из ${SETUP_STEPS.length}`;
+    if (els.setupStepHintBadge) els.setupStepHintBadge.textContent = meta.badge;
+    if (els.setupProgressFill) els.setupProgressFill.style.width = `${((safeIndex + 1) / SETUP_STEPS.length) * 100}%`;
+
+    if (els.setupPrevBtn) els.setupPrevBtn.disabled = safeIndex === 0;
+    if (els.setupNextBtn) {
+        els.setupNextBtn.style.display = safeIndex === lastIndex ? 'none' : 'inline-flex';
+        els.setupNextBtn.textContent = safeIndex === 0 ? 'Начать' : 'Дальше';
+    }
+
+    if (els.startBtn) {
+        els.startBtn.style.display = safeIndex === lastIndex ? 'inline-flex' : 'none';
+    }
+}
+
+function openSettingsModal() {
+    if (!els.settingsModal) return;
+    els.settingsModal.classList.remove('hidden');
+    els.settingsModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeSettingsModal() {
+    if (!els.settingsModal) return;
+    els.settingsModal.classList.add('hidden');
+    els.settingsModal.setAttribute('aria-hidden', 'true');
+}
+
+function setupSettingsModal() {
+    els.setupSettingsBtn?.addEventListener('click', openSettingsModal);
+    els.gameSettingsBtn?.addEventListener('click', openSettingsModal);
+    els.settingsCloseBtn?.addEventListener('click', closeSettingsModal);
+    els.settingsBackdrop?.addEventListener('click', closeSettingsModal);
+}
+
+function setupArchiveControls() {
+    els.archivePrevBtn?.addEventListener('click', () => {
+        if (!state.archiveEntries?.length) return;
+        if (!isArchiveMode()) setArchiveView(state.archiveEntries.length - 1);
+        else if (state.archiveViewIndex > 0) setArchiveView(state.archiveViewIndex - 1);
+    });
+
+    els.archiveNextBtn?.addEventListener('click', () => {
+        if (!isArchiveMode()) return;
+        if (state.archiveViewIndex < state.archiveEntries.length - 1) setArchiveView(state.archiveViewIndex + 1);
+        else setArchiveView(null);
+    });
+
+    els.archiveCurrentBtn?.addEventListener('click', () => setArchiveView(null));
+    els.archiveCopyBtn?.addEventListener('click', async () => {
+        try {
+            await copyArchiveEntryToClipboard(getSelectedArchiveEntry());
+            alert('✅ Период скопирован!');
+        } catch (e) {
+            console.error('Archive copy error:', e);
+            alert('❌ Не удалось скопировать период.');
+        }
+    });
+}
 
 function setLoading(value) {
     els.loader.style.display = value ? 'block' : 'none';
@@ -1336,6 +1598,21 @@ ${statsGuidance ? `\nОсобые указания по параметрам п�
         advanceTime();
         await checkCriticalStats(state.lastStory);
 
+        pushArchiveEntry({
+            turn: state.turnCount,
+            action,
+            dateLabel: getDateLabel(state.seasonIdx, state.year),
+            seasonIdx: state.seasonIdx,
+            year: state.year,
+            age: state.age,
+            storyOriginal: originalStory,
+            storyEnhanced: enhancedStory,
+            miracleStory: state.lastMiracle || null,
+            gameOverData: cloneData(state.gameOverData)
+        });
+
+        state.lastMiracle = null;
+
         save();
         renderUI();
     } catch (error) {
@@ -1619,11 +1896,17 @@ function applyUpdates(u) {
 function renderUI() {
     const locInfo = getLocationInfo();
     const providerCfg = getProviderConfig();
+    const archiveEntry = getSelectedArchiveEntry();
+    const archiveMode = isArchiveMode();
 
     applyVisualMood('game');
     renderProviderSwitcher();
+    renderArchiveStrip();
 
-    els.dateText.innerText = `${SEASONS[state.seasonIdx]} ${state.year} | ${state.age} лет`;
+    const shownDate = archiveEntry?.dateLabel || getDateLabel();
+    const shownAge = archiveEntry?.age ?? state.age;
+
+    els.dateText.innerText = `${shownDate} | ${shownAge} лет`;
     els.locationDisplay.textContent = locInfo.fullName;
 
     let modeHTML = '';
@@ -1637,52 +1920,44 @@ function renderUI() {
         else modeHTML += `<span class="miracle-badge used">✨ Спасение использовано</span>`;
     }
 
-    if (state.lifeSummary) {
+    if (archiveMode) {
+        modeHTML += `<span class="summary-badge">📖 Архив</span>`;
+    } else if (state.lifeSummary) {
         modeHTML += `<span class="summary-badge">📝 Сводка: ход ${state.lastSummaryTurn}</span>`;
     }
 
     els.modeDisplay.innerHTML = modeHTML;
-
-    if (state.gameOver && state.gameOverData) {
-        const god = state.gameOverData;
-        els.story.innerHTML = renderMarkdown(state.lastStory || '') +
-            `<hr><div class="game-over-banner"><h2>💀 GAME OVER</h2><p>${SEASONS[state.seasonIdx]} ${state.year}, ${state.age} лет</p></div>` +
-            `<h2 style="color:var(--accent);">🕯️ Эпилог</h2>${renderMarkdown(god.epilogue || '')}` +
-            `<div class="game-over-reasons"><strong>Что привело:</strong><ul>${(god.reasons || []).map((r) => `<li>${escapeHTML(r)}</li>`).join('')}</ul></div>` +
-            renderMarkdown(`> "${god.epitaph || ''}"`);
-    } else if (state.lastMiracle) {
-        els.story.innerHTML = renderMarkdown(state.lastStory || '') +
-            `<hr><div class="miracle-banner"><h2>✨ ЧУДЕСНОЕ СПАСЕНИЕ</h2><p>Судьба смилостивилась...</p></div>` +
-            renderMarkdown(state.lastMiracle) +
-            '<hr><p><em>Спасение использовано.</em></p>';
-        state.lastMiracle = null;
-    } else {
-        els.story.innerHTML = renderMarkdown(state.lastStory || 'Загрузка...');
-    }
+    els.story.innerHTML = buildArchiveStoryMarkup(archiveEntry);
 
     els.choices.innerHTML = '';
-    if (state.gameOver) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'choice-btn';
-        btn.style.borderColor = 'var(--danger)';
-        btn.innerHTML = `
-            <span class="choice-btn__body choice-btn__body--single">
-                <span class="choice-btn__title">Начать новую жизнь</span>
-            </span>
-            <span class="choice-btn__arrow" aria-hidden="true">↺</span>
-        `;
-        btn.onclick = resetGame;
-        els.choices.appendChild(btn);
-    } else if (state.lastChoices) {
-        state.lastChoices.forEach((choice, index) => {
+    if (els.choicesWrap) {
+        els.choicesWrap.style.display = archiveMode ? 'none' : '';
+    }
+
+    if (!archiveMode) {
+        if (state.gameOver) {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'choice-btn';
-            btn.innerHTML = buildChoiceMarkup(choice, index);
-            btn.onclick = () => turn(choice.action || choice.text);
+            btn.style.borderColor = 'var(--danger)';
+            btn.innerHTML = `
+                <span class="choice-btn__body choice-btn__body--single">
+                    <span class="choice-btn__title">Начать новую жизнь</span>
+                </span>
+                <span class="choice-btn__arrow" aria-hidden="true">↺</span>
+            `;
+            btn.onclick = resetGame;
             els.choices.appendChild(btn);
-        });
+        } else if (state.lastChoices) {
+            state.lastChoices.forEach((choice, index) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'choice-btn';
+                btn.innerHTML = buildChoiceMarkup(choice, index);
+                btn.onclick = () => turn(choice.action || choice.text);
+                els.choices.appendChild(btn);
+            });
+        }
     }
 
     els.stats.innerHTML = '';
@@ -1768,6 +2043,9 @@ function tryLoadSavedGame() {
         if (!state.enhancedHistory) state.enhancedHistory = [];
         if (!state.compressedSummary) state.compressedSummary = '';
         if (!state.lastCompressTurn) state.lastCompressTurn = 0;
+        if (!state.archiveEntries) state.archiveEntries = [];
+        if (state.archiveViewIndex === undefined) state.archiveViewIndex = null;
+        backfillArchiveEntriesFromHistory();
 
         persistProviderChoice(state.provider);
         syncCurrentApiKey();
@@ -1783,18 +2061,38 @@ function tryLoadSavedGame() {
     }
 }
 
+window.copyCurrentPeriodToClipboard = async function copyCurrentPeriodToClipboard() {
+    try {
+        const entry = getSelectedArchiveEntry();
+        await copyArchiveEntryToClipboard(entry);
+        alert('✅ Период скопирован!');
+    } catch (err) {
+        console.error('Ошибка копирования периода:', err);
+        alert('❌ Не удалось скопировать период.');
+    }
+};
+
 window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
     try {
         let historyText = '';
 
-        if (state.enhancedHistory.length) {
+        if (state.archiveEntries?.length) {
+            historyText = state.archiveEntries.map((entry) => {
+                let block = `📖 ${entry.dateLabel || `Ход ${entry.turn}`}`;
+                if (entry.age) block += ` · ${entry.age} лет`;
+                block += `\n\n${entry.storyEnhanced || entry.storyOriginal || ''}`;
+                if (entry.miracleStory) block += `\n\n[Чудесное спасение]\n${entry.miracleStory}`;
+                if (entry.gameOverData?.epilogue) block += `\n\n[Эпилог]\n${entry.gameOverData.epilogue}`;
+                return block;
+            }).join('\n\n---\n\n');
+        } else if (state.enhancedHistory.length) {
             historyText = state.enhancedHistory.map((text, i) => `📖 Ход ${i + 1}:\n${text}`).join('\n\n---\n\n');
         } else {
             historyText = 'История пока пуста.';
         }
 
         const locInfo = getLocationInfo();
-        const header = `=== ЭПОХА ПЕРЕМЕН: 1993 ===\nПерсонаж: ${GENDER_INFO[state.gender].name}, ${state.age} лет\nЛокация: ${locInfo.fullName}\nДата: ${SEASONS[state.seasonIdx]} ${state.year}\nПровайдер: ${getProviderConfig().label}\n\n`;
+        const header = `=== ЭПОХА ПЕРЕМЕН: 1993 ===\nПерсонаж: ${GENDER_INFO[state.gender].name}, ${state.age} лет\nЛокация: ${locInfo.fullName}\nДата: ${getDateLabel()}\nПровайдер: ${getProviderConfig().label}\n\n`;
         const statsText = Object.entries(state.stats).map(([k, v]) => `${STATS_INFO[k].name}: ${v}`).join(', ');
 
         await navigator.clipboard.writeText(header + `Текущие параметры: ${statsText}\n\n=== ИСТОРИЯ ===\n${historyText}`);
@@ -1808,6 +2106,8 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
 loadStoredApiKeys();
 syncCurrentApiKey();
 setupProviderSwitcher();
+setupSettingsModal();
+setupArchiveControls();
 renderProviderSwitcher();
 updateApiKeyInput();
 applyVisualMood('setup');
@@ -1846,10 +2146,21 @@ if (!savedGameLoaded) {
         state.startAge = parseInt(e.target.value, 10);
     };
 
+    els.setupPrevBtn?.addEventListener('click', () => {
+        setupStepIndex = Math.max(0, setupStepIndex - 1);
+        renderSetupWizard();
+    });
+
+    els.setupNextBtn?.addEventListener('click', () => {
+        setupStepIndex = Math.min(SETUP_STEPS.length - 1, setupStepIndex + 1);
+        renderSetupWizard();
+    });
+
     updatePaceInfo(state.pace);
     updateDifficultyInfo(state.difficulty);
     updateLocationDescription();
     rollStartPreview();
+    renderSetupWizard();
 }
 
 els.startBtn.onclick = () => {
