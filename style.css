@@ -749,51 +749,17 @@ button.primary {
     box-shadow: var(--shadow-xl);
 }
 
-/* Seasonal panel atmosphere */
-body[data-season="winter"] .panel-main::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: url("images/city_winter.jpg") center/cover no-repeat;
-    opacity: 0.06;
-    pointer-events: none;
-    z-index: 0;
-    filter: blur(1px) saturate(0.3);
-}
-body[data-season="spring"] .panel-main::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: url("images/city_spring.jpg") center/cover no-repeat;
-    opacity: 0.05;
-    pointer-events: none;
-    z-index: 0;
-    filter: blur(1px) saturate(0.3);
-}
-body[data-season="summer"] .panel-main::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: url("images/city_summer.jpg") center/cover no-repeat;
-    opacity: 0.04;
-    pointer-events: none;
-    z-index: 0;
-    filter: blur(1px) saturate(0.4);
-}
-body[data-season="autumn"] .panel-main::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: url("images/city_autumn.jpg") center/cover no-repeat;
-    opacity: 0.06;
-    pointer-events: none;
-    z-index: 0;
-    filter: blur(1px) saturate(0.3);
-}
+/* Seasonal panel atmosphere — CITY (capital & town) */
+body[data-season="winter"]:not([data-location-type="village"]) .panel-main::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: url("images/city_winter.jpg") center/cover no-repeat; opacity: 0.06; pointer-events: none; z-index: 0; filter: blur(1px) saturate(0.3); }
+body[data-season="spring"]:not([data-location-type="village"]) .panel-main::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: url("images/city_spring.jpg") center/cover no-repeat; opacity: 0.05; pointer-events: none; z-index: 0; filter: blur(1px) saturate(0.3); }
+body[data-season="summer"]:not([data-location-type="village"]) .panel-main::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: url("images/city_summer.jpg") center/cover no-repeat; opacity: 0.04; pointer-events: none; z-index: 0; filter: blur(1px) saturate(0.4); }
+body[data-season="autumn"]:not([data-location-type="village"]) .panel-main::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: url("images/city_autumn.jpg") center/cover no-repeat; opacity: 0.06; pointer-events: none; z-index: 0; filter: blur(1px) saturate(0.3); }
+
+/* Seasonal panel atmosphere — VILLAGE */
+body[data-location-type="village"][data-season="winter"] .panel-main::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: url("images/village_winter.jpg") center/cover no-repeat; opacity: 0.07; pointer-events: none; z-index: 0; filter: blur(1px) saturate(0.3); }
+body[data-location-type="village"][data-season="spring"] .panel-main::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: url("images/village_spring.jpg") center/cover no-repeat; opacity: 0.06; pointer-events: none; z-index: 0; filter: blur(1px) saturate(0.3); }
+body[data-location-type="village"][data-season="summer"] .panel-main::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: url("images/village_summer.jpg") center/cover no-repeat; opacity: 0.05; pointer-events: none; z-index: 0; filter: blur(1px) saturate(0.4); }
+body[data-location-type="village"][data-season="autumn"] .panel-main::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: url("images/village_autumn.jpg") center/cover no-repeat; opacity: 0.07; pointer-events: none; z-index: 0; filter: blur(1px) saturate(0.3); }
 
 .panel::after {
     content: "";
@@ -809,8 +775,15 @@ body[data-season="autumn"] .panel-main::before {
 }
 
 .panel-main {
+    position: relative;
     min-height: calc(100vh - 2 * clamp(12px, 2vw, 28px));
     padding: 22px;
+    z-index: 0;
+}
+
+.panel-main > * {
+    position: relative;
+    z-index: 1;
 }
 
 .panel-sidebar {
