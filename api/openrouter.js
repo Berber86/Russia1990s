@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       model: model || 'google/gemini-2.5-flash',
       messages,
       temperature: temperature ?? 0.6,
-      max_tokens: max_tokens ?? 2500
+      max_tokens: max_tokens ?? 5000
     };
 
     if (response_format) {
