@@ -2281,3 +2281,57 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
     border: 1px solid rgba(0,0,0,0.5);
     background-color: #000;
 }
+
+/* ---------- РЕТРО ЛОАДЕР ДЛЯ ГЕНЕРАЦИИ ТЕКСТА ---------- */
+.retro-loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(16, 14, 11, 0.85);
+    backdrop-filter: blur(6px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: illuFadeIn 0.2s ease forwards;
+    pointer-events: all; /* Blocks any clicks on background elements */
+}
+
+.retro-loader-card {
+    background: var(--bg-card, #26221c);
+    border: 2px solid var(--amber, #efd5ad);
+    border-radius: 8px;
+    padding: 32px 24px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.retro-loader-spinner {
+    width: 45px;
+    height: 45px;
+    border: 3px solid rgba(239, 213, 173, 0.2);
+    border-top-color: var(--amber, #efd5ad);
+    border-radius: 50%;
+    animation: illuSpin 1.2s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+    margin: 0 auto 20px;
+}
+
+.retro-loader-title {
+    font-family: var(--mono, monospace);
+    color: var(--amber, #efd5ad);
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+}
+
+.retro-loader-sub {
+    font-family: var(--serif, serif);
+    color: var(--ink-soft, #d5c8ad);
+    font-size: 1.05rem;
+    line-height: 1.6;
+}

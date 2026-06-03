@@ -324,7 +324,7 @@ function buildArchiveStoryMarkup(entry) {
         } else if (entry.illustrationStatus === 'limit_reached') {
             html += `
                 <div class="illustration-box illustration-box--limit">
-                    <div class="illustration-text">📷 Лимит иллюстраций на сегодня исчерпан (макс. 2 в сутки).</div>
+                    <div class="illustration-text">📷 Лимит иллюстраций на сегодня исчерпан (макс. 20 в сутки).</div>
                 </div>
             `;
         } else if (entry.illustrationStatus === 'failed') {
@@ -522,6 +522,28 @@ function setLoading(value) {
     document.querySelectorAll('.choice-btn').forEach((btn) => {
         btn.disabled = value;
     });
+
+    if (value) {
+        let loadingOverlay = document.getElementById('retro-game-loader');
+        if (!loadingOverlay) {
+            loadingOverlay = document.createElement('div');
+            loadingOverlay.id = 'retro-game-loader';
+            loadingOverlay.className = 'retro-loader-overlay';
+            loadingOverlay.innerHTML = `
+                <div class="retro-loader-card">
+                    <div class="retro-loader-spinner"></div>
+                    <div class="retro-loader-title">📟 ХРОНИКА ВРЕМЕНИ...</div>
+                    <div class="retro-loader-sub">Пожалуйста, подождите. Ветер перемен наполняет паруса истории...</div>
+                </div>
+            `;
+            document.body.appendChild(loadingOverlay);
+        }
+    } else {
+        const loadingOverlay = document.getElementById('retro-game-loader');
+        if (loadingOverlay) {
+            loadingOverlay.remove();
+        }
+    }
 }
 
 function save() {
@@ -1904,14 +1926,6 @@ function renderUI() {
     els.locationDisplay.textContent = locInfo.fullName;
 
     let modeHTML = '';
-    modeHTML += `<span class="provider-badge ${getActiveProvider()}">${providerCfg.icon} ${providerCfg.label}</span>`;
-    if (state.difficulty === 'hardcore') {
-        modeHTML += `<span class="mode-badge hardcore">💀 Хардкор</span>`;
-    } else {
-        modeHTML += `<span class="mode-badge normal">🛡️ Норма</span>`;
-        if (!state.miracleUsed) modeHTML += `<span class="miracle-badge available">✨ Спасение доступно</span>`;
-        else modeHTML += `<span class="miracle-badge used">✨ Спасение использовано</span>`;
-    }
     if (archiveMode) {
         modeHTML += `<span class="summary-badge">📖 Архив</span>`;
     } else if (state.lifeSummary) {
@@ -2325,7 +2339,7 @@ function checkImageLimitAndIncrement() {
         console.error('Error reading image limit:', e);
     }
 
-    if (limitData.count >= 2) {
+    if (limitData.count >= 20) {
         return false;
     }
 
