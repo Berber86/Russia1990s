@@ -108,6 +108,73 @@ const SETUP_STEPS = [
 ];
 
 // ========== ЭЛЕМЕНТЫ DOM ==========
+
+// ========== СИСТЕМА ЛОГИРОВАНИЯ (ОТЛАДКА НЕЙРОСЕТЕЙ) ==========
+window.appSystemLogs = [];
+function addSystemLog(title, content, isError = false) {
+    const time = new Date().toLocaleTimeString();
+    window.appSystemLogs.unshift({ time, title, content, isError });
+    renderDebugLogs();
+}
+
+function escapeDebugHTML(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderDebugLogs() {
+    const container = document.getElementById('debug-log-container');
+    if (!container) return;
+    
+    if (window.appSystemLogs.length === 0) {
+        container.innerHTML = '<div style="color: var(--muted); text-align: center; padding: 2rem;">Лог пуст. Запросы и ошибки появятся здесь.</div>';
+        return;
+    }
+
+    container.innerHTML = window.appSystemLogs.map((log, i) => `
+        <div style="background: var(--surface-1); border: 1px solid ${log.isError ? 'var(--danger)' : 'var(--border)'}; border-radius: 6px; padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <strong style="color: ${log.isError ? 'var(--danger)' : 'var(--ink)'};">${log.title}</strong>
+                <span style="font-size: 0.85em; color: var(--muted);">${log.time}</span>
+            </div>
+            <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.85em; background: var(--surface-2); padding: 0.5rem; border-radius: 4px; color: var(--ink); margin: 0; max-height: 300px; overflow-y: auto;"><code>${escapeDebugHTML(typeof log.content === 'object' ? JSON.stringify(log.content, null, 2) : log.content)}</code></pre>
+        </div>
+    `).join('');
+}
+
+function initDebugUI() {
+    const fab = document.getElementById('debug-log-fab');
+    const modal = document.getElementById('debug-modal');
+    const closeBtn = document.getElementById('debug-close-btn');
+    const clearBtn = document.getElementById('debug-clear-btn');
+    
+    if (fab && modal) {
+        fab.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            renderDebugLogs();
+        });
+        
+        closeBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        });
+        
+        clearBtn.addEventListener('click', () => {
+            window.appSystemLogs = [];
+            renderDebugLogs();
+        });
+    }
+}
+// Вызовем initDebugUI при загрузке
+document.addEventListener('DOMContentLoaded', initDebugUI);
+
+
 const els = {
     setup: document.getElementById('setup-screen'),
     game: document.getElementById('game-ui'),
@@ -176,8 +243,9 @@ function rollChance(percent) {
     return Math.random() * 100 < percent;
 }
 
-function parseJSON(text) {
+function parseJSON(text, contextTitle = 'LLM Ответ') {
     if (!text) return null;
+    if (typeof addSystemLog === 'function') addSystemLog(contextTitle + ' (Сырой текст)', text, false);
     try {
         return JSON.parse(text);
     } catch (e1) {
@@ -203,6 +271,7 @@ function parseJSON(text) {
             return JSON.parse(clean.substring(startIdx, endIdx + 1));
         } catch (e2) {
             console.error('JSON parse error:', e2, text.substring(0, 200));
+            if (typeof addSystemLog === 'function') addSystemLog('Ошибка парсинга JSON (' + contextTitle + ')', text, true);
             return null;
         }
     }
@@ -1107,8 +1176,7 @@ function buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount) {
         choicesTemplate += `{"text": "Действие ${i}", "action": "художественное описание действия ${i}"}`;
         if (i < choicesCount) choicesTemplate += ',\n';
     }
-    return `Придумай 4 случайных слова.  Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа:
-    Ты — мастер драматической и детально атмосферной текстовой RPG о жизни в России 90-х. Драма и атмосферная ностальгия — это вся твоя суть.
+    return `Ты — мастер драматической и детально атмосферной текстовой RPG о жизни в России 90-х. Драма и атмосферная ностальгия — это вся твоя суть.
 
 ГЕРОЙ: ${genderInfo.name} (${state.age} лет)
 
@@ -1284,6 +1352,7 @@ async function callLLM({
             return data;
         } catch (err) {
             console.error(`Ошибка вызова ${cfg.label}:`, err);
+            addSystemLog(`Ошибка вызова ${cfg.label}`, err.message || err.toString(), true);
             if (attempt > 1) {
                 await new Promise((resolve) => setTimeout(resolve, 2000 * (4 - attempt)));
                 return makeRequest(attempt - 1);
@@ -1332,7 +1401,7 @@ ${fullHistory}
             modelKind: 'main',
             response_format: { type: 'json_object' }
         });
-        const data = parseJSON(completion?.choices?.[0]?.message?.content);
+        const data = parseJSON(completion?.choices?.[0]?.message?.content, 'Запрос (сводка/финал/др.)');
         if (data?.summary) {
             state.lifeSummary = data.summary;
             if (state.history.length > 6) state.history = state.history.slice(-6);
@@ -1417,7 +1486,7 @@ async function turn(action) {
         });
 
         const raw1 = completion1?.choices?.[0]?.message?.content || '';
-        const data = parseJSON(raw1);
+        const data = parseJSON(raw1, 'Основной ход');
 
         if (!data?.story || !Array.isArray(data?.choices)) {
             console.error('Invalid JSON:', raw1);
@@ -1456,7 +1525,7 @@ async function turn(action) {
             if (levelDesc) statsGuidance += levelDesc + '\n';
         }
 
-        const enhancementPrompt = `Придумай 4 случайных слова.  Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа:Ты мастер социально-драматической художественной текстовой игры про детство в 1990-х. Ниже текст — увеличь его примерно в 1.5 раза, насыть аутентичными диалогами и описаниями. Исправь очевидные ляпы, ориентируйся на предыдущую историю как на абсолютный канон. Не пиши предисловий и послесловий. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.
+        const enhancementPrompt = `Ты мастер социально-драматической художественной текстовой игры про детство в 1990-х. Ниже текст — увеличь его примерно в 1.5 раза, насыть аутентичными диалогами и описаниями. Исправь очевидные ляпы, ориентируйся на предыдущую историю как на абсолютный канон. Не пиши предисловий и послесловий. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.
 
 ТЕКСТ ДЛЯ УЛУЧШЕНИЯ (только его нужно переписать, остальное ниже — справочная информация):
 
@@ -1482,7 +1551,7 @@ ${statsGuidance ? `\nОсобые указания по параметрам п�
                 messages: [{ role: 'user', content: enhancementPrompt }],
                 modelKind: 'enhance',
                 temperature: 0.7,
-                max_tokens: 8000
+                max_tokens: 5000
             });
             const raw2 = completion2?.choices?.[0]?.message?.content;
             if (raw2?.trim()) enhancedStory = raw2.trim();
@@ -1643,7 +1712,7 @@ ${precedingStory}
             modelKind: 'main',
             response_format: { type: 'json_object' }
         });
-        const data = parseJSON(completion?.choices?.[0]?.message?.content);
+        const data = parseJSON(completion?.choices?.[0]?.message?.content, 'Запрос (сводка/финал/др.)');
         if (data?.miracle_story) {
             state.lastMiracle = data.miracle_story;
             if (data.choices) state.lastChoices = data.choices;
@@ -1708,7 +1777,7 @@ ${fullHistory}
             modelKind: 'main',
             response_format: { type: 'json_object' }
         });
-        const data = parseJSON(completion?.choices?.[0]?.message?.content);
+        const data = parseJSON(completion?.choices?.[0]?.message?.content, 'Запрос (сводка/финал/др.)');
         if (data) state.gameOverData = data;
     } catch (e) {
         console.error('Game Over error:', e);
