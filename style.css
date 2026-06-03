@@ -2091,3 +2091,90 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
     }
     .screen-noise { animation: none !important; }
 }
+
+/* ---------- ИЛЛЮСТРАЦИИ К ХОДАМ ---------- */
+.illustration-box {
+    margin: 32px auto 16px;
+    max-width: 550px;
+    width: 100%;
+    border: 1px solid var(--border-soft, #423b30);
+    background: var(--bg-card, #26221c);
+    border-radius: 6px;
+    padding: 12px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translateY(10px);
+    animation: storyRise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation-delay: 0.6s;
+}
+
+.illustration-img {
+    width: 100%;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.5);
+    background-color: #000;
+}
+
+.illustration-btn {
+    align-self: center;
+    background: transparent;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.illustration-btn:hover {
+    background: var(--amber);
+    color: var(--bg);
+    box-shadow: 0 0 10px rgba(239, 213, 173, 0.3);
+}
+
+/* Состояния загрузки и ошибок */
+.illustration-box--loading {
+    padding: 32px 16px;
+    border: 1px dashed var(--ink-muted);
+    background: transparent;
+    box-shadow: none;
+    justify-content: center;
+}
+
+.illustration-spinner {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--ink-muted);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: illuSpin 1s linear infinite;
+    margin-bottom: 8px;
+}
+
+@keyframes illuSpin {
+    to { transform: rotate(360deg); }
+}
+
+.illustration-text {
+    font-family: var(--serif);
+    font-size: 0.96rem;
+    color: var(--ink-soft);
+    text-align: center;
+    font-style: italic;
+}
+
+.illustration-box--limit, .illustration-box--failed {
+    padding: 20px 16px;
+    border: 1px solid var(--border-soft);
+    background: rgba(0,0,0,0.15);
+    box-shadow: none;
+}

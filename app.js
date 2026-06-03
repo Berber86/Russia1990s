@@ -305,6 +305,37 @@ function getDateLabel(seasonIdx = state.seasonIdx, year = state.year) {
 function buildArchiveStoryMarkup(entry) {
     if (!entry) return renderMarkdown(state.lastStory || '');
     let html = renderMarkdown(entry.storyEnhanced || entry.story || '');
+    
+    if (entry) {
+        if (entry.illustrationStatus === 'loading') {
+            html += `
+                <div class="illustration-box illustration-box--loading">
+                    <div class="illustration-spinner"></div>
+                    <div class="illustration-text">📼 Проявляется набросок воспоминания...</div>
+                </div>
+            `;
+        } else if (entry.illustrationStatus === 'success' && entry.illustration) {
+            html += `
+                <div class="illustration-box">
+                    <img src="${entry.illustration}" class="illustration-img" alt="Иллюстрация к событию" />
+                    <button type="button" class="illustration-btn" onclick="downloadIllustration('${escapeHTML(entry.dateLabel || '')}', '${entry.illustration}')">💾 Скачать рисунок</button>
+                </div>
+            `;
+        } else if (entry.illustrationStatus === 'limit_reached') {
+            html += `
+                <div class="illustration-box illustration-box--limit">
+                    <div class="illustration-text">📷 Лимит иллюстраций на сегодня исчерпан (макс. 2 в сутки).</div>
+                </div>
+            `;
+        } else if (entry.illustrationStatus === 'failed') {
+            html += `
+                <div class="illustration-box illustration-box--failed">
+                    <div class="illustration-text">❌ Не удалось воссоздать рисунок воспоминания.</div>
+                </div>
+            `;
+        }
+    }
+
     if (entry.miracleStory) {
         html += `<hr><div class="miracle-banner"><h2>✨ ЧУДЕСНОЕ СПАСЕНИЕ</h2><p>Судьба смилостивилась...</p></div>`;
         html += renderMarkdown(entry.miracleStory);
@@ -494,7 +525,27 @@ function setLoading(value) {
 }
 
 function save() {
-    localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(state));
+    try {
+        localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+            console.warn('Quota exceeded, pruning older illustrations...');
+            if (state.archiveEntries) {
+                for (let i = 0; i < state.archiveEntries.length; i++) {
+                    if (state.archiveEntries[i].illustration) {
+                        delete state.archiveEntries[i].illustration;
+                        delete state.archiveEntries[i].illustrationStatus;
+                        try {
+                            localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(state));
+                            console.log('Saved successfully after pruning an older illustration.');
+                            return;
+                        } catch (err) {}
+                    }
+                }
+            }
+        }
+        console.error('Save error:', e);
+    }
 }
 
 window.resetGame = () => {
@@ -1436,7 +1487,7 @@ ${statsGuidance ? `\nОсобые указания по параметрам п�
 
         await checkCriticalStats(state.lastStory);
 
-        pushArchiveEntry({
+        const newEntry = {
             turn: state.turnCount,
             action,
             dateLabel: getDateLabel(state.seasonIdx, state.year),
@@ -1447,7 +1498,17 @@ ${statsGuidance ? `\nОсобые указания по параметрам п�
             storyEnhanced: enhancedStory,
             miracleStory: state.lastMiracle || null,
             gameOverData: cloneData(state.gameOverData)
-        });
+        };
+
+        const canGenImg = checkImageLimitAndIncrement();
+        if (canGenImg) {
+            newEntry.illustrationStatus = 'loading';
+            pushArchiveEntry(newEntry);
+            startIllustrationGenerationForEntry(newEntry);
+        } else {
+            newEntry.illustrationStatus = 'limit_reached';
+            pushArchiveEntry(newEntry);
+        }
 
         state.lastMiracle = null;
         save();
@@ -2116,3 +2177,142 @@ els.startBtn.onclick = () => {
         setTheme(next);
     });
 })();
+
+// ========== ИЛЛЮСТРАЦИИ (OPENROUTER) ==========
+
+function getFirstThreeParagraphs(text) {
+    if (!text) return '';
+    const paragraphs = text.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+    return paragraphs.slice(0, 3).join('\n\n');
+}
+
+async function callOpenRouterImageGeneration(promptText) {
+    const providerApiKey = (userApiKeys.openrouter || '').trim();
+    const requestBody = {
+        model: 'google/gemini-3.1-flash-image-preview',
+        messages: [
+            {
+                role: 'user',
+                content: promptText
+            }
+        ],
+        modalities: ['image', 'text']
+    };
+
+    let response;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 минуты тайм-аут
+
+    try {
+        response = await fetch('/api/openrouter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...requestBody,
+                apiKey: providerApiKey || undefined
+            }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+    } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
+    }
+
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Сервер вернул статус ${response.status}`);
+    }
+
+    const result = await response.json();
+    if (result.choices && result.choices[0]?.message) {
+        const message = result.choices[0].message;
+        if (message.images && message.images.length > 0) {
+            return message.images[0].image_url.url; // Base64 data URL
+        }
+    }
+    throw new Error('Изображение не найдено в ответе API.');
+}
+
+async function startIllustrationGenerationForEntry(entry) {
+    if (!entry) return;
+
+    try {
+        const text = entry.storyEnhanced || entry.storyOriginal || '';
+        const paragraphs = getFirstThreeParagraphs(text);
+        if (!paragraphs) {
+            entry.illustrationStatus = 'failed';
+            save();
+            renderUI();
+            return;
+        }
+
+        const genderName = GENDER_INFO[state.gender]?.name || 'герой';
+        const ageText = `${entry.age || state.age} лет`;
+        const characterDesc = `Пол: ${genderName}, возраст: ${ageText}.`;
+        const promptText = `Сделай акварельно пастэльно угольную иллюстрацию для этого книжного фрагмента, без каких либо слов и подписей и от первого лица главного героя(POV): ${characterDesc}\n\n${paragraphs}`;
+
+        const base64Url = await callOpenRouterImageGeneration(promptText);
+        
+        entry.illustration = base64Url;
+        entry.illustrationStatus = 'success';
+    } catch (e) {
+        console.error('Ошибка генерации картинки:', e);
+        entry.illustrationStatus = 'failed';
+        refundImageLimit();
+    }
+
+    save();
+    renderUI();
+}
+
+function checkImageLimitAndIncrement() {
+    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+    let limitData = { date: today, count: 0 };
+    try {
+        const stored = localStorage.getItem('rpg90_image_limit');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && parsed.date === today) {
+                limitData = parsed;
+            }
+        }
+    } catch (e) {
+        console.error('Error reading image limit:', e);
+    }
+
+    if (limitData.count >= 2) {
+        return false;
+    }
+
+    limitData.count++;
+    try {
+        localStorage.setItem('rpg90_image_limit', JSON.stringify(limitData));
+    } catch (e) {
+        console.error('Error saving image limit:', e);
+    }
+    return true;
+}
+
+function refundImageLimit() {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+        const stored = localStorage.getItem('rpg90_image_limit');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && parsed.date === today) {
+                parsed.count = Math.max(0, parsed.count - 1);
+                localStorage.setItem('rpg90_image_limit', JSON.stringify(parsed));
+            }
+        }
+    } catch (e) {}
+}
+
+window.downloadIllustration = function(dateLabel, base64Url) {
+    const link = document.createElement('a');
+    link.href = base64Url;
+    link.download = `Эпоха_Перемен_${dateLabel.replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
