@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { messages, model, temperature, max_tokens, response_format, apiKey } = req.body || {};
+  const { messages, model, temperature, max_tokens, response_format, apiKey, modalities } = req.body || {};
   const apiKeyToUse = apiKey || process.env.OPENROUTER_API_KEY;
 
   if (!apiKeyToUse) {
@@ -30,6 +30,10 @@ export default async function handler(req, res) {
 
     if (response_format) {
       requestBody.response_format = response_format;
+    }
+
+    if (modalities) {
+      requestBody.modalities = modalities;
     }
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
