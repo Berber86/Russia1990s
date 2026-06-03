@@ -2178,3 +2178,106 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
     background: rgba(0,0,0,0.15);
     box-shadow: none;
 }
+
+/* ---------- МОДАЛЬНОЕ ОКНО УВЕЛИЧЕНИЯ КАРТИНКИ ---------- */
+.illustration-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    animation: illuFadeIn 0.25s ease forwards;
+}
+
+.illustration-modal--closing {
+    animation: illuFadeOut 0.2s ease forwards;
+}
+
+@keyframes illuFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes illuFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.illustration-modal__backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+}
+
+.illustration-modal__content {
+    position: relative;
+    z-index: 2;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.illustration-modal__close {
+    position: absolute;
+    top: -45px;
+    right: 0;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, color 0.2s ease;
+    padding: 10px;
+    line-height: 1;
+}
+
+.illustration-modal__close:hover {
+    transform: scale(1.1);
+    color: var(--amber, #efd5ad);
+}
+
+.illustration-modal__body {
+    overflow: auto;
+    max-width: 100%;
+    max-height: calc(90vh - 20px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.illustration-modal__img {
+    max-width: 100%;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    cursor: zoom-out;
+    transition: transform 0.3s ease;
+}
+
+.illustration-modal__img:active {
+    transform: scale(1.15);
+}
+
+/* Обновление стиля самой картинки для вертикального формата */
+.illustration-img {
+    width: 100%;
+    max-height: 550px;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.5);
+    background-color: #000;
+}

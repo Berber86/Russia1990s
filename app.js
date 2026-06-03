@@ -317,7 +317,7 @@ function buildArchiveStoryMarkup(entry) {
         } else if (entry.illustrationStatus === 'success' && entry.illustration) {
             html += `
                 <div class="illustration-box">
-                    <img src="${entry.illustration}" class="illustration-img" alt="Иллюстрация к событию" />
+                    <img src="${entry.illustration}" class="illustration-img" alt="Иллюстрация к событию" onclick="openIllustrationModal('${entry.illustration}')" style="cursor: zoom-in;" />
                     <button type="button" class="illustration-btn" onclick="downloadIllustration('${escapeHTML(entry.dateLabel || '')}', '${entry.illustration}')">💾 Скачать рисунок</button>
                 </div>
             `;
@@ -2196,7 +2196,10 @@ async function callOpenRouterImageGeneration(promptText) {
                 content: promptText
             }
         ],
-        modalities: ['image', 'text']
+        modalities: ['image', 'text'],
+        image_config: {
+            aspect_ratio: '3:4'
+        }
     };
 
     let response;
@@ -2249,8 +2252,13 @@ async function startIllustrationGenerationForEntry(entry) {
 
         const genderName = GENDER_INFO[state.gender]?.name || 'герой';
         const ageText = `${entry.age || state.age} лет`;
-        const characterDesc = `Пол: ${genderName}, возраст: ${ageText}.`;
-        const promptText = `Сделай акварельно пастэльно угольную иллюстрацию для этого книжного фрагмента, без каких либо слов и подписей и от первого лица главного героя(POV): ${characterDesc}\n\n${paragraphs}`;
+        const characterDesc = `пол: ${genderName}, возраст: ${ageText}`;
+        const promptText = `Сделай вертикально ориентированную художественную иллюстрацию для этого книжного фрагмента. 
+Вид: строго от первого лица главного героя (${characterDesc}), показывающий сцену его глазами, но БЕЗ изображения его собственных рук, ног, пальцев или других частей тела в кадре. 
+Стиль: атмосферный и глубоко реалистичный снимок эпохи, имитирующий старую любительскую пленочную фотографию 1990-х годов или полароидный снимок (faded Polaroid snapshot). Характерное ретро-зерно пленки (film grain), слегка выцветшие приглушенные цвета, естественные тени, теплая ностальгическая дымка и аналоговое несовершенство кадра. Полное отсутствие глянца, современных элементов, текста, слов или подписей. Сама текстура и стиль кадра должны сквозить эпохой 90-х в России.
+
+Фрагмент текста:
+${paragraphs}`;
 
         const base64Url = await callOpenRouterImageGeneration(promptText);
         
@@ -2265,6 +2273,42 @@ async function startIllustrationGenerationForEntry(entry) {
     save();
     renderUI();
 }
+
+window.openIllustrationModal = function(base64Url) {
+    const existing = document.getElementById('illustration-zoom-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'illustration-zoom-modal';
+    modal.className = 'illustration-modal';
+    modal.innerHTML = `
+        <div class="illustration-modal__backdrop"></div>
+        <div class="illustration-modal__content">
+            <button type="button" class="illustration-modal__close">✕</button>
+            <div class="illustration-modal__body">
+                <img src="${base64Url}" class="illustration-modal__img" alt="Увеличенное изображение" />
+            </div>
+        </div>
+    `;
+    
+    modal.querySelector('.illustration-modal__backdrop').onclick = window.closeIllustrationModal;
+    modal.querySelector('.illustration-modal__close').onclick = window.closeIllustrationModal;
+    modal.querySelector('.illustration-modal__img').onclick = window.closeIllustrationModal;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+};
+
+window.closeIllustrationModal = function() {
+    const modal = document.getElementById('illustration-zoom-modal');
+    if (modal) {
+        modal.classList.add('illustration-modal--closing');
+        setTimeout(() => {
+            modal.remove();
+            document.body.style.overflow = '';
+        }, 200);
+    }
+};
 
 function checkImageLimitAndIncrement() {
     const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
