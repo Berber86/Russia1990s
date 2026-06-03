@@ -1193,7 +1193,7 @@ async function callLLM({
     modelKind = 'main',
     provider = getActiveProvider(),
     temperature = 0.6,
-    max_tokens = 2500,
+    max_tokens = 5000,
     response_format
 }, retries = 3) {
     const logicalCfg = getProviderConfig(provider);
@@ -1411,7 +1411,7 @@ async function turn(action) {
             ],
             modelKind: 'main',
             temperature: 0.5,
-            max_tokens: 2500,
+            max_tokens: 5000,
             response_format: { type: 'json_object' }
         });
 
@@ -1481,7 +1481,7 @@ ${statsGuidance ? `\nОсобые указания по параметрам п�
                 messages: [{ role: 'user', content: enhancementPrompt }],
                 modelKind: 'enhance',
                 temperature: 0.7,
-                max_tokens: 3000
+                max_tokens: 5000
             });
             const raw2 = completion2?.choices?.[0]?.message?.content;
             if (raw2?.trim()) enhancedStory = raw2.trim();
