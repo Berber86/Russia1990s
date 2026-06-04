@@ -418,20 +418,22 @@ function buildArchiveStoryMarkup(entry) {
             `;
         } else if (!entry.illustrationStatus || entry.illustrationStatus === 'pending') {
             html += `
-                <div class="illustration-box illustration-box--pending" style="background:var(--surface-1); padding: 1rem; border-radius:8px; border: 1px dashed var(--border); margin-top:1rem;">
+                <div class="illustration-box illustration-box--pending" id="img-pending-${entry.turn}" style="background:var(--surface-1); padding: 1rem; border-radius:8px; border: 1px dashed var(--border); margin-top:1rem;">
                     <div style="font-weight:600; margin-bottom:0.5rem;">🎨 Создать визуальное воспоминание</div>
                     <div style="margin-bottom:0.5rem; font-size:0.9em; color:var(--muted);">Выберите стиль:</div>
-                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
-                        <button type="button" class="btn" onclick="window.startGenImg('${entry.turn}', 'photo')">📷 Фотография</button>
-                        <button type="button" class="btn" onclick="window.startGenImg('${entry.turn}', 'book')">📖 Книжная</button>
-                        <button type="button" class="btn" onclick="window.startGenImg('${entry.turn}', 'child')">🖍️ Детская</button>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;" id="img-style-group-${entry.turn}">
+                        <button type="button" class="option-btn selected" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'photo', this)">📷 Фотография</button>
+                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'book', this)">📖 Книжная</button>
+                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'child', this)">🖍️ Детская</button>
                     </div>
-                    <div style="display:flex; gap:1rem; font-size:0.9em; color:var(--muted); align-items:center;">
+                    <input type="hidden" id="img-style-val-${entry.turn}" value="photo">
+                    <div style="display:flex; gap:1rem; font-size:0.9em; color:var(--muted); align-items:center; margin-bottom: 1rem;">
                         <span>Текста в промпт (абзацы):</span>
                         <label><input type="radio" name="img_paras_${entry.turn}" value="3"> 3</label>
                         <label><input type="radio" name="img_paras_${entry.turn}" value="5" checked> 5</label>
                         <label><input type="radio" name="img_paras_${entry.turn}" value="7"> 7</label>
                     </div>
+                    <button type="button" class="btn primary" style="width: 100%;" onclick="window.startGenImgUI('${entry.turn}')">Начать создание иллюстрации</button>
                 </div>
             `;
         }
