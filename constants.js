@@ -23,8 +23,8 @@ export const LLM_PROVIDERS = {
         serverPath: "/api/openrouter",
         storageKey: "rpg90_key_openrouter",
         models: {
-            main: "qwen/qwen3.7-plus",
-            enhance: "qwen/qwen3.7-plus"
+            main: "z-ai/glm-4.5-air:free",
+            enhance: "z-ai/glm-4.5-air:free"
         }
     },
     hybrid: {
@@ -36,7 +36,7 @@ export const LLM_PROVIDERS = {
             enhance: "hydra"
         },
         models: {
-            main: "qwen/qwen3.7-plus",
+            main: "z-ai/glm-4.5-air:free",
             enhance: "gemini-3.1-pro"
         }
     }
