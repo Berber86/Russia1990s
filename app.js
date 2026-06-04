@@ -2356,6 +2356,8 @@ async function callOpenRouterImageGeneration(promptText) {
 }
 
 async function startIllustrationGenerationForEntry(entry) {
+    console.log("startIllustrationGenerationForEntry called with entry turn:", entry?.turn);
+    addSystemLog('startIllustrationGenerationForEntry', {turn: entry?.turn}, false);
     if (!entry) return;
 
     try {
@@ -2491,4 +2493,97 @@ window.downloadIllustration = function(dateLabel, base64Url) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+};
+
+window.retryPolish = async function(turnStr) {
+    const turnNum = parseInt(turnStr, 10);
+    const entry = state.archiveEntries.find(e => e.turn === turnNum);
+    if (!entry || !entry.polishFailed || !entry.enhancementPrompt) return;
+    
+    setLoading(true, "Повторная попытка полировки...");
+    try {
+        const completion2 = await callLLM({
+            messages: [{ role: 'user', content: entry.enhancementPrompt }],
+            modelKind: 'enhance',
+            temperature: 0.7,
+            max_tokens: 5000
+        });
+        const raw2 = completion2?.choices?.[0]?.message?.content;
+        if (raw2?.trim()) {
+            entry.storyEnhanced = raw2.trim();
+            entry.polishFailed = false;
+            
+            // update state history
+            const histEntry = state.history.find(h => h.role === 'assistant' && h.original === entry.storyOriginal);
+            if (histEntry) {
+                histEntry.enhanced = entry.storyEnhanced;
+            }
+            if (state.lastStory === entry.storyOriginal) {
+                state.lastStory = entry.storyEnhanced;
+            }
+            const enhIdx = state.enhancedHistory.indexOf(entry.storyOriginal);
+            if (enhIdx !== -1) {
+                state.enhancedHistory[enhIdx] = entry.storyEnhanced;
+            }
+        }
+    } catch(e) {
+        console.error(e);
+        alert('Не удалось отполировать: ' + e.message);
+    } finally {
+        setLoading(false);
+        save();
+        renderUI();
+    }
+};
+
+window.startGenImg = function(turnStr, style) {
+    const turnNum = parseInt(turnStr, 10);
+    const entry = state.archiveEntries.find(e => e.turn === turnNum);
+    if (!entry) return;
+    
+    const radios = document.getElementsByName('img_paras_' + turnStr);
+    let paras = 5;
+    for (let r of radios) {
+        if (r.checked) paras = parseInt(r.value, 10);
+    }
+    
+    entry.imgStyle = style;
+    entry.imgParas = paras;
+    
+    const canGenImg = checkImageLimitAndIncrement();
+    if (canGenImg) {
+        entry.illustrationStatus = 'loading';
+        save();
+        renderUI();
+        startIllustrationGenerationForEntry(entry);
+    } else {
+        entry.illustrationStatus = 'limit_reached';
+        save();
+        renderUI();
+    }
+};
+
+window.retryGenImg = function(turnStr) {
+    const turnNum = parseInt(turnStr, 10);
+    const entry = state.archiveEntries.find(e => e.turn === turnNum);
+    if (!entry) return;
+    entry.illustrationStatus = 'pending';
+    save();
+    renderUI();
+};
+
+window.selectImgStyle = function(turnStr, style, btnElem) {
+    const group = document.getElementById('img-style-group-' + turnStr);
+    if (group) {
+        const buttons = group.querySelectorAll('button');
+        buttons.forEach(b => b.classList.remove('selected'));
+        btnElem.classList.add('selected');
+    }
+    const valInput = document.getElementById('img-style-val-' + turnStr);
+    if (valInput) valInput.value = style;
+};
+
+window.startGenImgUI = function(turnStr) {
+    const styleVal = document.getElementById('img-style-val-' + turnStr)?.value || 'photo';
+    window.startGenImg(turnStr, styleVal);
 };
