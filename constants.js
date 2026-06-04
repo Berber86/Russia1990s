@@ -44,8 +44,8 @@ export const LLM_PROVIDERS = {
 
 export const MODEL = LLM_PROVIDERS[DEFAULT_PROVIDER].models.main;
 export const SEASONS = ["Зима", "Весна", "Лето", "Осень"];
-export const HISTORY_LIMIT = 40;
-export const SUMMARY_INTERVAL = 20;
+export const HISTORY_LIMIT = 12;
+export const SUMMARY_INTERVAL = 10;
 
 // Информация о характеристиках
 export const STATS_INFO = {
