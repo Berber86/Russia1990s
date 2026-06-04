@@ -23,8 +23,8 @@ export const LLM_PROVIDERS = {
         serverPath: "/api/openrouter",
         storageKey: "rpg90_key_openrouter",
         models: {
-            main: "z-ai/glm-5.1",
-            enhance: "z-ai/glm-5.1"
+            main: "nvidia/nemotron-3-super-120b-a12b:free",
+            enhance: "nvidia/nemotron-3-super-120b-a12b:free"
         }
     },
     hybrid: {
@@ -36,7 +36,7 @@ export const LLM_PROVIDERS = {
             enhance: "hydra"
         },
         models: {
-            main: "z-ai/glm-5.1",
+            main: "nvidia/nemotron-3-super-120b-a12b:free",
             enhance: "gemini-3.1-pro"
         }
     }
