@@ -620,7 +620,7 @@ function setupArchiveControls() {
     });
 }
 
-function setLoading(value) {
+function setLoading(value, message = 'Пожалуйста, подождите. Ветер перемен наполняет паруса истории...') {
     els.loader.style.display = value ? 'block' : 'none';
     document.querySelectorAll('.choice-btn').forEach((btn) => {
         btn.disabled = value;
@@ -636,10 +636,13 @@ function setLoading(value) {
                 <div class="retro-loader-card">
                     <div class="retro-loader-spinner"></div>
                     <div class="retro-loader-title">📟 ХРОНИКА ВРЕМЕНИ...</div>
-                    <div class="retro-loader-sub">Пожалуйста, подождите. Ветер перемен наполняет паруса истории...</div>
+                    <div class="retro-loader-sub" id="retro-loader-message">${message}</div>
                 </div>
             `;
             document.body.appendChild(loadingOverlay);
+        } else {
+            const msgEl = document.getElementById('retro-loader-message');
+            if (msgEl) msgEl.textContent = message;
         }
     } else {
         const loadingOverlay = document.getElementById('retro-game-loader');
@@ -2380,9 +2383,10 @@ async function startIllustrationGenerationForEntry(entry) {
         let stylePrompt = `Стиль: атмосферный и глубоко реалистичный снимок эпохи, имитирующий старую любительскую пленочную фотографию 1990-х годов или полароидный снимок (faded Polaroid snapshot). Характерное ретро-зерно пленки (film grain), слегка выцветшие приглушенные цвета, естественные тени, теплая ностальгическая дымка и аналоговое несовершенство кадра. Полное отсутствие глянца, современных элементов, текста, слов или подписей.`;
         
         if (entry.imgStyle === 'book') {
-            stylePrompt = `Стиль: классическая книжная иллюстрация (советская или постсоветская эстетика детской и юношеской литературы). Смешанная техника: акварель, пастель и уголь. Теплые, немного приглушенные тона, выразительные текстуры, мягкая штриховка, создающая ностальгическое и чуть сказочное настроение. Без текста, слов или подписей.`;
+            stylePrompt = `Стиль: высокопрофессиональная книжная иллюстрация, шедевр книжной графики в традициях лучших советских художников-иллюстраторов 1980-х годов (в духе Владимирского, Владимирского или Диодорова). Виртуозное владение композицией, сложная многослойная техника (сочетание акварели, тонкой пастели и деликатного угля). Невероятно детализированная, глубокая, художественная и мастерски выполненная работа. Эстетика золотого века советской детской литературы. Никакой примитивности. Без текста и подписей.`;
         } else if (entry.imgStyle === 'child') {
-            stylePrompt = `Стиль: аутентичный детский рисунок (рисовал ребенок ${ageText}). Использованы доступные материалы (ручка, карандаши, акварель, фломастеры, простой серый карандаш - уместно возрасту). Неровные линии, наивная перспектива, детская искренность. Бумага может выглядеть немного помятой или из альбома для рисования. Без осмысленного взрослого текста.`;
+            const adjustedAge = Math.max(3, (entry.age || state.age) - 2);
+            stylePrompt = `Стиль: очень примитивный, кривой и наивный детский рисунок (рисовал неумелый ребенок ${adjustedAge} лет). Использованы дешевые фломастеры, ручка или обломки карандашей. Искаженные пропорции, полное отсутствие перспективы ("плоский" рисунок), кривые дрожащие линии, человечки из палок или нелепые формы. Выход за контуры при раскрашивании, небрежные штрихи. Рисунок должен выглядеть максимально неуклюже, не опытно и аутентично по-детски, как будто ребенок только учится держать фломастер. Нарисовано на мятом тетрадном листе. Без осмысленного текста.`;
         }
 
         const promptText = `Сделай вертикально ориентированную художественную иллюстрацию для этого фрагмента. 
@@ -2394,8 +2398,14 @@ ${stylePrompt}
 Фрагмент текста:
 ${paragraphs}`;
 
-        const base64Url = await callOpenRouterImageGeneration(promptText);
+        let base64Url = await callOpenRouterImageGeneration(promptText);
         
+        try {
+            base64Url = await downscaleImageBase64(base64Url, 800);
+        } catch(err) {
+            console.error('Ошибка сжатия:', err);
+        }
+
         entry.illustration = base64Url;
         entry.illustrationStatus = 'success';
     } catch (e) {
