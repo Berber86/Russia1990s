@@ -151,6 +151,18 @@
                                     <button class="option-btn selected" data-value="capital">🏙️ Столица</button>
                                 </div>
                             </div>
+                            </div>
+                            <div class="setup-tip">
+                                <strong>Подсказка:</strong>
+                                локация влияет не только на декорации. Она меняет быт, темп взросления, уровень опасности и даже то, что считается нормой.
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Шаг 3: Конкретное место -->
+                    <section class="setup-step" data-step="3">
+                        <div class="setup-section location-section">
+                            <h3>Где именно</h3>
                             <div class="setup-row" id="region-select-row" style="display:none;">
                                 <label>Регион:</label>
                                 <select id="region-select" class="region-select">
@@ -177,15 +189,12 @@
                             <div class="location-description" id="location-description">
                                 Москва — столица, огромный муравейник...
                             </div>
-                            <div class="setup-tip">
-                                <strong>Подсказка:</strong>
-                                локация влияет не только на декорации. Она меняет быт, темп взросления, уровень опасности и даже то, что считается нормой.
-                            </div>
+
                         </div>
                     </section>
 
                     <!-- Шаг 3: Ритм игры -->
-                    <section class="setup-step" data-step="3">
+                    <section class="setup-step" data-step="4">
                         <div class="setup-grid-2 setup-grid-2--tight">
                             <div class="setup-section">
                                 <h3>Темп повествования</h3>
@@ -220,7 +229,7 @@
                     </section>
 
                     <!-- Шаг 4: Старт -->
-                    <section class="setup-step" data-step="4">
+                    <section class="setup-step" data-step="5">
                         <div class="setup-section setup-section--focus">
                             <h3>Твой старт</h3>
                             <p class="setup-copy setup-copy--small">
@@ -308,7 +317,7 @@
                 <div class="story-shell">
                     <div id="story-display" class="story-content"></div>
                 </div>
-                <div class="loading-bar" id="loader"></div>
+                <div class="loading-container" id="loader" style="display:none;"><div class="loading-bar"></div><div class="loading-message" id="loader-message" style="text-align:center; font-size:0.85em; color:var(--muted); margin-top:0.5rem;"></div></div>
                 <div class="choices-wrap choices-wrap--minimal" id="choices-wrap">
                     <div class="choices" id="choices-display"></div>
                 </div>
@@ -398,5 +407,27 @@
         </div>
     </div>
 
+    <!-- Debug Log Modal -->
+    <div class="settings-modal hidden" id="debug-modal" aria-hidden="true" style="z-index: 10000;">
+        <div class="settings-backdrop" id="debug-backdrop"></div>
+        <div class="settings-sheet" role="dialog" aria-modal="true" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="settings-sheet__head">
+                <div>
+                    <div class="setup-eyebrow">Для отладки нейросетей</div>
+                    <h2 class="settings-title">Системный лог</h2>
+                </div>
+                <button type="button" class="icon-btn" id="debug-close-btn" aria-label="Закрыть">✕</button>
+            </div>
+            <div class="settings-sheet__body" style="overflow-y: auto; flex: 1; padding: 1rem;">
+                <div id="debug-log-container" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Logs will appear here -->
+                </div>
+            </div>
+            <div style="padding: 1rem; border-top: 1px solid var(--border); display: flex; gap: 1rem;">
+                <button type="button" class="btn" id="debug-clear-btn">Очистить лог</button>
+            </div>
+        </div>
+    </div>
+    <button id="debug-log-fab" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--border); border-radius: 50%; width: 48px; height: 48px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--ink);">🐞</button>
 </body>
 </html>

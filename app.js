@@ -102,7 +102,8 @@ let setupStepIndex = 0;
 const SETUP_STEPS = [
     { title: 'Пролог', caption: 'Вступление', badge: 'Начнём спокойно, шаг за шагом.' },
     { title: 'Кто твой герой', caption: 'Персонаж', badge: 'Пол и возраст определяют интонацию всей жизни.' },
-    { title: 'Где всё начинается', caption: 'Локация', badge: 'Место рождения — это тоже часть судьбы.' },
+    { title: 'Где всё начинается', caption: 'Инфраструктура', badge: 'Место рождения — это тоже часть судьбы.' },
+    { title: 'Где именно', caption: 'Регион', badge: 'У каждого уголка — свой характер.' },
     { title: 'Как течёт время', caption: 'Ритм игры', badge: 'Темп и сложность задают драматургию прохождения.' },
     { title: 'Первый срез жизни', caption: 'Старт', badge: 'Последний взгляд перед тем, как всё начнётся по-настоящему.' }
 ];
@@ -190,6 +191,7 @@ const els = {
     npcs: document.getElementById('npcs-display'),
     inv: document.getElementById('inventory-display'),
     loader: document.getElementById('loader'),
+    loaderMessage: document.getElementById('loader-message'),
     modeDisplay: document.getElementById('mode-display'),
     preview: document.getElementById('start-preview'),
     locationDesc: document.getElementById('location-description'),
@@ -375,6 +377,17 @@ function buildArchiveStoryMarkup(entry) {
     if (!entry) return renderMarkdown(state.lastStory || '');
     let html = renderMarkdown(entry.storyEnhanced || entry.story || '');
     
+    
+    if (entry && entry.polishFailed) {
+        html = `
+            <div style="background: rgba(220,50,50,0.1); border: 1px dashed var(--danger); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <strong style="color: var(--danger);">⚠️ Полировка текста сорвалась</strong>
+                <span style="font-size:0.9em;">Отображается черновой вариант. Вы можете повторить попытку (например, после смены провайдера в настройках).</span>
+                <button class="btn" style="align-self: flex-start; border-color: var(--danger); color: var(--danger);" onclick="window.retryPolish('${entry.turn}')">Отполировать заново</button>
+            </div>
+        ` + html;
+    }
+
     if (entry) {
         if (entry.illustrationStatus === 'loading') {
             html += `
@@ -400,6 +413,25 @@ function buildArchiveStoryMarkup(entry) {
             html += `
                 <div class="illustration-box illustration-box--failed">
                     <div class="illustration-text">❌ Не удалось воссоздать рисунок воспоминания.</div>
+                    <button class="btn" style="margin-top:0.5rem;" onclick="window.retryGenImg('${entry.turn}')">Попробовать снова</button>
+                </div>
+            `;
+        } else if (!entry.illustrationStatus || entry.illustrationStatus === 'pending') {
+            html += `
+                <div class="illustration-box illustration-box--pending" style="background:var(--surface-1); padding: 1rem; border-radius:8px; border: 1px dashed var(--border); margin-top:1rem;">
+                    <div style="font-weight:600; margin-bottom:0.5rem;">🎨 Создать визуальное воспоминание</div>
+                    <div style="margin-bottom:0.5rem; font-size:0.9em; color:var(--muted);">Выберите стиль:</div>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+                        <button type="button" class="btn" onclick="window.startGenImg('${entry.turn}', 'photo')">📷 Фотография</button>
+                        <button type="button" class="btn" onclick="window.startGenImg('${entry.turn}', 'book')">📖 Книжная</button>
+                        <button type="button" class="btn" onclick="window.startGenImg('${entry.turn}', 'child')">🖍️ Детская</button>
+                    </div>
+                    <div style="display:flex; gap:1rem; font-size:0.9em; color:var(--muted); align-items:center;">
+                        <span>Текста в промпт (абзацы):</span>
+                        <label><input type="radio" name="img_paras_${entry.turn}" value="3"> 3</label>
+                        <label><input type="radio" name="img_paras_${entry.turn}" value="5" checked> 5</label>
+                        <label><input type="radio" name="img_paras_${entry.turn}" value="7"> 7</label>
+                    </div>
                 </div>
             `;
         }
@@ -1441,7 +1473,7 @@ ${recentTexts.map((t, i) => `Событие ${i + 1}:\n${t}`).join('\n\n')}
 // ========== ОСНОВНОЙ ХОД ==========
 async function turn(action) {
     if (state.gameOver) return;
-    setLoading(true);
+    setLoading(true, "Генерация первого прохода (черновика)...");
     state.turnCount++;
     try {
         const needSummary = (state.turnCount - state.lastSummaryTurn) >= SUMMARY_INTERVAL && state.history.length >= 10;
@@ -1546,7 +1578,9 @@ ${summary ? '\n' + summary : ''}
 ${statsGuidance ? `\nОсобые указания по параметрам персонажа. Вплетай их органично, если уместно. Повествование строго от лица ребёнка ${state.age} лет, язык должен быть уместен возрасту героя:\n${statsGuidance}` : ''}`;
 
         let enhancedStory = originalStory;
+        let polishFailed = false;
         try {
+            setLoading(true, "Черновик готов. Идёт полировка второй моделью...");
             const completion2 = await callLLM({
                 messages: [{ role: 'user', content: enhancementPrompt }],
                 modelKind: 'enhance',
@@ -1555,8 +1589,10 @@ ${statsGuidance ? `\nОсобые указания по параметрам п�
             });
             const raw2 = completion2?.choices?.[0]?.message?.content;
             if (raw2?.trim()) enhancedStory = raw2.trim();
+            else polishFailed = true;
         } catch (e) {
             console.error('Ошибка улучшения:', e);
+            polishFailed = true;
         }
 
         state.enhancedHistory.push(enhancedStory);
@@ -1589,22 +1625,18 @@ ${statsGuidance ? `\nОсобые указания по параметрам п�
             storyOriginal: originalStory,
             storyEnhanced: enhancedStory,
             miracleStory: state.lastMiracle || null,
-            gameOverData: cloneData(state.gameOverData)
+            gameOverData: cloneData(state.gameOverData),
+            polishFailed,
+            enhancementPrompt: polishFailed ? enhancementPrompt : null
         };
 
-        const canGenImg = checkImageLimitAndIncrement();
-        if (canGenImg) {
-            newEntry.illustrationStatus = 'loading';
-            pushArchiveEntry(newEntry);
-            startIllustrationGenerationForEntry(newEntry);
-        } else {
-            newEntry.illustrationStatus = 'limit_reached';
-            pushArchiveEntry(newEntry);
-        }
+        newEntry.illustrationStatus = 'pending';
+        pushArchiveEntry(newEntry);
 
         state.lastMiracle = null;
         save();
         renderUI();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
     } catch (error) {
         console.error('Turn error:', error);
@@ -2326,7 +2358,10 @@ async function startIllustrationGenerationForEntry(entry) {
 
     try {
         const text = entry.storyEnhanced || entry.storyOriginal || '';
-        const paragraphs = getFirstThreeParagraphs(text);
+        
+        let pCount = entry.imgParas || 5;
+        let paragraphs = text.split(/\n+/).filter(p => p.trim().length > 10).slice(0, pCount).join('\n\n');
+
         if (!paragraphs) {
             entry.illustrationStatus = 'failed';
             save();
@@ -2337,9 +2372,20 @@ async function startIllustrationGenerationForEntry(entry) {
         const genderName = GENDER_INFO[state.gender]?.name || 'герой';
         const ageText = `${entry.age || state.age} лет`;
         const characterDesc = `пол: ${genderName}, возраст: ${ageText}`;
-        const promptText = `Сделай вертикально ориентированную художественную иллюстрацию для этого книжного фрагмента. 
+        
+        let stylePrompt = `Стиль: атмосферный и глубоко реалистичный снимок эпохи, имитирующий старую любительскую пленочную фотографию 1990-х годов или полароидный снимок (faded Polaroid snapshot). Характерное ретро-зерно пленки (film grain), слегка выцветшие приглушенные цвета, естественные тени, теплая ностальгическая дымка и аналоговое несовершенство кадра. Полное отсутствие глянца, современных элементов, текста, слов или подписей.`;
+        
+        if (entry.imgStyle === 'book') {
+            stylePrompt = `Стиль: классическая книжная иллюстрация (советская или постсоветская эстетика детской и юношеской литературы). Смешанная техника: акварель, пастель и уголь. Теплые, немного приглушенные тона, выразительные текстуры, мягкая штриховка, создающая ностальгическое и чуть сказочное настроение. Без текста, слов или подписей.`;
+        } else if (entry.imgStyle === 'child') {
+            stylePrompt = `Стиль: аутентичный детский рисунок (рисовал ребенок ${ageText}). Использованы доступные материалы (ручка, карандаши, акварель, фломастеры, простой серый карандаш - уместно возрасту). Неровные линии, наивная перспектива, детская искренность. Бумага может выглядеть немного помятой или из альбома для рисования. Без осмысленного взрослого текста.`;
+        }
+
+        const promptText = `Сделай вертикально ориентированную художественную иллюстрацию для этого фрагмента. 
 Вид: строго от первого лица главного героя (${characterDesc}), показывающий сцену его глазами, но БЕЗ изображения его собственных рук, ног, пальцев или других частей тела в кадре. 
-Стиль: атмосферный и глубоко реалистичный снимок эпохи, имитирующий старую любительскую пленочную фотографию 1990-х годов или полароидный снимок (faded Polaroid snapshot). Характерное ретро-зерно пленки (film grain), слегка выцветшие приглушенные цвета, естественные тени, теплая ностальгическая дымка и аналоговое несовершенство кадра. Полное отсутствие глянца, современных элементов, текста, слов или подписей. Сама текстура и стиль кадра должны сквозить эпохой 90-х в России.
+${stylePrompt}
+
+Сама текстура и дух кадра должны сквозить эпохой 90-х в России.
 
 Фрагмент текста:
 ${paragraphs}`;
