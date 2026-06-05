@@ -23,8 +23,8 @@ export const LLM_PROVIDERS = {
         serverPath: "/api/openrouter",
         storageKey: "rpg90_key_openrouter",
         models: {
-            main: "nvidia/nemotron-3-ultra-550b-a55b",
-            enhance: "nvidia/nemotron-3-ultra-550b-a55b"
+            main: "qwen/qwen3.7-plus",
+            enhance: "qwen/qwen3.7-plus"
         }
     },
     hybrid: {
@@ -36,7 +36,7 @@ export const LLM_PROVIDERS = {
             enhance: "hydra"
         },
         models: {
-            main: "nvidia/nemotron-3-ultra-550b-a55b",
+            main: "qwen/qwen3.7-plus",
             enhance: "gemini-3.1-pro"
         }
     }
