@@ -2585,3 +2585,204 @@ window.startGenImgUI = function(turnStr) {
     const styleVal = document.getElementById('img-style-val-' + turnStr)?.value || 'photo';
     window.startGenImg(turnStr, styleVal);
 };
+
+// ========== ИНСПЕКТОР ПРОМПТА ==========
+
+(function setupPromptInspector() {
+    const fab       = document.getElementById('prompt-fab');
+    const modal     = document.getElementById('prompt-modal');
+    const closeBtn  = document.getElementById('prompt-close-btn');
+    const backdrop  = document.getElementById('prompt-backdrop');
+    const copyBtn   = document.getElementById('prompt-copy-btn');
+    const refreshBtn= document.getElementById('prompt-refresh-btn');
+    const content   = document.getElementById('prompt-content');
+    const metaTurns = document.getElementById('prompt-meta-turns');
+    const metaChars = document.getElementById('prompt-meta-chars');
+    const metaMsgs  = document.getElementById('prompt-meta-msgs');
+    const metaAction= document.getElementById('prompt-meta-action');
+    const tabBtns   = document.querySelectorAll('.prompt-tab-btn');
+
+    let currentTab = 'main'; // 'main' | 'enhance'
+
+    // ---------- вспомогательные функции ----------
+
+    /** Собирает тот же массив сообщений что идёт в callLLM на основном ходу,
+     *  но НЕ делает реального запроса. Возвращает { messages, action }. */
+    function buildInspectorPayload() {
+        // Определяем "симулированный" выбор игрока:
+        // первый из текущих lastChoices, либо заглушка для старта игры
+        let simulatedAction = 'Начало игры. Опиши обстановку и представь героя.';
+        if (state.lastChoices && state.lastChoices.length > 0) {
+            const first = state.lastChoices[0];
+            simulatedAction = first.action || first.text || simulatedAction;
+        }
+
+        const { nextSeasonIdx, nextYear } = getNextTime();
+        const nextSeasonName = SEASONS[nextSeasonIdx];
+        const choicesCount   = getChoicesCount();
+
+        // Контекст (точная копия логики из turn())
+        let contextForFirstPass = [];
+        const simulatedTurnCount = state.turnCount + 1; // следующий ход
+        if (state.compressedSummary) {
+            contextForFirstPass.push(state.compressedSummary);
+        }
+        if (simulatedTurnCount <= 4) {
+            contextForFirstPass = state.originalHistory.slice(-2);
+        }
+
+        const contextText = contextForFirstPass.length > 0
+            ? '=== КОНТЕКСТ ИСТОРИИ ===\n' + contextForFirstPass.join('\n\n---\n\n')
+            : '';
+
+        const systemPrompt    = buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount);
+        const fullSystemPrompt= contextText ? contextText + '\n\n' + systemPrompt : systemPrompt;
+
+        const historyForLLM = state.history.map((msg) => {
+            if (msg.role === 'assistant') {
+                return { role: 'assistant', content: msg.enhanced || msg.original || msg.content };
+            }
+            return { role: 'user', content: msg.content };
+        });
+
+        const messagesMain = [
+            { role: 'system',    content: fullSystemPrompt },
+            ...historyForLLM,
+            { role: 'user', content: `Мой выбор: ${simulatedAction}. (Сгенерируй атмосферно описанный результат и переход в ${nextSeasonName} ${nextYear})` }
+        ];
+
+        return { messagesMain, simulatedAction, nextSeasonName, nextYear };
+    }
+
+    /** Строит промпт для 2-го прохода (полировки).
+     *  Использует заглушку originalStory, т.к. реального ответа ещё нет. */
+    function buildEnhancePayload(simulatedAction) {
+        const locInfo    = getLocationInfo();
+        const genderInfo = GENDER_INFO[state.gender];
+        const npcList    = state.npcs.map((n) => `- ${n.name}: ${n.desc}`).join('\n');
+        const itemList   = state.inventory.map((i) => `- ${i.name}: ${i.desc}`).join('\n');
+        const summary    = state.lifeSummary ? `Краткая история жизни: ${state.lifeSummary}` : '';
+
+        // Строим statsGuidance (копия логики из turn())
+        let statsGuidance = '';
+        for (const [key, val] of Object.entries(state.stats)) {
+            const info = STATS_INFO[key];
+            if (!info || val === 5) continue;
+            let levelDesc = '';
+            if (val === 4) levelDesc = `У героя слегка низкий параметр ${info.name}. Лёгкий намёк в тексте, без трагизма.`;
+            else if (val === 6) levelDesc = `У героя слегка высокий параметр ${info.name}. Лёгкий намёк в тексте, без трагизма.`;
+            else if (val === 3) levelDesc = `У героя тревожно низкий параметр ${info.name}. Сам он не видит проблемы, но проблемы есть. Отрази это.`;
+            else if (val === 7) levelDesc = `У героя тревожно высокий параметр ${info.name}. Сам он не видит проблемы, но проблемы есть. Отрази это.`;
+            else if (val === 2) levelDesc = `У героя очень низкий параметр ${info.name}. Красной нитью по всему тексту.`;
+            else if (val === 8) levelDesc = `У героя очень высокий параметр ${info.name}. Красной нитью по всему тексту.`;
+            else if (val <= 1 || val >= 9) {
+                const critical = val <= 1 ? 'критически низкий' : 'критически высокий';
+                levelDesc = `У героя ${critical} параметр ${info.name}. Значительная часть текста должна быть обращена к этому.`;
+            }
+            if (levelDesc) statsGuidance += levelDesc + '\n';
+        }
+
+        const lastEnhanced = state.enhancedHistory.length
+            ? state.enhancedHistory[state.enhancedHistory.length - 1]
+            : null;
+
+        const placeholderStory = `[⚠ ЗАГЛУШКА: реальный текст 1-го прохода появится после отправки запроса]\nСимулированный выбор: «${simulatedAction}»`;
+
+        const enhancementPrompt = `Придумай 4 случайных слова. Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа: Ты мастер социально-драматической художественной текстовой игры про детство в 1990-х. Ниже текст — насыть его аутентичными и интересными запоминающимися диалогами и описаниями. Исправь очевидные ляпы, ориентируйся на предыдущую историю как на абсолютный канон. Не пиши предисловий и послесловий. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.\n\nВАЖНО: СТРОЖАЙШИЙ ЗАПРЕТ на избыток длинных тире (—). Не используй тире чаще одного раза на абзац.\n\nТЕКСТ ДЛЯ УЛУЧШЕНИЯ:\n\n${placeholderStory}\n\nКонтекст для понимания (справочно):\n- последний ход: ${lastEnhanced || 'нет'}\n- знакомые люди:\n${npcList || 'Нет'}\n- предметы:\n${itemList || 'Нет'}${summary ? '\n' + summary : ''}${statsGuidance ? `\n\nОсобые указания по параметрам:\n${statsGuidance}` : ''}`;
+
+        return [{ role: 'user', content: enhancementPrompt }];
+    }
+
+    /** Форматирует массив messages в читаемый текст для отображения */
+    function formatMessages(messages) {
+        return messages.map((m, i) => {
+            const roleLabel = {
+                system:    '╔══ SYSTEM ══╗',
+                user:      '╔══ USER ══╗',
+                assistant: '╔══ ASSISTANT ══╗'
+            }[m.role] || `╔══ ${m.role.toUpperCase()} ══╗`;
+            const sep = '─'.repeat(72);
+            return `${sep}\n[${i + 1}] ${roleLabel}\n${sep}\n${m.content}\n`;
+        }).join('\n') + '\n' + '─'.repeat(72);
+    }
+
+    /** Обновляет содержимое модального окна */
+    function renderPromptInspector() {
+        if (!state) {
+            content.textContent = '— Игра ещё не инициализирована —';
+            return;
+        }
+
+        const { messagesMain, simulatedAction, nextSeasonName, nextYear } = buildInspectorPayload();
+
+        let messages, tabLabel;
+        if (currentTab === 'enhance') {
+            messages = buildEnhancePayload(simulatedAction);
+            tabLabel = 'Полировка (2-й pass) — enhance-модель';
+        } else {
+            messages = messagesMain;
+            tabLabel = 'Основной (1-й pass) — main-модель';
+        }
+
+        const totalChars = messages.reduce((s, m) => s + m.content.length, 0);
+        const approxTokens = Math.round(totalChars / 3.8);
+
+        // Мета-строка
+        if (metaTurns)  metaTurns.textContent  = `ход: ${state.turnCount} → ${state.turnCount + 1}`;
+        if (metaChars)  metaChars.textContent   = `~${approxTokens.toLocaleString()} токенов (${totalChars.toLocaleString()} симв.)`;
+        if (metaMsgs)   metaMsgs.textContent    = `сообщений: ${messages.length}`;
+        if (metaAction) metaAction.textContent  = `симул. выбор: «${simulatedAction.substring(0, 60)}${simulatedAction.length > 60 ? '…' : ''}»`;
+
+        content.textContent = `═══ ${tabLabel} ═══\nМодель: ${getProviderModel(currentTab === 'enhance' ? 'enhance' : 'main')}\nПровайдер: ${getProviderConfig().label}\n\n` + formatMessages(messages);
+    }
+
+    // ---------- Tab switching ----------
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentTab = btn.dataset.tab;
+            tabBtns.forEach(b => {
+                const isActive = b.dataset.tab === currentTab;
+                b.style.background  = isActive ? 'var(--amber,#e8b061)' : 'var(--paper-2,#26201a)';
+                b.style.color       = isActive ? 'var(--paper-0,#0c0a08)' : 'var(--ink-soft)';
+                b.style.borderColor = isActive ? 'var(--line-warm,#c98a3a)' : 'var(--line-strong)';
+                b.classList.toggle('selected', isActive);
+            });
+            renderPromptInspector();
+        });
+    });
+
+    // ---------- Open / Close ----------
+    function openModal() {
+        renderPromptInspector();
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    fab?.addEventListener('click', openModal);
+    closeBtn?.addEventListener('click', closeModal);
+    backdrop?.addEventListener('click', closeModal);
+    refreshBtn?.addEventListener('click', renderPromptInspector);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+    });
+
+    // ---------- Copy ----------
+    copyBtn?.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(content.textContent);
+            const orig = copyBtn.textContent;
+            copyBtn.textContent = '✅ Скопировано!';
+            setTimeout(() => { copyBtn.textContent = orig; }, 1800);
+        } catch {
+            copyBtn.textContent = '❌ Ошибка';
+            setTimeout(() => { copyBtn.textContent = '📋 Копировать'; }, 1800);
+        }
+    });
+})();
