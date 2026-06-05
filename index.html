@@ -428,5 +428,54 @@
         </div>
     </div>
     <button id="debug-log-fab" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--border); border-radius: 50%; width: 48px; height: 48px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--ink);">🐞</button>
+
+    <!-- Prompt Inspector Button -->
+    <button id="prompt-fab" title="Инспектор промпта" style="position: fixed; bottom: 20px; right: 76px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--line-warm, #c98a3a); border-radius: 50%; width: 48px; height: 48px; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--amber, #e8b061);">🔬</button>
+
+    <!-- Prompt Inspector Modal -->
+    <div class="settings-modal hidden" id="prompt-modal" aria-hidden="true" style="z-index: 10001;">
+        <div class="settings-backdrop" id="prompt-backdrop"></div>
+        <div class="settings-sheet" role="dialog" aria-modal="true" style="max-width: 900px; max-height: 92vh; display: flex; flex-direction: column;">
+            <div class="settings-sheet__head">
+                <div>
+                    <div class="setup-eyebrow">Промпт-инжиниринг</div>
+                    <h2 class="settings-title" style="font-size:1.4rem;">Инспектор промпта</h2>
+                </div>
+                <button type="button" class="icon-btn" id="prompt-close-btn" aria-label="Закрыть">✕</button>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display:flex; gap:6px; padding: 0 1rem 0.75rem; border-bottom: 1px solid var(--line);">
+                <button class="prompt-tab-btn selected" data-tab="main" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-warm,#c98a3a); background:var(--amber,#e8b061); color:var(--paper-0,#0c0a08); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Основной (1-й pass)</button>
+                <button class="prompt-tab-btn" data-tab="enhance" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:var(--paper-2,#26201a); color:var(--ink-soft); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Полировка (2-й pass)</button>
+                <div style="flex:1;"></div>
+                <button id="prompt-refresh-btn" title="Пересчитать промпт" style="padding:6px 12px; border-radius:6px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-dim); font-family:var(--mono); font-size:0.75rem; cursor:pointer;">↺ Обновить</button>
+                <button id="prompt-copy-btn" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-dim); font-family:var(--mono); font-size:0.75rem; cursor:pointer;">📋 Копировать</button>
+            </div>
+
+            <!-- Meta info bar -->
+            <div id="prompt-meta" style="display:flex; gap:16px; flex-wrap:wrap; padding:0.6rem 1rem; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:0.7rem; color:var(--ink-dim); background:var(--paper-2,#1c1812);">
+                <span id="prompt-meta-turns"></span>
+                <span id="prompt-meta-chars"></span>
+                <span id="prompt-meta-msgs"></span>
+                <span id="prompt-meta-action"></span>
+            </div>
+
+            <!-- Content -->
+            <div class="settings-sheet__body" style="overflow-y:auto; flex:1; padding:0;">
+                <div id="prompt-content" style="
+                    white-space: pre-wrap;
+                    font-family: var(--mono, monospace);
+                    font-size: 0.78rem;
+                    line-height: 1.65;
+                    color: var(--ink, #efe5d0);
+                    background: var(--paper-0, #0c0a08);
+                    padding: 1.25rem 1.5rem;
+                    margin: 0;
+                    min-height: 300px;
+                ">— Промпт появится здесь. Начните или продолжите игру —</div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
