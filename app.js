@@ -75,6 +75,8 @@ function createDefaultState() {
         enhancedHistory: [],
         compressedSummary: '',
         lastCompressTurn: 0,
+        dialogArchive: '',      // сжатый архив истории диалога (все кроме хвоста)
+        lastDialogCompress: 0,  // turnCount последнего сжатия диалога
         archiveEntries: [],
         archiveViewIndex: null,
         gameOver: false,
@@ -1407,9 +1409,12 @@ async function callLLM({
 async function generateLifeSummary() {
     const genderInfo = GENDER_INFO[state.gender];
     const locInfo = getLocationInfo();
-    const fullHistory = state.history
+    // Полная история = архив диалога (если есть) + текущий хвост
+    const archivePart = state.dialogArchive ? `=== АРХИВ (сжато) ===\n${state.dialogArchive}\n\n` : '';
+    const tailPart = state.history
         .map((h) => h.role === 'user' ? `>> Выбор: ${h.content} <<` : (h.original || h.enhanced || h.content))
         .join('\n\n');
+    const fullHistory = archivePart + tailPart;
     const npcsDesc = state.npcs.map((n) => `- ${n.name}: ${n.desc}`).join('\n');
     const invDesc = state.inventory.map((i) => `- ${i.name}: ${i.desc}`).join('\n');
     const prevSummary = state.lifeSummary ? `\nПРЕДЫДУЩАЯ СВОДКА:\n${state.lifeSummary}\n` : '';
@@ -1454,15 +1459,7 @@ ${fullHistory}
 
 // ========== СЖАТИЕ ИСТОРИИ ==========
 async function compressHistory(oldSummary, recentTexts) {
-    const prompt = `Ты архивариус. Составь краткую сводку (не больше 5 предложений) истории жизни персонажа на основе предыдущей сводки и последних событий. Используй только факты, ничего не выдумывай.
-
-Предыдущая сводка:
-${oldSummary || 'Нет'}
-
-Последние события:
-${recentTexts.map((t, i) => `Событие ${i + 1}:\n${t}`).join('\n\n')}
-
-Сводка:`;
+    const prompt = `Ты архивариус. Составь краткую сводку (не больше 5 предложений) истории жизни персонажа на основе предыдущей сводки и последних событий. Используй только факты, ничего не выдумывай.\n\nПредыдущая сводка:\n${oldSummary || 'Нет'}\n\nПоследние события:\n${recentTexts.map((t, i) => `Событие ${i + 1}:\n${t}`).join('\n\n')}\n\nСводка:`;
 
     try {
         const completion = await callLLM({
@@ -1478,6 +1475,148 @@ ${recentTexts.map((t, i) => `Событие ${i + 1}:\n${t}`).join('\n\n')}
     }
 }
 
+// ========== СЖАТИЕ ДИАЛОГОВОГО ХВОСТА ==========
+// Вызывается ФОНОВО после завершения хода (не блокирует UI).
+// Берёт state.history БЕЗ двух последних сообщений (хвост оставляем),
+// сжимает их вдвое и обрезает state.history до хвоста.
+// Флаг — предотвращает параллельный запуск двух сжатий
+let _compressDialogRunning = false;
+
+async function compressDialogHistory(force = false) {
+    // Защита от гонки: если сжатие уже идёт — пропускаем
+    if (_compressDialogRunning) {
+        addSystemLog('Сжатие диалога (пропуск)', 'Уже выполняется', false);
+        return;
+    }
+
+    // Нужно минимум 6 сообщений (3 пары): иначе сжимать почти нечего
+    // (хвост = 2, сжимаем = 4+). При force=true порог снижается до 4.
+    const minMessages = force ? 4 : 6;
+    if (state.history.length < minMessages) {
+        addSystemLog('Сжатие диалога (пропуск)', `Мало сообщений: ${state.history.length} < ${minMessages}`, false);
+        return;
+    }
+
+    _compressDialogRunning = true;
+
+    // Снимок истории на момент запуска (защита от гонки с новым ходом)
+    const snapshotHistory = [...state.history];
+    const snapshotTurn = state.turnCount;
+
+    // Хвост — последние 2 сообщения остаются в state.history
+    const tail = snapshotHistory.slice(-2);
+    const toCompress = snapshotHistory.slice(0, -2);
+
+    const dialogText = toCompress.map(m => {
+        if (m.role === 'user') return `>> Выбор игрока: ${m.content} <<`;
+        const storyText = m.enhanced || m.original || m.content || '';
+        return storyText.substring(0, 1200);
+    }).join('\n\n');
+
+    const existingArchive = state.dialogArchive
+        ? `\nУже существующий архив (добавь к нему новые события):\n${state.dialogArchive}\n`
+        : '';
+
+    const prompt = `Ты архивариус текстовой RPG. Ниже — история диалога между игроком и нейросетью.
+Сожми её примерно ВДВОЕ, сохранив все ключевые события, имена персонажей, предметы, выборы игрока и их последствия. Пиши связным текстом от третьего лица, без потери фактов. Не добавляй ничего от себя.
+${existingArchive}
+История для сжатия:
+${dialogText}
+
+Сжатый архив:`;
+
+    addSystemLog('Сжатие диалога (фон)', `Сжимаем ${toCompress.length} сообщ., хвост ${tail.length} сообщ., ход ${snapshotTurn}`, false);
+
+    let compressed = null;
+
+    // Попытка 1: основная модель (main)
+    for (let attempt = 1; attempt <= 2 && !compressed; attempt++) {
+        try {
+            const completion = await callLLM({
+                messages: [{ role: 'user', content: prompt }],
+                modelKind: 'main',
+                temperature: 0.3,
+                max_tokens: 1200
+            }, 1); // retries=1, мы сами управляем повторами
+            const result = completion?.choices?.[0]?.message?.content?.trim();
+            if (result && result.length > 50) {
+                compressed = result;
+                addSystemLog('Сжатие диалога (успех main)', `Попытка ${attempt}, ${compressed.length} симв.`, false);
+            } else {
+                addSystemLog('Сжатие диалога (пустой ответ main)', `Попытка ${attempt}`, true);
+            }
+        } catch (e) {
+            addSystemLog(`Сжатие диалога (ошибка main, попытка ${attempt})`, e.message, true);
+            if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+        }
+    }
+
+    // Попытка 2: fallback на enhance-модель
+    if (!compressed) {
+        addSystemLog('Сжатие диалога (fallback → enhance)', 'Переключаемся на вторую модель', false);
+        for (let attempt = 1; attempt <= 2 && !compressed; attempt++) {
+            try {
+                const completion = await callLLM({
+                    messages: [{ role: 'user', content: prompt }],
+                    modelKind: 'enhance',
+                    temperature: 0.3,
+                    max_tokens: 1200
+                }, 1);
+                const result = completion?.choices?.[0]?.message?.content?.trim();
+                if (result && result.length > 50) {
+                    compressed = result;
+                    addSystemLog('Сжатие диалога (успех enhance)', `Попытка ${attempt}, ${compressed.length} симв.`, false);
+                } else {
+                    addSystemLog('Сжатие диалога (пустой ответ enhance)', `Попытка ${attempt}`, true);
+                }
+            } catch (e) {
+                addSystemLog(`Сжатие диалога (ошибка enhance, попытка ${attempt})`, e.message, true);
+                if (attempt < 2) await new Promise(r => setTimeout(r, 3000));
+            }
+        }
+    }
+
+    // Аварийное усечение — если все 4 попытки упали, режем историю механически
+    if (!compressed) {
+        addSystemLog('Сжатие диалога (аварийное усечение)', `Все попытки исчерпаны. Механически режем историю до хвоста.`, true);
+        // Механически склеиваем старые сообщения в архив без LLM
+        const fallbackArchive = toCompress.map(m => {
+            if (m.role === 'user') return `[Выбор] ${m.content}`;
+            const t = m.enhanced || m.original || m.content || '';
+            return t.substring(0, 400);
+        }).join(' | ');
+        compressed = (state.dialogArchive ? state.dialogArchive + '\n' : '') + fallbackArchive;
+    }
+
+    // Применяем результат ТОЛЬКО если state.history не успело обновиться новым ходом.
+    // Проверяем: хвост снапшота совпадает с хвостом текущей истории.
+    const currentTail = state.history.slice(-2);
+    const tailIsValid = (
+        currentTail.length === tail.length &&
+        currentTail.every((m, i) => m.content === tail[i].content && m.role === tail[i].role)
+    );
+
+    if (tailIsValid) {
+        state.dialogArchive = compressed;
+        // Оставляем хвост + всё что было добавлено ПОСЛЕ снапшота (новые ходы)
+        const newMessages = state.history.slice(snapshotHistory.length);
+        state.history = [...tail, ...newMessages];
+        state.lastDialogCompress = snapshotTurn;
+        save();
+        addSystemLog('Сжатие диалога (применено)', `Архив: ${compressed.length} симв. История: ${state.history.length} сообщ.`, false);
+    } else {
+        // Хвост изменился — игрок успел сделать новый ход за время сжатия.
+        // Не трогаем state.history, просто обновляем архив.
+        state.dialogArchive = compressed;
+        state.lastDialogCompress = snapshotTurn;
+        save();
+        addSystemLog('Сжатие диалога (архив обновлён, хвост не тронут)', 'Обнаружен новый ход за время сжатия', false);
+    }
+
+    _compressDialogRunning = false;
+}
+
+
 // ========== ОСНОВНОЙ ХОД ==========
 async function turn(action) {
     if (state.gameOver) return;
@@ -1491,35 +1630,22 @@ async function turn(action) {
         const nextSeasonName = SEASONS[nextSeasonIdx];
         const choicesCount = getChoicesCount();
 
-        // Формируем контекст для первого прохода. 
-        // Мы используем сжатую сводку истории и последние несколько записей, 
-        // которые могли еще не попасть в основную историю сообщений или для усиления контекста.
-        // Чтобы не перегружать контекст, ограничим количество передаваемых полных текстов старых ходов.
-        let contextForFirstPass = [];
-        if (state.turnCount > 0) {
-            // Если история сообщений (state.history) уже содержит последние ходы, 
-            // то дублировать их в системном промпте в виде полных текстов — лишняя трата токенов.
-            // Оставляем только сжатую сводку.
-            if (state.compressedSummary) {
-                contextForFirstPass.push(state.compressedSummary);
-            }
-            
-            // Если же мы в самом начале игры, можем передать пару последних оригинальных историй
-            if (state.turnCount <= 4) {
-                contextForFirstPass = state.originalHistory.slice(-2);
-            }
-        }
-
-        const contextText = contextForFirstPass.length > 0
-            ? '=== КОНТЕКСТ ИСТОРИИ ===\n' + contextForFirstPass.join('\n\n---\n\n')
-            : '';
+        // ── ФОРМИРОВАНИЕ КОНТЕКСТА (1-й проход) ──
+        // Структура: [SYSTEM: системный промпт + dialogArchive] → [история-хвост] → [USER: выбор]
+        // dialogArchive — сжатый архив старых ходов (обновляется фоново каждые 3 хода)
+        // state.history — только свежий хвост (последние 2 пары после сжатия)
 
         const systemPrompt = buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount);
-        const fullSystemPrompt = contextText ? contextText + '\n\n' + systemPrompt : systemPrompt;
 
+        // Добавляем архив прямо в system-промпт (не в отдельное сообщение)
+        const archiveBlock = state.dialogArchive
+            ? '\n\n=== АРХИВ ИСТОРИИ (сжато) ===\n' + state.dialogArchive + '\n=== КОНЕЦ АРХИВА ==='
+            : '';
+        const fullSystemPrompt = systemPrompt + archiveBlock;
+
+        // Хвост истории — только нужные сообщения (без JSON/технических данных)
         const historyForLLM = state.history.map((msg) => {
             if (msg.role === 'assistant') {
-                // Берем только художественный текст, без JSON и технических данных
                 return { role: 'assistant', content: msg.enhanced || msg.original || msg.content };
             }
             return { role: 'user', content: msg.content };
@@ -1577,6 +1703,21 @@ async function turn(action) {
             if (levelDesc) statsGuidance += levelDesc + '\n';
         }
 
+        // ── КОНТЕКСТ ДЛЯ ПОЛИРОВКИ (2-й проход) ──
+        // Архив даёт фоновое знание об истории, хвост — каноническая истина последних ходов.
+        const canonTail = state.history.slice(-4).map(m => {
+            if (m.role === 'user') return `>> Выбор игрока: ${m.content} <<`;
+            return m.enhanced || m.original || m.content || '';
+        }).join('\n\n');
+
+        const archiveForEnhance = state.dialogArchive
+            ? `\n=== АРХИВ ИСТОРИИ (канон, сжато) ===\n${state.dialogArchive}\n=== КОНЕЦ АРХИВА ===\n`
+            : '';
+
+        const canonBlock = canonTail
+            ? `\n=== ПОСЛЕДНИЕ ХОДЫ (канон, дословно) ===\n${canonTail}\n=== КОНЕЦ ===\n`
+            : '';
+
         const enhancementPrompt = `Придумай 4 случайных слова.  Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа: Ты мастер социально-драматической художественной текстовой игры про детство в 1990-х. Ниже текст — насыть его аутентичными и интересными запоминающимися диалогами и описаниями. Исправь очевидные ляпы, ориентируйся на предыдущую историю как на абсолютный канон. Не пиши предисловий и послесловий. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.
 
 ВАЖНО: СТРОЖАЙШИЙ ЗАПРЕТ на избыток длинных тире (—). Не используй тире чаще одного раза на абзац.
@@ -1586,14 +1727,12 @@ async function turn(action) {
 ${originalStory}
 
 Контекст для понимания (справочно):
-- последний ход: ${lastEnhanced || 'нет'}
 - знакомые люди:
 ${npcList || 'Нет'}
 - предметы:
 ${itemList || 'Нет'}
 ${summary ? '\n' + summary : ''}
-${statsGuidance ? `\nОсобые указания по параметрам:\n${statsGuidance}` : ''}`;
-
+${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указания по параметрам:\n${statsGuidance}` : ''}`
         let enhancedStory = originalStory;
         let polishFailed = false;
         try {
@@ -1614,16 +1753,30 @@ ${statsGuidance ? `\nОсобые указания по параметрам:\n$
 
         state.enhancedHistory.push(enhancedStory);
 
-        if (state.turnCount % 4 === 0 && state.turnCount > 0) {
-            const recent = state.originalHistory.slice(-4);
-            state.compressedSummary = await compressHistory(state.compressedSummary, recent);
-            state.lastCompressTurn = state.turnCount;
-        }
-
+        // Добавляем новые сообщения в хвост истории
         state.history.push({ role: 'user', content: action });
         state.history.push({ role: 'assistant', content: raw1, original: originalStory, enhanced: enhancedStory });
 
-        if (state.history.length > HISTORY_LIMIT) state.history = state.history.slice(-HISTORY_LIMIT);
+        // ── ФОНОВОЕ СЖАТИЕ ДИАЛОГА ──
+        // Плановое: каждые 3 хода + ответ > 800 симв. + есть что сжимать (≥ 6 сообщ.)
+        const planCompress = (
+            state.turnCount % 3 === 0 &&
+            enhancedStory.length > 800 &&
+            state.history.length >= 6
+        );
+        // Аварийное: история слишком разрослась (≥ 12 сообщений) — запускаем force-режим
+        // независимо от кратности хода (если плановое сжатие раньше падало)
+        const forceCompress = (
+            !planCompress &&
+            state.history.length >= 12 &&
+            !_compressDialogRunning
+        );
+        if (planCompress || forceCompress) {
+            const isForce = forceCompress;
+            if (isForce) addSystemLog('Сжатие диалога (аварийный запуск)', `История разрослась до ${state.history.length} сообщ.`, true);
+            // Запускаем фоново — не ждём, не блокируем UI
+            compressDialogHistory(isForce).catch(e => console.error('Фоновое сжатие диалога:', e));
+        }
 
         applyUpdates(data.updates);
         state.lastStory = enhancedStory;
@@ -1781,7 +1934,9 @@ ${precedingStory}
 }
 
 async function generateGameOverStory(crits, precedingStory) {
-    const fullHistory = state.history
+    // Полная история = архив + хвост
+    const archivePartGO = state.dialogArchive ? `=== АРХИВ (сжато) ===\n${state.dialogArchive}\n\n` : '';
+    const fullHistory = archivePartGO + state.history
         .map((h) => h.role === 'user' ? `>> ${h.content} <<` : (h.original || h.enhanced || h.content))
         .join('\n\n');
     const npcsDesc = state.npcs.map((n) => `- ${n.name}: ${n.desc}`).join('\n');
@@ -2165,6 +2320,8 @@ function tryLoadSavedGame() {
         if (!state.enhancedHistory) state.enhancedHistory = [];
         if (!state.compressedSummary) state.compressedSummary = '';
         if (!state.lastCompressTurn) state.lastCompressTurn = 0;
+        if (!state.dialogArchive) state.dialogArchive = '';
+        if (!state.lastDialogCompress) state.lastDialogCompress = 0;
         if (!state.archiveEntries) state.archiveEntries = [];
         if (state.archiveViewIndex === undefined) state.archiveViewIndex = null;
         backfillArchiveEntriesFromHistory();
@@ -2621,22 +2778,12 @@ window.startGenImgUI = function(turnStr) {
         const nextSeasonName = SEASONS[nextSeasonIdx];
         const choicesCount   = getChoicesCount();
 
-        // Контекст (точная копия логики из turn())
-        let contextForFirstPass = [];
-        const simulatedTurnCount = state.turnCount + 1; // следующий ход
-        if (state.compressedSummary) {
-            contextForFirstPass.push(state.compressedSummary);
-        }
-        if (simulatedTurnCount <= 4) {
-            contextForFirstPass = state.originalHistory.slice(-2);
-        }
-
-        const contextText = contextForFirstPass.length > 0
-            ? '=== КОНТЕКСТ ИСТОРИИ ===\n' + contextForFirstPass.join('\n\n---\n\n')
+        // Инспектор использует ту же логику что и реальный turn()
+        const systemPromptI    = buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount);
+        const archiveBlockI    = state.dialogArchive
+            ? '\n\n=== АРХИВ ИСТОРИИ (сжато) ===\n' + state.dialogArchive + '\n=== КОНЕЦ АРХИВА ==='
             : '';
-
-        const systemPrompt    = buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount);
-        const fullSystemPrompt= contextText ? contextText + '\n\n' + systemPrompt : systemPrompt;
+        const fullSystemPrompt = systemPromptI + archiveBlockI;
 
         const historyForLLM = state.history.map((msg) => {
             if (msg.role === 'assistant') {
