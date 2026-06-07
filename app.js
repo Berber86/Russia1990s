@@ -87,6 +87,7 @@ function createDefaultState() {
         lastSummaryTurn: 0,
         lastStory: '',
         lastChoices: null,
+        lastStatDeltas: null,
         lastMiracle: null,
         gameOverData: null
     };
@@ -1154,19 +1155,20 @@ function buildStatsDescription() {
     for (const [key, val] of Object.entries(state.stats)) {
         const info = STATS_INFO[key];
         if (!info) continue;
+        // val === 5 — норма, не пишем ничего (не отвлекаем LLM)
+        if (val === 5) continue;
         let status = '';
         let impact = '';
-        if (val === 0) { status = 'GAME OVER (0/10)'; impact = 'Полный крах: ' + info.low; }
-        else if (val === 1) { status = 'ТРАГИЗМ СИТУАЦИИ (1/10)'; impact = 'На грани гибели: ' + info.low; }
-        else if (val === 2) { status = 'ОЧЕВИДНЫЕ И СИЛЬНЫЕ ПРОБЛЕМЫ (2/10)'; impact = 'Даже герой видит беду: ' + info.low; }
-        else if (val === 3) { status = 'ЗНАЧИТЕЛЬНОЕ ОТКЛОНЕНИЕ (3/10)'; impact = 'Герой считает нормой, но проблемы есть: ' + info.low; }
-        else if (val === 4) { status = 'ЛЁГКОЕ ОТКЛОНЕНИЕ (4/10)'; impact = 'Пока ещё не трагедия: ' + info.low; }
-        else if (val === 5) { status = 'НОРМА (5/10)'; impact = 'Средний уровень, обычная жизнь'; }
-        else if (val === 6) { status = 'ЛЁГКОЕ ОТКЛОНЕНИЕ (6/10)'; impact = 'Лёгкий привкус счастья: ' + info.high; }
-        else if (val === 7) { status = 'ЗНАЧИТЕЛЬНОЕ ОТКЛОНЕНИЕ (7/10)'; impact = 'Герой считает благом, но читатель видит проблемы: ' + info.high; }
-        else if (val === 8) { status = 'ОЧЕВИДНЫЕ ПРОБЛЕМЫ (8/10)'; impact = 'Даже герой видит перебор: ' + info.high; }
-        else if (val === 9) { status = 'ТРАГИЗМ СИТУАЦИИ (9/10)'; impact = 'На грани катастрофы: ' + info.high; }
-        else if (val === 10) { status = 'GAME OVER (10/10)'; impact = 'Полный крах от избытка: ' + info.high; }
+        if (val === 0)       { status = 'GAME OVER (0/10)';                      impact = 'Полный крах: ' + info.low; }
+        else if (val === 1)  { status = 'ТРАГИЗМ СИТУАЦИИ (1/10)';               impact = 'На грани гибели: ' + info.low; }
+        else if (val === 2)  { status = 'ОЧЕВИДНЫЕ И СИЛЬНЫЕ ПРОБЛЕМЫ (2/10)';   impact = 'Даже герой видит беду: ' + info.low; }
+        else if (val === 3)  { status = 'ЗНАЧИТЕЛЬНОЕ ОТКЛОНЕНИЕ (3/10)';        impact = 'Герой считает нормой, но проблемы есть: ' + info.low; }
+        else if (val === 4)  { status = 'ЛЁГКОЕ ОТКЛОНЕНИЕ (4/10)';              impact = 'Пока ещё не трагедия: ' + info.low; }
+        else if (val === 6)  { status = 'ЛЁГКОЕ ОТКЛОНЕНИЕ (6/10)';              impact = 'Лёгкий привкус счастья: ' + info.high; }
+        else if (val === 7)  { status = 'ЗНАЧИТЕЛЬНОЕ ОТКЛОНЕНИЕ (7/10)';        impact = 'Герой считает благом, но читатель видит проблемы: ' + info.high; }
+        else if (val === 8)  { status = 'ОЧЕВИДНЫЕ ПРОБЛЕМЫ (8/10)';             impact = 'Даже герой видит перебор: ' + info.high; }
+        else if (val === 9)  { status = 'ТРАГИЗМ СИТУАЦИИ (9/10)';               impact = 'На грани катастрофы: ' + info.high; }
+        else if (val === 10) { status = 'GAME OVER (10/10)';                     impact = 'Полный крах от избытка: ' + info.high; }
         desc += `- **${info.name}**: ${status} — ${impact}\n`;
     }
     return desc;
@@ -1507,23 +1509,26 @@ async function compressDialogHistory(force = false) {
     const tail = snapshotHistory.slice(-2);
     const toCompress = snapshotHistory.slice(0, -2);
 
-    const dialogText = toCompress.map(m => {
-        if (m.role === 'user') return `>> Выбор игрока: ${m.content} <<`;
-        const storyText = m.enhanced || m.original || m.content || '';
-        return storyText.substring(0, 1200);
-    }).join('\n\n');
+    // Полная история для сжатия = старый архив (если есть) + новые ходы из хвоста.
+    // Архив идёт ПЕРВЫМ как часть единого текста — иначе модели игнорируют инструкцию
+    // "добавь к нему" и пересказывают только свежие ходы, теряя раннюю историю.
+    const fullDialogForCompress = [
+        ...(state.dialogArchive ? [`=== РАНЕЕ (уже сжато) ===\n${state.dialogArchive}\n=== КОНЕЦ РАНЕЕ ===`] : []),
+        ...toCompress.map(m => {
+            if (m.role === 'user') return `>> Выбор игрока: ${m.content} <<`;
+            const storyText = m.enhanced || m.original || m.content || '';
+            return storyText.substring(0, 1200);
+        })
+    ].join('\n\n');
 
-    const existingArchive = state.dialogArchive
-        ? `\nУже существующий архив (добавь к нему новые события):\n${state.dialogArchive}\n`
-        : '';
+    const prompt = `Ты архивариус текстовой RPG. Ниже — полная история игры: сначала уже сжатый архив ранних событий (если есть), затем новые ходы.
+Твоя задача — создать ЕДИНЫЙ сжатый архив всей истории целиком, примерно вдвое короче суммарного объёма входного текста.
+Сохрани все ключевые события, имена персонажей, предметы, выборы игрока и их последствия в хронологическом порядке. Пиши связным текстом от третьего лица. Не добавляй ничего от себя.
 
-    const prompt = `Ты архивариус текстовой RPG. Ниже — история диалога между игроком и нейросетью.
-Сожми её примерно ВДВОЕ, сохранив все ключевые события, имена персонажей, предметы, выборы игрока и их последствия. Пиши связным текстом от третьего лица, без потери фактов. Не добавляй ничего от себя.
-${existingArchive}
-История для сжатия:
-${dialogText}
+Полная история:
+${fullDialogForCompress}
 
-Сжатый архив:`;
+Единый сжатый архив:`;
 
     addSystemLog('Сжатие диалога (фон)', `Сжимаем ${toCompress.length} сообщ., хвост ${tail.length} сообщ., ход ${snapshotTurn}`, false);
 
@@ -1778,7 +1783,16 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
             compressDialogHistory(isForce).catch(e => console.error('Фоновое сжатие диалога:', e));
         }
 
+        // Снимок статов ДО применения — для отображения финальных сдвигов игроку
+        const statsBeforeUpdate = { ...state.stats };
         applyUpdates(data.updates);
+        // Считаем фактические (финальные) сдвиги после всех фильтров вязкости
+        const statDeltas = {};
+        for (const key of Object.keys(state.stats)) {
+            const diff = state.stats[key] - statsBeforeUpdate[key];
+            if (diff !== 0) statDeltas[key] = diff;
+        }
+        state.lastStatDeltas = Object.keys(statDeltas).length > 0 ? statDeltas : null;
         state.lastStory = enhancedStory;
         state.lastChoices = data.choices;
         advanceTime();
@@ -2229,6 +2243,21 @@ function renderUI() {
             btn.onclick = resetGame;
             els.choices.appendChild(btn);
         } else if (state.lastChoices) {
+            // Плашка финальных сдвигов статов (после фильтров вязкости)
+            if (state.lastStatDeltas && Object.keys(state.lastStatDeltas).length > 0) {
+                const deltaBar = document.createElement('div');
+                deltaBar.className = 'stat-delta-bar';
+                const chips = Object.entries(state.lastStatDeltas).map(([key, diff]) => {
+                    const info = STATS_INFO[key];
+                    const name = info?.name || key;
+                    const sign = diff > 0 ? '+' : '';
+                    const cls  = diff > 0 ? 'stat-delta-chip stat-delta-chip--up'
+                                          : 'stat-delta-chip stat-delta-chip--down';
+                    return `<span class="${cls}">${escapeHTML(name)} ${sign}${diff}</span>`;
+                }).join('');
+                deltaBar.innerHTML = chips;
+                els.choices.appendChild(deltaBar);
+            }
             state.lastChoices.forEach((choice, index) => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
