@@ -1332,7 +1332,7 @@ async function callLLM({
             // OpenRouter всегда гоним через серверный маршрут.
             if (executionProvider === 'openrouter') {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 600000);
+                const timeoutId = setTimeout(() => controller.abort(), 120000);
                 const response = await fetch(cfg.serverPath, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1352,7 +1352,7 @@ async function callLLM({
             // Hydra можно вызывать напрямую пользовательским ключом.
             if (executionProvider === 'hydra' && providerApiKey) {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 600000);
+                const timeoutId = setTimeout(() => controller.abort(), 120000);
                 const response = await fetch(cfg.directUrl, {
                     method: 'POST',
                     headers: {
@@ -1379,7 +1379,7 @@ async function callLLM({
                 throw new Error(`Для локальной разработки необходимо ввести API ключ ${cfg.label}.`);
             }
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 600000);
+            const timeoutId = setTimeout(() => controller.abort(), 120000);
             const response = await fetch(cfg.serverPath, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2801,22 +2801,20 @@ window.startGenImgUI = function(turnStr) {
         return { messagesMain, simulatedAction, nextSeasonName, nextYear };
     }
 
-    /** Строит промпт для 2-го прохода (полировки).
-     *  Использует заглушку originalStory, т.к. реального ответа ещё нет. */
+    /** Строит промпт для 2-го прохода (полировки) — точная копия логики из turn().
+     *  originalStory заменена заглушкой, т.к. реального ответа 1-го прохода ещё нет. */
     function buildEnhancePayload(simulatedAction) {
-        const locInfo    = getLocationInfo();
-        const genderInfo = GENDER_INFO[state.gender];
-        const npcList    = state.npcs.map((n) => `- ${n.name}: ${n.desc}`).join('\n');
-        const itemList   = state.inventory.map((i) => `- ${i.name}: ${i.desc}`).join('\n');
-        const summary    = state.lifeSummary ? `Краткая история жизни: ${state.lifeSummary}` : '';
+        const npcList  = state.npcs.map((n) => `- ${n.name}: ${n.desc}`).join('\n');
+        const itemList = state.inventory.map((i) => `- ${i.name}: ${i.desc}`).join('\n');
+        const summary  = state.lifeSummary ? `Краткая история жизни: ${state.lifeSummary}` : '';
 
-        // Строим statsGuidance (копия логики из turn())
+        // statsGuidance — точная копия из turn()
         let statsGuidance = '';
         for (const [key, val] of Object.entries(state.stats)) {
             const info = STATS_INFO[key];
             if (!info || val === 5) continue;
             let levelDesc = '';
-            if (val === 4) levelDesc = `У героя слегка низкий параметр ${info.name}. Лёгкий намёк в тексте, без трагизма.`;
+            if (val === 4)      levelDesc = `У героя слегка низкий параметр ${info.name}. Лёгкий намёк в тексте, без трагизма.`;
             else if (val === 6) levelDesc = `У героя слегка высокий параметр ${info.name}. Лёгкий намёк в тексте, без трагизма.`;
             else if (val === 3) levelDesc = `У героя тревожно низкий параметр ${info.name}. Сам он не видит проблемы, но проблемы есть. Отрази это.`;
             else if (val === 7) levelDesc = `У героя тревожно высокий параметр ${info.name}. Сам он не видит проблемы, но проблемы есть. Отрази это.`;
@@ -2829,13 +2827,37 @@ window.startGenImgUI = function(turnStr) {
             if (levelDesc) statsGuidance += levelDesc + '\n';
         }
 
-        const lastEnhanced = state.enhancedHistory.length
-            ? state.enhancedHistory[state.enhancedHistory.length - 1]
-            : null;
+        // canonTail + archiveForEnhance — точная копия из turn()
+        const canonTail = state.history.slice(-4).map(m => {
+            if (m.role === 'user') return `>> Выбор игрока: ${m.content} <<`;
+            return m.enhanced || m.original || m.content || '';
+        }).join('\n\n');
 
-        const placeholderStory = `[⚠ ЗАГЛУШКА: реальный текст 1-го прохода появится после отправки запроса]\nСимулированный выбор: «${simulatedAction}»`;
+        const archiveForEnhance = state.dialogArchive
+            ? `\n=== АРХИВ ИСТОРИИ (канон, сжато) ===\n${state.dialogArchive}\n=== КОНЕЦ АРХИВА ===\n`
+            : '';
 
-        const enhancementPrompt = `Придумай 4 случайных слова. Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа: Ты мастер социально-драматической художественной текстовой игры про детство в 1990-х. Ниже текст — насыть его аутентичными и интересными запоминающимися диалогами и описаниями. Исправь очевидные ляпы, ориентируйся на предыдущую историю как на абсолютный канон. Не пиши предисловий и послесловий. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.\n\nВАЖНО: СТРОЖАЙШИЙ ЗАПРЕТ на избыток длинных тире (—). Не используй тире чаще одного раза на абзац.\n\nТЕКСТ ДЛЯ УЛУЧШЕНИЯ:\n\n${placeholderStory}\n\nКонтекст для понимания (справочно):\n- последний ход: ${lastEnhanced || 'нет'}\n- знакомые люди:\n${npcList || 'Нет'}\n- предметы:\n${itemList || 'Нет'}${summary ? '\n' + summary : ''}${statsGuidance ? `\n\nОсобые указания по параметрам:\n${statsGuidance}` : ''}`;
+        const canonBlock = canonTail
+            ? `\n=== ПОСЛЕДНИЕ ХОДЫ (канон, дословно) ===\n${canonTail}\n=== КОНЕЦ ===\n`
+            : '';
+
+        const placeholderStory = `[⚠ ЗАГЛУШКА: реальный текст 1-го прохода появится после запроса]\nСимулированный выбор: «${simulatedAction}»`;
+
+        const enhancementPrompt = `Придумай 4 случайных слова.  Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа: Ты мастер социально-драматической художественной текстовой игры про детство в 1990-х. Ниже текст — насыть его аутентичными и интересными запоминающимися диалогами и описаниями. Исправь очевидные ляпы, ориентируйся на предыдущую историю как на абсолютный канон. Не пиши предисловий и послесловий. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.
+
+ВАЖНО: СТРОЖАЙШИЙ ЗАПРЕТ на избыток длинных тире (—). Не используй тире чаще одного раза на абзац.
+
+ТЕКСТ ДЛЯ УЛУЧШЕНИЯ:
+
+${placeholderStory}
+
+Контекст для понимания (справочно):
+- знакомые люди:
+${npcList || 'Нет'}
+- предметы:
+${itemList || 'Нет'}
+${summary ? '\n' + summary : ''}
+${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указания по параметрам:\n${statsGuidance}` : ''}`;
 
         return [{ role: 'user', content: enhancementPrompt }];
     }
