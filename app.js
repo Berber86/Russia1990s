@@ -2465,15 +2465,31 @@ function applyUpdates(u) {
             apply = false;
             console.log(`🚫 Первый ход: изменение ${STATS_INFO[key]?.name || key} заблокировано (${current} → ${current + delta})`);
         } else {
-            if (delta > 0 && current >= 6) {
-                const chance = state.pace === 'season' ? 0.25 : 0.5;
+            // ── ВЯЗКОСТЬ СТАТОВ ──
+            // Блокируется только движение ОТ центра (5) — всё дальше к краям.
+            // Движение К центру — никогда не блокируется.
+            //
+            // Формула: p = max(decay^dist, floor)
+            // Параметры подобраны так чтобы при целенаправленном движении +1 каждый ход:
+            //   Normal:   ~16 ходов от 5 до game over  (season)
+            //   Hardcore: ~12 ходов от 5 до game over  (season)
+            //
+            // Шансы по шагам (season):
+            //   Normal  (decay=0.62): 6→7:62% 7→8:38% 8→9:24% 9→10:15%
+            //   Hardcore(decay=0.69): 6→7:69% 7→8:48% 8→9:33% 9→10:23%
+            // Годовой темп: decay^0.7 — чуть мягче (ход охватывает больше времени)
+            const movingAwayFromCenter = (delta > 0 && current >= 5) || (delta < 0 && current <= 5);
+            if (movingAwayFromCenter) {
+                const dist = Math.abs(current - 5); // 1..5
+                const decay = state.difficulty === 'hardcore'
+                    ? (state.pace === 'season' ? 0.69 : Math.pow(0.69, 0.7))
+                    : (state.pace === 'season' ? 0.62 : Math.pow(0.62, 0.7));
+                const floor = 0.10; // минимум 10% — дотянуться до края всегда возможно
+                const chance = Math.max(Math.pow(decay, dist), floor);
                 apply = Math.random() < chance;
-                if (!apply) console.log(`🛡️ Вязкость: повышение ${STATS_INFO[key]?.name || key} заблокировано (${current} → ${current + delta})`);
-            } else if (delta < 0 && current <= 4) {
-                const chance = state.pace === 'season' ? 0.25 : 0.5;
-                apply = Math.random() < chance;
-                if (!apply) console.log(`🛡️ Вязкость: понижение ${STATS_INFO[key]?.name || key} заблокировано (${current} → ${current + delta})`);
+                if (!apply) console.log(`🛡️ Вязкость [${state.difficulty}/${state.pace}]: ${STATS_INFO[key]?.name || key} (${current}→${current + delta}) dist=${dist} шанс=${(chance*100).toFixed(0)}%`);
             }
+            // Движение к центру: никогда не блокируется
         }
         if (apply) {
             state.stats[key] = Math.max(0, Math.min(10, current + delta));
@@ -3111,33 +3127,71 @@ window.downloadIllustration = function(dateLabel, base64Url) {
 window.retryPolish = async function(turnStr) {
     const turnNum = parseInt(turnStr, 10);
     const entry = state.archiveEntries.find(e => e.turn === turnNum);
-    if (!entry || !entry.polishFailed || !entry.enhancementPrompt) return;
-    
-    setLoading(true, "Повторная попытка полировки...");
+    if (!entry || !entry.polishFailed) return;
+
+    // Пересобираем актуальный промпт полировки на основе сохранённого черновика.
+    // enhancementPrompt мог устареть после правок кода — пересобираем на лету.
+    const originalStory = entry.storyOriginal || entry.storyEnhanced || '';
+    const npcList  = state.npcs.map((n) => `- ${n.name}: ${n.desc}`).join('\n');
+    const itemList = state.inventory.map((i) => `- ${i.name}: ${i.desc}`).join('\n');
+    const summary  = state.lifeSummary ? `Краткая история жизни: ${state.lifeSummary}` : '';
+    const verbosityStyleNote = state.verbosity === 'concise'
+        ? 'Текст должен остаться КОРОТКИМ и ЁМКИМ. Убирай лишнее, не добавляй описаний.'
+        : state.verbosity === 'detailed'
+        ? 'Текст должен быть ПОДРОБНЫМ и АТМОСФЕРНЫМ. Добавляй диалоги, запахи, ощущения, детали.'
+        : 'Сохраняй естественный объём, не растягивай и не обрезай.';
+    const archiveForEnhance = state.dialogArchive
+        ? `\n=== АРХИВ ИСТОРИИ (канон, сжато) ===\n${state.dialogArchive}\n=== КОНЕЦ АРХИВА ===\n`
+        : '';
+    const canonTail = state.history.slice(-4).map(m => {
+        if (m.role === 'user') return `>> Выбор игрока: ${m.content} <<`;
+        return m.enhanced || m.original || m.content || '';
+    }).join('\n\n');
+    const canonBlock = canonTail
+        ? `\n=== ПОСЛЕДНИЕ ХОДЫ (канон, дословно) ===\n${canonTail}\n=== КОНЕЦ ===\n`
+        : '';
+
+    const freshPrompt = `Придумай 4 случайных слова.  Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа: Ты мастер социально-драматической художественной текстовой игры про детство в 1990-х. Ниже текст — насыть его аутентичными и интересными запоминающимися диалогами и описаниями. Исправь очевидные ляпы, ориентируйся на предыдущую историю как на абсолютный канон. Не пиши предисловий и послесловий. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.
+
+${verbosityStyleNote}
+
+ВАЖНО: Запрет на избыток длинных тире (—). Не используй тире чаще одного раза на абзац.
+
+ТЕКСТ ДЛЯ УЛУЧШЕНИЯ:
+
+${originalStory}
+
+Контекст для понимания (справочно):
+- знакомые люди:
+${npcList || 'Нет'}
+- предметы:
+${itemList || 'Нет'}
+${summary ? '\n' + summary : ''}
+${archiveForEnhance}${canonBlock}`;
+
+    setLoading(true, 'Повторная попытка полировки...');
     try {
+        const pass2MaxTokens = 10000;
         const completion2 = await callLLM({
-            messages: [{ role: 'user', content: entry.enhancementPrompt }],
+            messages: [{ role: 'user', content: freshPrompt }],
             modelKind: 'enhance',
             temperature: 0.7,
-            max_tokens: 5000
+            max_tokens: pass2MaxTokens
         });
-        const raw2 = completion2?.choices?.[0]?.message?.content;
+        let raw2 = completion2?.choices?.[0]?.message?.content || '';
+        if (isTruncated(completion2) && raw2.trim()) {
+            const continued2 = await continuesTruncatedResponse(raw2, 'enhance');
+            if (continued2) raw2 = continued2;
+        }
         if (raw2?.trim()) {
             entry.storyEnhanced = raw2.trim();
             entry.polishFailed = false;
-            
-            // update state history
+
             const histEntry = state.history.find(h => h.role === 'assistant' && h.original === entry.storyOriginal);
-            if (histEntry) {
-                histEntry.enhanced = entry.storyEnhanced;
-            }
-            if (state.lastStory === entry.storyOriginal) {
-                state.lastStory = entry.storyEnhanced;
-            }
+            if (histEntry) histEntry.enhanced = entry.storyEnhanced;
+            if (state.lastStory === entry.storyOriginal) state.lastStory = entry.storyEnhanced;
             const enhIdx = state.enhancedHistory.indexOf(entry.storyOriginal);
-            if (enhIdx !== -1) {
-                state.enhancedHistory[enhIdx] = entry.storyEnhanced;
-            }
+            if (enhIdx !== -1) state.enhancedHistory[enhIdx] = entry.storyEnhanced;
         }
     } catch(e) {
         console.error(e);
