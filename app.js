@@ -250,35 +250,103 @@ function rollChance(percent) {
     return Math.random() * 100 < percent;
 }
 
+// Исправляет типичные ошибки которые делают LLM в JSON:
+// - trailing commas: {a:1,} или [1,2,]
+// - двойные открывающие скобки: {{"key" → {"key"
+// - лишние поля внутри "updates" (stats, inventory и т.п.)
+// - незакрытые корневые объекты (добавляем недостающие })
+function sanitizeJSON(raw) {
+    let s = raw
+        // Убираем markdown-обёртку
+        .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/g, '').trim();
+
+    // Находим начало JSON-объекта
+    const start = s.indexOf('{');
+    if (start === -1) return s;
+    s = s.substring(start);
+
+    // 1. Двойные открывающие скобки: {{"key" → {"key"
+    //    Возникает когда модель пишет update_item: {{"name":...}}
+    s = s.replace(/\{\{/g, '{');
+
+    // 2. Trailing commas перед } или ]
+    //    Например: "authority":6,\n} или [...],\n}
+    s = s.replace(/,(\s*[}\]])/g, '$1');
+
+    // 3. Лишние поля в "updates" — модель иногда вставляет туда "stats", "inventory"
+    //    Эти поля не предусмотрены схемой и ломают применение обновлений.
+    //    Удаляем их из блока updates. Ищем блок updates и вырезаем чужеродные ключи.
+    const UPDATES_EXTRA = /"(stats|inventory|npcs|history|age|year|season|turnCount)"\s*:\s*/g;
+    // Применяем только внутри "updates": { ... } — находим его и чистим
+    s = s.replace(/"updates"\s*:\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/g, (match, inner) => {
+        // Удаляем лишние ключи и их значения (объект или примитив)
+        let cleaned = inner
+            .replace(/"(stats|inventory|npcs|history|age|year|season|turnCount)"\s*:\s*(\{[^}]*\}|\[[^\]]*\]|"[^"]*"|\d+|null|true|false)\s*,?\s*/g, '');
+        // Убираем trailing comma после последнего поля
+        cleaned = cleaned.replace(/,(\s*)$/, '$1');
+        return `"updates": {${cleaned}}`;
+    });
+
+    // 4. Незакрытый корневой объект — считаем баланс скобок и добавляем }
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (escape)          { escape = false; continue; }
+        if (c === '\\')      { escape = true; continue; }
+        if (c === '"')       { inString = !inString; continue; }
+        if (inString)        continue;
+        if (c === '{' || c === '[') depth++;
+        else if (c === '}' || c === ']') depth--;
+    }
+    // Добавляем недостающие закрывающие скобки
+    if (depth > 0) {
+        s = s + '}'.repeat(depth);
+        if (typeof addSystemLog === 'function')
+            addSystemLog('sanitizeJSON: добавлено закрывающих скобок', String(depth), false);
+    }
+
+    return s;
+}
+
 function parseJSON(text, contextTitle = 'LLM Ответ') {
     if (!text) return null;
     if (typeof addSystemLog === 'function') addSystemLog(contextTitle + ' (Сырой текст)', text, false);
+
+    // Попытка 1: прямой парсинг
+    try { return JSON.parse(text); } catch (_) {}
+
+    // Попытка 2: санитайзер + парсинг
     try {
-        return JSON.parse(text);
-    } catch (e1) {
+        const sanitized = sanitizeJSON(text);
+        const result = JSON.parse(sanitized);
+        if (typeof addSystemLog === 'function')
+            addSystemLog(contextTitle + ' (Парсинг после санитайзера)', 'OK', false);
+        return result;
+    } catch (e2) {
+        // Попытка 3: найти первый валидный JSON-объект в тексте (как раньше)
         try {
-            let clean = text
-                .replace(/^```json\s*/i, '')
-                .replace(/^```\s*/i, '')
-                .replace(/\s*```$/g, '')
-                .trim();
+            const clean = sanitizeJSON(text);
             const startIdx = clean.indexOf('{');
             if (startIdx === -1) throw new Error('No JSON object found');
-            let braceCount = 0;
-            let endIdx = -1;
+            let braceCount = 0, endIdx = -1;
+            let inStr = false, esc = false;
             for (let i = startIdx; i < clean.length; i++) {
-                if (clean[i] === '{') braceCount++;
-                else if (clean[i] === '}') braceCount--;
-                if (braceCount === 0 && clean[i] === '}') {
-                    endIdx = i;
-                    break;
-                }
+                const c = clean[i];
+                if (esc)       { esc = false; continue; }
+                if (c === '\\') { esc = true; continue; }
+                if (c === '"') { inStr = !inStr; continue; }
+                if (inStr) continue;
+                if (c === '{') braceCount++;
+                else if (c === '}') { braceCount--; if (braceCount === 0) { endIdx = i; break; } }
             }
             if (endIdx === -1) throw new Error('Unbalanced JSON');
             return JSON.parse(clean.substring(startIdx, endIdx + 1));
-        } catch (e2) {
-            console.error('JSON parse error:', e2, text.substring(0, 200));
-            if (typeof addSystemLog === 'function') addSystemLog('Ошибка парсинга JSON (' + contextTitle + ')', text, true);
+        } catch (e3) {
+            console.error('JSON parse error:', e3, text.substring(0, 300));
+            if (typeof addSystemLog === 'function')
+                addSystemLog('Ошибка парсинга JSON (' + contextTitle + ')', text, true);
             return null;
         }
     }
