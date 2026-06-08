@@ -585,6 +585,7 @@ function renderSetupWizard() {
 
 function openSettingsModal() {
     if (!els.settingsModal) return;
+    syncSettingsVerbosityBtns();
     els.settingsModal.classList.remove('hidden');
     els.settingsModal.setAttribute('aria-hidden', 'false');
 }
@@ -595,11 +596,49 @@ function closeSettingsModal() {
     els.settingsModal.setAttribute('aria-hidden', 'true');
 }
 
+function syncSettingsVerbosityBtns() {
+    // Синхронизирует кнопки verbosity в модалке настроек с текущим state.verbosity
+    const btns = document.querySelectorAll('#settings-verbosity-btns .option-btn');
+    btns.forEach(b => b.classList.toggle('selected', b.dataset.value === state.verbosity));
+    // Обновляем info-блок
+    const info = document.getElementById('settings-verbosity-info');
+    if (info) {
+        const map = {
+            concise:  '<strong>Лаконично:</strong> короткие ходы, только суть. Лимит ответа — 3 500 токенов.',
+            normal:   '<strong>Обычно:</strong> сбалансированный объём текста, живые детали без излишеств. Лимит — 5 000 токенов.',
+            detailed: '<strong>Подробно:</strong> развёрнутые описания, диалоги, неожиданная деталь при смене сезона. Лимит — 6 500 токенов.',
+        };
+        info.innerHTML = map[state.verbosity] || map.normal;
+    }
+}
+
 function setupSettingsModal() {
     els.setupSettingsBtn?.addEventListener('click', openSettingsModal);
     els.gameSettingsBtn?.addEventListener('click', openSettingsModal);
     els.settingsCloseBtn?.addEventListener('click', closeSettingsModal);
     els.settingsBackdrop?.addEventListener('click', closeSettingsModal);
+
+    // ── Табы внутри модалки настроек ──
+    document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.stab;
+            document.querySelectorAll('.settings-tab-btn').forEach(b => b.classList.toggle('selected', b.dataset.stab === target));
+            document.querySelectorAll('.settings-tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== 'stab-' + target));
+        });
+    });
+
+    // ── Кнопки verbosity в модалке настроек ──
+    document.querySelectorAll('#settings-verbosity-btns .option-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            state.verbosity = btn.dataset.value;
+            syncSettingsVerbosityBtns();
+            // Синхронизируем кнопки в визарде (если открыт)
+            document.querySelectorAll('#verbosity-btns .option-btn').forEach(b =>
+                b.classList.toggle('selected', b.dataset.value === state.verbosity));
+            updateVerbosityInfo(state.verbosity);
+            if (hasActiveRun()) save();
+        });
+    });
 }
 
 function setupArchiveControls() {

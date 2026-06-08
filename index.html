@@ -289,25 +289,52 @@
         <div class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div class="settings-sheet__head">
                 <div>
-                    <div class="setup-eyebrow">Технические настройки</div>
-                    <h3 id="settings-title">Маршрут запросов</h3>
+                    <div class="setup-eyebrow">Настройки игры</div>
+                    <h3 id="settings-title">Параметры</h3>
                 </div>
                 <button type="button" class="icon-btn icon-btn--ghost" id="settings-close-btn" aria-label="Закрыть настройки">✕</button>
             </div>
-            <div class="provider-switch">
-                <div class="provider-switch-title">Провайдер</div>
-                <div class="provider-buttons">
-                    <button type="button" class="provider-btn" data-provider="hydra">🌀 Hydra</button>
-                    <button type="button" class="provider-btn" data-provider="openrouter">🧭 OpenRouter</button>
-                    <button type="button" class="provider-btn" data-provider="hybrid">🧩 Hybrid</button>
-                </div>
-                <div class="provider-models" data-provider-models></div>
+
+            <!-- Табы -->
+            <div class="settings-tabs">
+                <button type="button" class="settings-tab-btn selected" data-stab="connection">🔌 Соединение</button>
+                <button type="button" class="settings-tab-btn" data-stab="narration">📖 Повествование</button>
             </div>
-            <div class="settings-key-block">
-                <label id="api-provider-title" class="settings-label">API ключ</label>
-                <input type="password" id="api-key" placeholder="Hydra API key">
-                <div id="api-key-hint" class="provider-hint">
-                    Можно оставить пустым, если на сервере настроен ключ для выбранного провайдера.
+
+            <!-- Вкладка: Соединение -->
+            <div class="settings-tab-panel" id="stab-connection">
+                <div class="provider-switch">
+                    <div class="provider-switch-title">Провайдер</div>
+                    <div class="provider-buttons">
+                        <button type="button" class="provider-btn" data-provider="hydra">🌀 Hydra</button>
+                        <button type="button" class="provider-btn" data-provider="openrouter">🧭 OpenRouter</button>
+                        <button type="button" class="provider-btn" data-provider="hybrid">🧩 Hybrid</button>
+                    </div>
+                    <div class="provider-models" data-provider-models></div>
+                </div>
+                <div class="settings-key-block">
+                    <label id="api-provider-title" class="settings-label">API ключ</label>
+                    <input type="password" id="api-key" placeholder="Hydra API key">
+                    <div id="api-key-hint" class="provider-hint">
+                        Можно оставить пустым, если на сервере настроен ключ для выбранного провайдера.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка: Повествование -->
+            <div class="settings-tab-panel hidden" id="stab-narration">
+                <div class="settings-label" style="margin-bottom:12px;">Стиль и объём текста</div>
+                <div class="option-buttons" id="settings-verbosity-btns">
+                    <button class="option-btn" data-value="concise">✂️ Лаконично</button>
+                    <button class="option-btn selected" data-value="normal">📖 Обычно</button>
+                    <button class="option-btn" data-value="detailed">🔍 Подробно</button>
+                </div>
+                <div class="verbosity-info" id="settings-verbosity-info" style="margin-top:14px;">
+                    <strong>Обычно:</strong> сбалансированный объём текста, живые детали без излишеств. Лимит — 5 000 токенов.
+                </div>
+                <div class="setup-tip" style="margin-top:14px;">
+                    <strong>Подсказка:</strong>
+                    смена стиля применяется со следующего хода. Не влияет на уже написанную историю.
                 </div>
             </div>
         </div>

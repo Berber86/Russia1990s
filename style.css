@@ -2384,3 +2384,38 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
     line-height: 1.6;
     margin-top: 12px;
 }
+
+/* ── ТАБЫ МОДАЛКИ НАСТРОЕК ── */
+.settings-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 0 0 18px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 20px;
+}
+
+.settings-tab-btn {
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line-strong);
+    background: var(--paper-2);
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-size: 0.96rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.settings-tab-btn:hover {
+    border-color: var(--amber);
+    color: var(--ink);
+}
+.settings-tab-btn.selected {
+    border-color: var(--amber);
+    background: var(--amber);
+    color: var(--paper-0);
+    font-weight: 600;
+}
+body[data-theme="paper"] .settings-tab-btn.selected { color: #fff8e7; }
+
+.settings-tab-panel { }
+.settings-tab-panel.hidden { display: none !important; }
