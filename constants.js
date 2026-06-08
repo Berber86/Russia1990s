@@ -36,7 +36,7 @@ export const LLM_PROVIDERS = {
             enhance: "hydra"
         },
         models: {
-            main: "qwen/qwen3.7-plus",
+            main: "z-ai/glm-5.1",
             enhance: "gemini-3.1-pro"
         }
     }
