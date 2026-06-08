@@ -608,9 +608,9 @@ function getDateLabel(seasonIdx = state.seasonIdx, year = state.year) {
 function buildArchiveStoryMarkup(entry) {
     if (!entry) return renderMarkdown(state.lastStory || '');
     let html = renderMarkdown(entry.storyEnhanced || entry.story || '');
-    
-    
+
     if (entry && entry.polishFailed) {
+        // Полировка сорвалась — показываем предупреждение сверху
         html = `
             <div style="background: rgba(220,50,50,0.1); border: 1px dashed var(--danger); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
                 <strong style="color: var(--danger);">⚠️ Полировка текста сорвалась</strong>
@@ -618,6 +618,14 @@ function buildArchiveStoryMarkup(entry) {
                 <button class="btn" style="align-self: flex-start; border-color: var(--danger); color: var(--danger);" onclick="window.retryPolish('${entry.turn}')">Отполировать заново</button>
             </div>
         ` + html;
+    } else if (entry && entry.turn && entry.storyOriginal) {
+        // Полировка прошла успешно — тихая кнопка переполировки под текстом
+        html += `
+            <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <button class="control-btn control-btn--ghost" style="font-size: 0.82rem; padding: 6px 14px; opacity: 0.55; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'" onclick="window.retryPolish('${entry.turn}')">✦ Переполировать текст</button>
+                <span style="font-size: 0.78rem; color: var(--ink-muted); font-family: var(--mono);">второй проход заново — механики не затронуты</span>
+            </div>
+        `;
     }
 
     if (entry) {
@@ -3220,7 +3228,7 @@ window.downloadIllustration = function(dateLabel, base64Url) {
 window.retryPolish = async function(turnStr) {
     const turnNum = parseInt(turnStr, 10);
     const entry = state.archiveEntries.find(e => e.turn === turnNum);
-    if (!entry || !entry.polishFailed) return;
+    if (!entry) return; // polishFailed не проверяем — кнопка доступна всегда
 
     // Пересобираем актуальный промпт полировки на основе сохранённого черновика.
     // enhancementPrompt мог устареть после правок кода — пересобираем на лету.
