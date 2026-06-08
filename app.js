@@ -1937,28 +1937,56 @@ async function continuesTruncatedResponse(rawSoFar, modelKind = 'main') {
     const hasChoices = rawSoFar.includes('"choices"');
     const hasUpdates = rawSoFar.includes('"updates"');
 
-    // ── Скелет недостающей части ──
     const choicesCount = getChoicesCount();
-    // Определяем числа которые уже написаны в updates (чтобы не дублировать)
     const statsKeys = ['mind','body','family','friends','health','looks','wealth','authority'];
     const alreadyHasNumbers = hasUpdates && statsKeys.some(k => rawSoFar.includes(`"${k}"`));
 
+    // ── Пробуем извлечь конец story через санитайзер ──
+    // Цель: дать модели финал событий чтобы она осмысленно заполнила updates.
+    // Парсим частичный JSON — если story уже есть, берём последние 400 символов.
+    let storyTail = '';
+    if (hasStory) {
+        try {
+            const partial = sanitizeJSON(rawSoFar);
+            const partialData = JSON.parse(partial);
+            if (partialData?.story && typeof partialData.story === 'string') {
+                storyTail = partialData.story.slice(-400).trim();
+            }
+        } catch (_) {
+            // Если не парсится — берём хвост rawSoFar до первого вхождения "choices"
+            const choicesIdx = rawSoFar.indexOf('"choices"');
+            const storyPart = choicesIdx > 0 ? rawSoFar.substring(0, choicesIdx) : rawSoFar;
+            storyTail = storyPart.slice(-400).replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+    }
+
+    // ── Скелет недостающей части ──
     let skeleton = '';
+    // Инструкция по updates идёт В КОНЦЕ промпта, прямо перед местом обрыва —
+    // так модель не забудет её из-за длинного текста посередине (lost-in-the-middle).
+    const updatesNote = `
+ПРАВИЛА для updates (КРИТИЧЕСКИ ВАЖНО):
+- mind/body/family/friends/health/looks/wealth/authority = СДВИГИ -2..+2, НЕ абсолютные числа!
+- add_npc: {"name":"...","desc":"..."} если в истории появился НОВЫЙ человек, иначе null
+- remove_npc: "имя" если персонаж умер/ушёл навсегда, иначе null  
+- update_npc: {"name":"...","desc":"..."} если что-то изменилось у существующего, иначе null
+- add_item: {"name":"...","desc":"..."} если герой получил новый предмет, иначе null
+- remove_item: "название" если предмет утрачен, иначе null
+- Заполни на основе событий в конце истории выше`;
+
     const updatesShell = alreadyHasNumbers
-        // Числа уже написаны — только структурный хвост
         ? `"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null`
-        // Числа ещё не написаны — просим дельты в диапазоне -2..+2, НЕ абсолютные значения
         : `"mind":<-2..+2>,"body":<-2..+2>,"family":<-2..+2>,"friends":<-2..+2>,"health":<-2..+2>,"looks":<-2..+2>,"wealth":<-2..+2>,"authority":<-2..+2>,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null`;
 
     if (!hasStory) {
         skeleton = `
-  "story": "...ПРОДОЛЖЕНИЕ ТЕКСТА ИСТОРИИ (не начинай сначала)...",
-  "choices": [РОВНО ${choicesCount} объекта вида {"text":"...","action":"..."}],
+  "story": "...ПРОДОЛЖЕНИЕ ТЕКСТА (не начинай сначала)...",
+  "choices": [РОВНО ${choicesCount} объекта {"text":"...","action":"..."}],
   "updates": {${updatesShell}}
 }`;
     } else if (!hasChoices) {
         skeleton = `
-  "choices": [РОВНО ${choicesCount} объекта вида {"text":"...","action":"..."}],
+  "choices": [РОВНО ${choicesCount} объекта {"text":"...","action":"..."}],
   "updates": {${updatesShell}}
 }`;
     } else if (!hasUpdates) {
@@ -1966,33 +1994,36 @@ async function continuesTruncatedResponse(rawSoFar, modelKind = 'main') {
   "updates": {${updatesShell}}
 }`;
     } else if (alreadyHasNumbers) {
-        // updates начат, числа написаны — дописываем только хвост
         skeleton = `  ${updatesShell}}
 }`;
     } else {
         skeleton = `  ...(закрыть незакрытые скобки и завершить корневой })`;
     }
 
-    // ── Структура промпта для continuation ──
-    // Провайдеры требуют чтобы первым шёл user (нельзя начинать с assistant).
-    // Поэтому весь rawSoFar вставляем внутрь user-сообщения — сначала идёт
-    // инструкция-система, потом обрезанный JSON как цитата, потом команда дописать.
-    // Такой порядок: модель видит задачу ДО текста, затем текст, затем команду —
-    // это даёт ей полный контекст и не даёт просто продолжить story.
+    // ── Промпт дописывания ──
+    // rawSoFar идёт целиком как цитата — модель видит весь контекст.
+    // Инструкция стоит ДО и ПОСЛЕ цитаты — обрамляет её.
+    // Конец story — передаём как отдельный напоминательный блок ПОСЛЕ длинного текста
+    const storyReminder = storyTail
+        ? `\nПоследние события истории (для заполнения updates):\n"...${storyTail}"\n`
+        : '';
+
     const messages = [
         {
             role: 'user',
             content:
-`Обрезанный JSON-ответ нейросети (НЕ ПОВТОРЯЙ его, только ДОПИШИ с места обрыва):
---- НАЧАЛО ОБРЕЗАННОГО ОТВЕТА ---
+`Ниже — обрезанный JSON-ответ RPG-нейросети. Твоя задача: дописать его ровно с места обрыва.
+НЕ ПОВТОРЯЙ уже написанное. Только продолжение.
+
+--- ОБРЕЗАННЫЙ JSON ---
 ${rawSoFar}
---- КОНЕЦ ОБРЕЗАННОГО ОТВЕТА ---
+--- КОНЕЦ ОБРЕЗАННОГО ---
+${storyReminder}
+Что нужно дописать (структура):${skeleton}
 
-Ответ оборвался на последнем символе выше. Допиши ТОЛЬКО недостающую часть JSON без единого повтора.
+${updatesNote}
 
-Что нужно дописать:${skeleton}
-
-Начни прямо с символа после последнего в обрезанном ответе. Только JSON, без пояснений.`
+Начни прямо с символа после последнего символа выше. Только JSON, без пояснений и комментариев.`
         },
     ];
 
