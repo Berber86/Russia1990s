@@ -312,6 +312,24 @@ function sanitizeJSON(raw) {
     const ROOT_ALLOWED = new Set(['story','choices','updates']);
     s = removeExtraRootKeys(s, ROOT_ALLOWED);
 
+    // 5б. Закрываем незакрытую строку (обрыв внутри "story" или другого значения)
+    //     Посимвольно ищем: если по завершении разбора мы всё ещё inString — добавляем "
+    {
+        let inStr = false, esc = false;
+        for (let i = 0; i < s.length; i++) {
+            const c = s[i];
+            if (esc) { esc = false; continue; }
+            if (c === '\\') { esc = true; continue; }
+            if (c === '"') inStr = !inStr;
+        }
+        if (inStr) {
+            // Строка не закрыта — закрываем её
+            s = s + '"';
+            if (typeof addSystemLog === 'function')
+                addSystemLog('sanitizeJSON: закрыта незакрытая строка', '', false);
+        }
+    }
+
     // 6. Незакрытый корневой объект
     let depth2 = 0, inString2 = false, escape2 = false;
     for (let i = 0; i < s.length; i++) {
@@ -1914,12 +1932,11 @@ async function continuesTruncatedResponse(rawSoFar, modelKind = 'main') {
     const hasUpdates = rawSoFar.includes('"updates"');
 
     // ── Скелет недостающей части ──
-    // Только структура без контента — дёшево по токенам, но даёт модели точный ориентир.
     const choicesCount = getChoicesCount();
     let skeleton = '';
     if (!hasStory) {
         skeleton = `
-  "story": "...продолжение истории...",
+  "story": "...ПРОДОЛЖЕНИЕ ТЕКСТА ИСТОРИИ (не начинай сначала)...",
   "choices": [{"text":"...","action":"..."}, ...всего ${choicesCount}],
   "updates": {"mind":0,"body":0,"family":0,"friends":0,"health":0,"looks":0,"wealth":0,"authority":0,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null}
 }`;
@@ -1933,34 +1950,31 @@ async function continuesTruncatedResponse(rawSoFar, modelKind = 'main') {
   "updates": {"mind":0,"body":0,"family":0,"friends":0,"health":0,"looks":0,"wealth":0,"authority":0,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null}
 }`;
     } else {
-        skeleton = `
-  ...(закрыть незакрытые скобки и завершить корневой })`;
+        skeleton = `  ...(закрыть незакрытые скобки и завершить корневой })`;
     }
 
-    // ── Стратегия передачи контекста через роли ──
-    // Весь обрезанный ответ идёт как сообщение assistant — модель видит его целиком
-    // как свой предыдущий вывод, а не как вставку в user-текст. Это нативно и дёшево:
-    // не дублируются обёрточные слова, токены тратятся только на реальный контент.
+    // ── Правильный порядок сообщений для continuation ──
+    // [assistant: обрезанный текст] → [user: команда дописать]
+    // Модель видит свой незаконченный ответ и ПОСЛЕ него получает инструкцию.
+    // Именно этот порядок заставляет её ДОПИСАТЬ, а не начать заново.
+    // Если порядок перевернуть (user → assistant), модель продолжает story,
+    // игнорируя инструкцию.
     const messages = [
         {
-            role: 'user',
-            content:
-`Продолжи JSON строго с места обрыва. Не повторяй уже написанное — выдай только продолжение.
-
-Недостающая структура (ориентир):${skeleton}
-
-Правило: начни с символа сразу после последнего в твоём предыдущем сообщении.`
-        },
-        {
-            // Весь обрезанный текст — как будто это уже написанный assistant-ответ.
-            // Модель «продолжает себя» — это наиболее надёжный способ continuation.
             role: 'assistant',
             content: rawSoFar
         },
+        {
+            role: 'user',
+            content:
+`Твой предыдущий ответ обрезан. ЗАПРЕЩЕНО повторять уже написанное.
+Допиши JSON с точного места обрыва — только недостающую часть.
+
+Что нужно дописать:${skeleton}
+
+ВАЖНО: начни ровно с того символа, на котором оборвался ответ выше. Никакого повтора.`
+        },
     ];
-    // Порядок: сначала user (инструкция + скелет), потом assistant (обрезанный текст).
-    // Некоторые провайдеры требуют чтобы последнее сообщение было от assistant
-    // для prefix-completion. Если нет — модель всё равно понимает задачу.
 
     try {
         const completion = await callLLM({
