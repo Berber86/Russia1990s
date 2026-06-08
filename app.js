@@ -352,19 +352,19 @@ function sanitizeJSON(raw) {
 
 // Оставляет в строке inner только разрешённые ключи updates
 function filterUpdatesFields(inner) {
-    // Посимвольно собираем пары ключ:значение
+    // Посимвольно собираем пары ключ:значение.
+    // При дублировании ключей берём ПЕРВОЕ значение — это критично:
+    // модель при дописывании может повторить числовые поля с нулями,
+    // JSON.parse взял бы последние (нули), мы берём первые (реальные дельты).
     const parts = [];
+    const seen = new Set();
     let i = 0;
     while (i < inner.length) {
-        // Пропускаем пробелы и запятые между парами
         while (i < inner.length && /[\s,]/.test(inner[i])) i++;
         if (i >= inner.length) break;
-        // Читаем ключ (строка в кавычках)
         if (inner[i] !== '"') { i++; continue; }
-        const keyStart = i;
-        i++; // пропускаем открывающую "
-        let key = '';
-        let esc = false;
+        i++;
+        let key = '', esc = false;
         while (i < inner.length) {
             const c = inner[i++];
             if (esc) { esc = false; key += c; continue; }
@@ -372,17 +372,16 @@ function filterUpdatesFields(inner) {
             if (c === '"') break;
             key += c;
         }
-        // Пропускаем :
         while (i < inner.length && /[\s:]/.test(inner[i])) i++;
-        // Читаем значение (может быть строка, число, null, объект, массив)
         const valStart = i;
         i = skipValue(inner, i);
         const valStr = inner.substring(valStart, i).trim();
 
-        if (UPDATES_ALLOWED.has(key)) {
+        if (UPDATES_ALLOWED.has(key) && !seen.has(key)) {
             parts.push(`"${key}": ${valStr}`);
+            seen.add(key);
         }
-        // иначе — молча пропускаем
+        // дубль или запрещённый ключ — молча пропускаем
     }
     return parts.join(', ');
 }
@@ -1933,21 +1932,35 @@ async function continuesTruncatedResponse(rawSoFar, modelKind = 'main') {
 
     // ── Скелет недостающей части ──
     const choicesCount = getChoicesCount();
+    // Определяем числа которые уже написаны в updates (чтобы не дублировать)
+    const statsKeys = ['mind','body','family','friends','health','looks','wealth','authority'];
+    const alreadyHasNumbers = hasUpdates && statsKeys.some(k => rawSoFar.includes(`"${k}"`));
+
     let skeleton = '';
+    const updatesShell = alreadyHasNumbers
+        // Числа уже написаны — только структурный хвост
+        ? `"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null`
+        // Числа ещё не написаны — просим написать осмысленные дельты (не нули!)
+        : `"mind":<дельта>,"body":<дельта>,"family":<дельта>,"friends":<дельта>,"health":<дельта>,"looks":<дельта>,"wealth":<дельта>,"authority":<дельта>,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null`;
+
     if (!hasStory) {
         skeleton = `
   "story": "...ПРОДОЛЖЕНИЕ ТЕКСТА ИСТОРИИ (не начинай сначала)...",
   "choices": [{"text":"...","action":"..."}, ...всего ${choicesCount}],
-  "updates": {"mind":0,"body":0,"family":0,"friends":0,"health":0,"looks":0,"wealth":0,"authority":0,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null}
+  "updates": {${updatesShell}}
 }`;
     } else if (!hasChoices) {
         skeleton = `
   "choices": [{"text":"...","action":"..."}, ...всего ${choicesCount}],
-  "updates": {"mind":0,"body":0,"family":0,"friends":0,"health":0,"looks":0,"wealth":0,"authority":0,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null}
+  "updates": {${updatesShell}}
 }`;
     } else if (!hasUpdates) {
         skeleton = `
-  "updates": {"mind":0,"body":0,"family":0,"friends":0,"health":0,"looks":0,"wealth":0,"authority":0,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null}
+  "updates": {${updatesShell}}
+}`;
+    } else if (alreadyHasNumbers) {
+        // updates начат, числа написаны — дописываем только хвост
+        skeleton = `  ${updatesShell}}
 }`;
     } else {
         skeleton = `  ...(закрыть незакрытые скобки и завершить корневой })`;
@@ -2438,13 +2451,31 @@ function getCurrentDateString() {
     return `${SEASONS[state.seasonIdx]} ${state.year}`;
 }
 
+// Извлекает числовые дельты из объекта updates, беря ПЕРВОЕ значение при дублировании.
+// JSON.parse при дублировании ключей берёт последнее — это ломает нас когда модель
+// при дописывании повторяет ключи с нулями.
+function extractFirstStatDeltas(u) {
+    if (!u) return {};
+    // u уже объект от JSON.parse — дубли потеряны. Поэтому sanitizeJSON теперь
+    // сохраняет первое значение через filterUpdatesFields.
+    // Здесь просто читаем что осталось.
+    const result = {};
+    for (const key of ['mind','body','family','friends','health','looks','wealth','authority']) {
+        if (u[key] !== undefined && typeof u[key] === 'number') {
+            result[key] = u[key];
+        }
+    }
+    return result;
+}
+
 function applyUpdates(u) {
     if (!u) return;
+    const rawDeltas = extractFirstStatDeltas(u);
     const deltas = {};
     let totalDeltaSum = 0;
     for (const key in state.stats) {
-        if (u[key] !== undefined && typeof u[key] === 'number') {
-            let delta = u[key];
+        if (rawDeltas[key] !== undefined) {
+            let delta = rawDeltas[key];
             if (delta > 2) delta = 2;
             if (delta < -2) delta = -2;
             deltas[key] = delta;
