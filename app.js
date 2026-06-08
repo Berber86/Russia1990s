@@ -88,6 +88,7 @@ function createDefaultState() {
         lastStory: '',
         lastChoices: null,
         lastStatDeltas: null,
+        verbosity: 'normal',
         lastMiracle: null,
         gameOverData: null
     };
@@ -108,6 +109,7 @@ const SETUP_STEPS = [
     { title: 'Где всё начинается', caption: 'Инфраструктура', badge: 'Место рождения — это тоже часть судьбы.' },
     { title: 'Где именно', caption: 'Регион', badge: 'У каждого уголка — свой характер.' },
     { title: 'Как течёт время', caption: 'Ритм игры', badge: 'Темп и сложность задают драматургию прохождения.' },
+    { title: 'Стиль повествования', caption: 'Нарратив', badge: 'Краткость оставляет простор воображению. Подробность — погружает.' },
     { title: 'Первый срез жизни', caption: 'Старт', badge: 'Последний взгляд перед тем, как всё начнётся по-настоящему.' }
 ];
 
@@ -992,6 +994,7 @@ function setupOptionButtons(containerId, stateKey, callback) {
             if (callback) callback(btn.dataset.value);
             if (stateKey === 'pace') updatePaceInfo(btn.dataset.value);
             if (stateKey === 'difficulty') updateDifficultyInfo(btn.dataset.value);
+            if (stateKey === 'verbosity') updateVerbosityInfo(btn.dataset.value);
             if (stateKey === 'locationType' || stateKey === 'gender') rollStartPreview();
             // Сразу обновляем data-атрибуты на body, чтобы CSS подхватил нужный фон (city/village).
             if (stateKey === 'locationType') applyVisualMood();
@@ -1006,6 +1009,17 @@ function updatePaceInfo(pace) {
     } else {
         info.innerHTML = `<strong>По годам:</strong> каждый ход = 9 месяцев<br><span class="pace-example">Лето 1993 → Весна 1994 → Зима 1995 → …</span>`;
     }
+}
+
+function updateVerbosityInfo(v) {
+    const info = document.getElementById('verbosity-info');
+    if (!info) return;
+    const map = {
+        concise:  '<strong>Лаконично:</strong> короткие ходы, только суть. Лимит ответа — 3 500 токенов.',
+        normal:   '<strong>Обычно:</strong> сбалансированный объём текста, живые детали без излишеств. Лимит — 5 000 токенов.',
+        detailed: '<strong>Подробно:</strong> развёрнутые описания, диалоги, неожиданная деталь при каждой смене сезона. Лимит — 6 500 токенов.',
+    };
+    info.innerHTML = map[v] || map.normal;
 }
 
 function updateDifficultyInfo(diff) {
@@ -1115,6 +1129,7 @@ function applyStartSettings() {
         provider,
         pace: state.pace,
         difficulty: state.difficulty,
+        verbosity: state.verbosity,
         startAge: state.startAge
     };
     state.age = state.startAge;
@@ -1206,7 +1221,7 @@ function advanceTime() {
     }
 }
 
-function buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount) {
+function buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount, verbosity = state.verbosity || 'normal') {
     const statsDesc = buildStatsDescription();
     const genderInfo = GENDER_INFO[state.gender];
     const locInfo = getLocationInfo();
@@ -1277,6 +1292,12 @@ ${JSON.stringify(state.stats)}
 - 1,9: почти без изменений
 
 Максимум ±2 за ход, общая сумма сдвигов ≤4.
+
+${verbosity === 'concise'
+    ? 'Целевой объём story: ~2000 токенов (примерно 1400–1600 слов). Не растягивай.'
+    : verbosity === 'detailed'
+    ? 'Целевой объём story: ~4000 токенов (примерно 2800–3200 слов). Пиши подробно.'
+    : 'Целевой объём story: ~3000 токенов (примерно 2000–2400 слов).'}
 
 РОВНО ${choicesCount} варианта выбора! КАЖДЫЙ вариант — развёрнутое описание (1-2 предложения, минимум 6 слов). пытайся придумать варианты, которые не только сюжетно уместны и вариативны, но и чаще задейсивуют самые высокие и самые низкие атрибуты героя(но как в сторону увеличения так и уменьшения - не смотря на то аысокий стат или низкий.
 
@@ -1656,6 +1677,11 @@ async function turn(action) {
             return { role: 'user', content: msg.content };
         });
 
+        // max_tokens первого прохода зависит от выбранного стиля повествования
+        const pass1MaxTokens = state.verbosity === 'concise' ? 3500
+                             : state.verbosity === 'detailed' ? 6500
+                             : 5000;
+
         const completion1 = await callLLM({
             messages: [
                 { role: 'system', content: fullSystemPrompt },
@@ -1664,7 +1690,7 @@ async function turn(action) {
             ],
             modelKind: 'main',
             temperature: 0.5,
-            max_tokens: 5000,
+            max_tokens: pass1MaxTokens,
             response_format: { type: 'json_object' }
         });
 
@@ -1723,9 +1749,17 @@ async function turn(action) {
             ? `\n=== ПОСЛЕДНИЕ ХОДЫ (канон, дословно) ===\n${canonTail}\n=== КОНЕЦ ===\n`
             : '';
 
+        const verbosityStyleNote = state.verbosity === 'concise'
+            ? 'Текст должен остаться КОРОТКИМ и ЁМКИМ. Убирай лишнее, не добавляй описаний. Целевой объём ~2000 токенов.'
+            : state.verbosity === 'detailed'
+            ? 'Текст должен быть ПОДРОБНЫМ и АТМОСФЕРНЫМ. Добавляй диалоги, запахи, ощущения, детали. Целевой объём ~4000 токенов.'
+            : 'Сохраняй естественный объём, не растягивай и не обрезай. Целевой объём ~3000 токенов.';
+
         const enhancementPrompt = `Придумай 4 случайных слова.  Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа: Ты мастер социально-драматической художественной текстовой игры про детство в 1990-х. Ниже текст — насыть его аутентичными и интересными запоминающимися диалогами и описаниями. Исправь очевидные ляпы, ориентируйся на предыдущую историю как на абсолютный канон. Не пиши предисловий и послесловий. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.
 
-ВАЖНО: СТРОЖАЙШИЙ ЗАПРЕТ на избыток длинных тире (—). Не используй тире чаще одного раза на абзац.
+${verbosityStyleNote}
+
+ВАЖНО: Запрет на избыток длинных тире (—). Не используй тире чаще одного раза на абзац.
 
 ТЕКСТ ДЛЯ УЛУЧШЕНИЯ:
 
@@ -1742,11 +1776,14 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
         let polishFailed = false;
         try {
             setLoading(true, "Черновик готов. Идёт полировка второй моделью...");
+            const pass2MaxTokens = state.verbosity === 'concise' ? 3500
+                                 : state.verbosity === 'detailed' ? 6500
+                                 : 5000;
             const completion2 = await callLLM({
                 messages: [{ role: 'user', content: enhancementPrompt }],
                 modelKind: 'enhance',
                 temperature: 0.7,
-                max_tokens: 5000
+                max_tokens: pass2MaxTokens
             });
             const raw2 = completion2?.choices?.[0]?.message?.content;
             if (raw2?.trim()) enhancedStory = raw2.trim();
@@ -2350,6 +2387,7 @@ function tryLoadSavedGame() {
         if (!state.compressedSummary) state.compressedSummary = '';
         if (!state.lastCompressTurn) state.lastCompressTurn = 0;
         if (!state.dialogArchive) state.dialogArchive = '';
+        if (!state.verbosity) state.verbosity = 'normal';
         if (!state.lastDialogCompress) state.lastDialogCompress = 0;
         if (!state.archiveEntries) state.archiveEntries = [];
         if (state.archiveViewIndex === undefined) state.archiveViewIndex = null;
@@ -2432,6 +2470,7 @@ if (!savedGameLoaded) {
     });
     setupOptionButtons('pace-btns', 'pace');
     setupOptionButtons('difficulty-btns', 'difficulty');
+    setupOptionButtons('verbosity-btns', 'verbosity');
 
     els.regionSelect.onchange = (e) => {
         state.region = e.target.value;
@@ -2458,6 +2497,7 @@ if (!savedGameLoaded) {
 
     updatePaceInfo(state.pace);
     updateDifficultyInfo(state.difficulty);
+    updateVerbosityInfo(state.verbosity);
     updateLocationDescription();
     rollStartPreview();
     renderSetupWizard();

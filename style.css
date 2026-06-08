@@ -2371,3 +2371,16 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
     color: var(--rust);
     border-color: color-mix(in srgb, var(--rust) 30%, transparent);
 }
+
+/* ── VERBOSITY INFO BOX ── */
+.verbosity-info {
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    background: var(--paper-0);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-size: 0.94rem;
+    line-height: 1.6;
+    margin-top: 12px;
+}
