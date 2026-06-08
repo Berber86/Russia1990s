@@ -1682,10 +1682,108 @@ ${fullDialogForCompress}
 }
 
 
+
+// ========== ДОПИСЫВАНИЕ ОБРЕЗАННОГО ОТВЕТА ==========
+// Вызывается когда finish_reason === 'length' (обрезан лимитом).
+// Стратегия:
+//   • Если JSON не спарсился вообще — просим дописать начиная с обрыва (сырой текст).
+//   • Если спарсился частично — знаем что именно не хватает (choices? updates?) — просим
+//     дописать только недостающую часть.
+// Возвращает склеенный raw-текст или null при неудаче.
+async function continuesTruncatedResponse(rawSoFar, modelKind = 'main') {
+    addSystemLog('Дописывание (запуск)', `Длина обрыва: ${rawSoFar.length} симв.`, true);
+
+    if (!rawSoFar.includes('{')) {
+        addSystemLog('Дописывание (отказ)', 'JSON не начался — нужен полный повтор', true);
+        return null;
+    }
+
+    // ── Анализируем что уже есть ──
+    const hasStory   = rawSoFar.includes('"story"');
+    const hasChoices = rawSoFar.includes('"choices"');
+    const hasUpdates = rawSoFar.includes('"updates"');
+
+    // ── Скелет недостающей части ──
+    // Только структура без контента — дёшево по токенам, но даёт модели точный ориентир.
+    const choicesCount = getChoicesCount();
+    let skeleton = '';
+    if (!hasStory) {
+        skeleton = `
+  "story": "...продолжение истории...",
+  "choices": [{"text":"...","action":"..."}, ...всего ${choicesCount}],
+  "updates": {"mind":0,"body":0,"family":0,"friends":0,"health":0,"looks":0,"wealth":0,"authority":0,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null}
+}`;
+    } else if (!hasChoices) {
+        skeleton = `
+  "choices": [{"text":"...","action":"..."}, ...всего ${choicesCount}],
+  "updates": {"mind":0,"body":0,"family":0,"friends":0,"health":0,"looks":0,"wealth":0,"authority":0,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null}
+}`;
+    } else if (!hasUpdates) {
+        skeleton = `
+  "updates": {"mind":0,"body":0,"family":0,"friends":0,"health":0,"looks":0,"wealth":0,"authority":0,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null}
+}`;
+    } else {
+        skeleton = `
+  ...(закрыть незакрытые скобки и завершить корневой })`;
+    }
+
+    // ── Стратегия передачи контекста через роли ──
+    // Весь обрезанный ответ идёт как сообщение assistant — модель видит его целиком
+    // как свой предыдущий вывод, а не как вставку в user-текст. Это нативно и дёшево:
+    // не дублируются обёрточные слова, токены тратятся только на реальный контент.
+    const messages = [
+        {
+            role: 'user',
+            content:
+`Продолжи JSON строго с места обрыва. Не повторяй уже написанное — выдай только продолжение.
+
+Недостающая структура (ориентир):${skeleton}
+
+Правило: начни с символа сразу после последнего в твоём предыдущем сообщении.`
+        },
+        {
+            // Весь обрезанный текст — как будто это уже написанный assistant-ответ.
+            // Модель «продолжает себя» — это наиболее надёжный способ continuation.
+            role: 'assistant',
+            content: rawSoFar
+        },
+    ];
+    // Порядок: сначала user (инструкция + скелет), потом assistant (обрезанный текст).
+    // Некоторые провайдеры требуют чтобы последнее сообщение было от assistant
+    // для prefix-completion. Если нет — модель всё равно понимает задачу.
+
+    try {
+        const completion = await callLLM({
+            messages,
+            modelKind,
+            temperature: 0.1,
+            max_tokens: 4000
+        }, 1);
+        const continuation = completion?.choices?.[0]?.message?.content?.trim();
+        if (!continuation) {
+            addSystemLog('Дописывание (пустой ответ)', '', true);
+            return null;
+        }
+        const joined = rawSoFar + continuation;
+        addSystemLog('Дописывание (успех)', `Итого: ${joined.length} симв. (было ${rawSoFar.length} + добавлено ${continuation.length})`, false);
+        return joined;
+    } catch (e) {
+        addSystemLog('Дописывание (ошибка)', e.message, true);
+        return null;
+    }
+}
+
+// Детектируем обрыв по finish_reason из ответа API
+function isTruncated(completion) {
+    const reason = completion?.choices?.[0]?.finish_reason;
+    // 'length' — стандартный finish_reason при обрезании лимитом
+    return reason === 'length';
+}
+
 // ========== ОСНОВНОЙ ХОД ==========
 async function turn(action) {
     if (state.gameOver) return;
-    setLoading(true, "Генерация первого прохода (черновика)...");
+    setLoading(true, "Листаю страницы судьбы... Первый черновик пишется.");
     state.turnCount++;
     try {
         const needSummary = (state.turnCount - state.lastSummaryTurn) >= SUMMARY_INTERVAL && state.history.length >= 10;
@@ -1717,9 +1815,7 @@ async function turn(action) {
         });
 
         // max_tokens первого прохода зависит от выбранного стиля повествования
-        const pass1MaxTokens = state.verbosity === 'concise' ? 3500
-                             : state.verbosity === 'detailed' ? 6500
-                             : 5000;
+        const pass1MaxTokens = 10000; // жёсткий потолок; желаемый объём задан в промпте
 
         const completion1 = await callLLM({
             messages: [
@@ -1733,8 +1829,31 @@ async function turn(action) {
             response_format: { type: 'json_object' }
         });
 
-        const raw1 = completion1?.choices?.[0]?.message?.content || '';
-        const data = parseJSON(raw1, 'Основной ход');
+        let raw1 = completion1?.choices?.[0]?.message?.content || '';
+
+        // Детект обрыва: finish_reason === 'length' → пробуем дописать
+        if (isTruncated(completion1)) {
+            addSystemLog('Обрыв 1-го прохода', `finish_reason=length, длина: ${raw1.length}`, true);
+            setLoading(true, 'История оборвалась на полуслове — дописываю первый проход...');
+            const continued = await continuesTruncatedResponse(raw1, 'main');
+            if (continued) raw1 = continued;
+        }
+
+        let data = parseJSON(raw1, 'Основной ход');
+
+        // Если JSON всё ещё не парсится — пробуем дописать даже без флага length
+        if ((!data?.story || !Array.isArray(data?.choices)) && raw1.includes('{')) {
+            addSystemLog('Парсинг провалился', 'Пробуем дописать без флага length', true);
+            setLoading(true, 'Страница вышла неполной — восстанавливаю черновик...');
+            const continued = await continuesTruncatedResponse(raw1, 'main');
+            if (continued) {
+                const retryData = parseJSON(continued, 'Основной ход (после дописывания)');
+                if (retryData?.story && Array.isArray(retryData?.choices)) {
+                    raw1 = continued;
+                    data = retryData;
+                }
+            }
+        }
 
         if (!data?.story || !Array.isArray(data?.choices)) {
             console.error('Invalid JSON:', raw1);
@@ -1814,18 +1933,25 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
         let enhancedStory = originalStory;
         let polishFailed = false;
         try {
-            setLoading(true, "Черновик готов. Идёт полировка второй моделью...");
-            const pass2MaxTokens = state.verbosity === 'concise' ? 3500
-                                 : state.verbosity === 'detailed' ? 6500
-                                 : 5000;
+            setLoading(true, "Черновик готов. Шлифую детали и диалоги...");
+            const pass2MaxTokens = 10000; // жёсткий потолок; желаемый объём задан в промпте
             const completion2 = await callLLM({
                 messages: [{ role: 'user', content: enhancementPrompt }],
                 modelKind: 'enhance',
                 temperature: 0.7,
                 max_tokens: pass2MaxTokens
             });
-            const raw2 = completion2?.choices?.[0]?.message?.content;
-            if (raw2?.trim()) enhancedStory = raw2.trim();
+            let raw2 = completion2?.choices?.[0]?.message?.content || '';
+
+            // Детект обрыва в enhance-ответе
+            if (isTruncated(completion2) && raw2.trim()) {
+                addSystemLog('Обрыв 2-го прохода', `finish_reason=length, длина: ${raw2.length}`, true);
+                setLoading(true, 'Полировка оборвалась — дописываю второй проход...');
+                const continued2 = await continuesTruncatedResponse(raw2, 'enhance');
+                if (continued2) raw2 = continued2;
+            }
+
+            if (raw2.trim()) enhancedStory = raw2.trim();
             else polishFailed = true;
         } catch (e) {
             console.error('Ошибка улучшения:', e);
