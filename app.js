@@ -2515,21 +2515,39 @@ function extractFirstStatDeltas(u) {
 function applyUpdates(u) {
     if (!u) return;
     const rawDeltas = extractFirstStatDeltas(u);
-    const deltas = {};
-    let totalDeltaSum = 0;
+    // Зажимаем каждую дельту до ±2
+    const clamped = {};
     for (const key in state.stats) {
         if (rawDeltas[key] !== undefined) {
             let delta = rawDeltas[key];
             if (delta > 2) delta = 2;
             if (delta < -2) delta = -2;
-            deltas[key] = delta;
-            totalDeltaSum += Math.abs(delta);
+            if (delta !== 0) clamped[key] = delta;
         }
     }
-    if (totalDeltaSum > 3) {
-        const scale = 3 / totalDeltaSum;
-        for (const key in deltas) {
-            deltas[key] = Math.round(deltas[key] * scale);
+
+    // Бюджет суммы ≤ 3. Если превышен — берём самые значимые дельты, остальные отбрасываем.
+    // Math.round при сильном масштабировании обнуляет ВСЕ дельты (баг), поэтому
+    // вместо масштабирования используем жадный алгоритм по убыванию |delta|.
+    const deltas = {};
+    const totalRaw = Object.values(clamped).reduce((s, v) => s + Math.abs(v), 0);
+    if (totalRaw <= 3) {
+        Object.assign(deltas, clamped);
+    } else {
+        // Сортируем по убыванию важности (|delta|), затем заполняем бюджет
+        const entries = Object.entries(clamped).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+        let budget = 3;
+        for (const [key, val] of entries) {
+            if (budget <= 0) break;
+            const abs = Math.abs(val);
+            if (abs <= budget) {
+                deltas[key] = val;
+                budget -= abs;
+            } else {
+                // Частично вписываем остаток бюджета
+                deltas[key] = val > 0 ? budget : -budget;
+                budget = 0;
+            }
         }
     }
     for (const key in deltas) {
