@@ -250,64 +250,206 @@ function rollChance(percent) {
     return Math.random() * 100 < percent;
 }
 
-// Исправляет типичные ошибки которые делают LLM в JSON:
-// - trailing commas: {a:1,} или [1,2,]
-// - двойные открывающие скобки: {{"key" → {"key"
-// - лишние поля внутри "updates" (stats, inventory и т.п.)
-// - незакрытые корневые объекты (добавляем недостающие })
+// ── БЕЛЫЙ СПИСОК РАЗРЕШЁННЫХ ПОЛЕЙ В "updates" ──
+// Всё что не в этом списке — молча удаляется.
+const UPDATES_ALLOWED = new Set([
+    'mind','body','family','friends','health','looks','wealth','authority',
+    'add_item','remove_item','update_item',
+    'add_npc','remove_npc','update_npc'
+]);
+
+// Исправляет типичные ошибки которые делают LLM в JSON
 function sanitizeJSON(raw) {
     let s = raw
-        // Убираем markdown-обёртку
         .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/g, '').trim();
 
-    // Находим начало JSON-объекта
     const start = s.indexOf('{');
     if (start === -1) return s;
     s = s.substring(start);
 
     // 1. Двойные открывающие скобки: {{"key" → {"key"
-    //    Возникает когда модель пишет update_item: {{"name":...}}
     s = s.replace(/\{\{/g, '{');
 
-    // 2. Trailing commas перед } или ]
-    //    Например: "authority":6,\n} или [...],\n}
-    s = s.replace(/,(\s*[}\]])/g, '$1');
+    // 2. Двойные кавычки перед ключом: ""key" → "key"
+    //    Модель иногда пишет: "update_npc": {"name":"X", ""desc":"Y"}
+    s = s.replace(/""/g, '"');
 
-    // 3. Лишние поля в "updates" — модель иногда вставляет туда "stats", "inventory"
-    //    Эти поля не предусмотрены схемой и ломают применение обновлений.
-    //    Удаляем их из блока updates. Ищем блок updates и вырезаем чужеродные ключи.
-    const UPDATES_EXTRA = /"(stats|inventory|npcs|history|age|year|season|turnCount)"\s*:\s*/g;
-    // Применяем только внутри "updates": { ... } — находим его и чистим
-    s = s.replace(/"updates"\s*:\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/g, (match, inner) => {
-        // Удаляем лишние ключи и их значения (объект или примитив)
-        let cleaned = inner
-            .replace(/"(stats|inventory|npcs|history|age|year|season|turnCount)"\s*:\s*(\{[^}]*\}|\[[^\]]*\]|"[^"]*"|\d+|null|true|false)\s*,?\s*/g, '');
-        // Убираем trailing comma после последнего поля
-        cleaned = cleaned.replace(/,(\s*)$/, '$1');
-        return `"updates": {${cleaned}}`;
-    });
+    // 3. Trailing commas перед } или ]
+    //    Несколько проходов — ловим вложенные случаи
+    for (let i = 0; i < 3; i++) s = s.replace(/,(\s*[}\]])/g, '$1');
 
-    // 4. Незакрытый корневой объект — считаем баланс скобок и добавляем }
-    let depth = 0;
-    let inString = false;
-    let escape = false;
+    // 4. Лишние поля в "updates" — фильтруем по белому списку.
+    //    Используем посимвольный разбор чтобы корректно найти границу объекта updates,
+    //    даже если внутри есть вложенные объекты с запятыми.
+    const updKey = '"updates"';
+    const updIdx = s.indexOf(updKey);
+    if (updIdx !== -1) {
+        let objStart = s.indexOf('{', updIdx + updKey.length);
+        if (objStart !== -1) {
+            // Находим закрывающую } с учётом вложенности
+            let depth = 0, inStr = false, esc = false, objEnd = -1;
+            for (let i = objStart; i < s.length; i++) {
+                const c = s[i];
+                if (esc)       { esc = false; continue; }
+                if (c === '\\') { esc = true; continue; }
+                if (c === '"') { inStr = !inStr; continue; }
+                if (inStr) continue;
+                if (c === '{') depth++;
+                else if (c === '}') { depth--; if (depth === 0) { objEnd = i; break; } }
+            }
+            if (objEnd !== -1) {
+                // Парсим пары ключ-значение внутри updates и оставляем только разрешённые
+                const inner = s.substring(objStart + 1, objEnd);
+                const filtered = filterUpdatesFields(inner);
+                s = s.substring(0, objStart + 1) + filtered + s.substring(objEnd);
+            }
+        }
+    }
+
+    // 5. Лишние блоки в корневом объекте: "stats":{...}, "inventory":[...]
+    //    Корневой объект должен содержать только story, choices, updates.
+    //    Удаляем любые другие ключи верхнего уровня с произвольными значениями.
+    const ROOT_ALLOWED = new Set(['story','choices','updates']);
+    s = removeExtraRootKeys(s, ROOT_ALLOWED);
+
+    // 6. Незакрытый корневой объект
+    let depth2 = 0, inString2 = false, escape2 = false;
     for (let i = 0; i < s.length; i++) {
         const c = s[i];
-        if (escape)          { escape = false; continue; }
-        if (c === '\\')      { escape = true; continue; }
-        if (c === '"')       { inString = !inString; continue; }
-        if (inString)        continue;
-        if (c === '{' || c === '[') depth++;
-        else if (c === '}' || c === ']') depth--;
+        if (escape2)         { escape2 = false; continue; }
+        if (c === '\\')      { escape2 = true; continue; }
+        if (c === '"')       { inString2 = !inString2; continue; }
+        if (inString2) continue;
+        if (c === '{' || c === '[') depth2++;
+        else if (c === '}' || c === ']') depth2--;
     }
-    // Добавляем недостающие закрывающие скобки
-    if (depth > 0) {
-        s = s + '}'.repeat(depth);
+    if (depth2 > 0) {
+        s = s + '}'.repeat(depth2);
         if (typeof addSystemLog === 'function')
-            addSystemLog('sanitizeJSON: добавлено закрывающих скобок', String(depth), false);
+            addSystemLog('sanitizeJSON: добавлено закрывающих скобок', String(depth2), false);
     }
 
     return s;
+}
+
+// Оставляет в строке inner только разрешённые ключи updates
+function filterUpdatesFields(inner) {
+    // Посимвольно собираем пары ключ:значение
+    const parts = [];
+    let i = 0;
+    while (i < inner.length) {
+        // Пропускаем пробелы и запятые между парами
+        while (i < inner.length && /[\s,]/.test(inner[i])) i++;
+        if (i >= inner.length) break;
+        // Читаем ключ (строка в кавычках)
+        if (inner[i] !== '"') { i++; continue; }
+        const keyStart = i;
+        i++; // пропускаем открывающую "
+        let key = '';
+        let esc = false;
+        while (i < inner.length) {
+            const c = inner[i++];
+            if (esc) { esc = false; key += c; continue; }
+            if (c === '\\') { esc = true; continue; }
+            if (c === '"') break;
+            key += c;
+        }
+        // Пропускаем :
+        while (i < inner.length && /[\s:]/.test(inner[i])) i++;
+        // Читаем значение (может быть строка, число, null, объект, массив)
+        const valStart = i;
+        i = skipValue(inner, i);
+        const valStr = inner.substring(valStart, i).trim();
+
+        if (UPDATES_ALLOWED.has(key)) {
+            parts.push(`"${key}": ${valStr}`);
+        }
+        // иначе — молча пропускаем
+    }
+    return parts.join(', ');
+}
+
+// Пропускает одно JSON-значение начиная с позиции i, возвращает позицию после него
+function skipValue(s, i) {
+    while (i < s.length && /\s/.test(s[i])) i++;
+    if (i >= s.length) return i;
+    const c = s[i];
+    if (c === '"') {
+        i++;
+        let esc = false;
+        while (i < s.length) {
+            const ch = s[i++];
+            if (esc) { esc = false; continue; }
+            if (ch === '\\') { esc = true; continue; }
+            if (ch === '"') break;
+        }
+        return i;
+    }
+    if (c === '{' || c === '[') {
+        const close = c === '{' ? '}' : ']';
+        let depth = 0, inStr = false, esc = false;
+        while (i < s.length) {
+            const ch = s[i++];
+            if (esc) { esc = false; continue; }
+            if (ch === '\\') { esc = true; continue; }
+            if (ch === '"') { inStr = !inStr; continue; }
+            if (inStr) continue;
+            if (ch === c) depth++;
+            else if (ch === close) { depth--; if (depth === 0) break; }
+        }
+        return i;
+    }
+    // null, true, false, number
+    while (i < s.length && !/[\s,}\]]/.test(s[i])) i++;
+    return i;
+}
+
+// Удаляет из корневого объекта ключи не входящие в allowedSet
+function removeExtraRootKeys(s, allowedSet) {
+    const rootStart = s.indexOf('{');
+    if (rootStart === -1) return s;
+    // Находим конец корневого объекта
+    let depth = 0, inStr = false, esc = false, rootEnd = -1;
+    for (let i = rootStart; i < s.length; i++) {
+        const c = s[i];
+        if (esc) { esc = false; continue; }
+        if (c === '\\') { esc = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === '{') depth++;
+        else if (c === '}') { depth--; if (depth === 0) { rootEnd = i; break; } }
+    }
+    if (rootEnd === -1) return s;
+    const inner = s.substring(rootStart + 1, rootEnd);
+    const filtered = filterKeysByAllowlist(inner, allowedSet);
+    return s.substring(0, rootStart + 1) + filtered + s.substring(rootEnd);
+}
+
+function filterKeysByAllowlist(inner, allowedSet) {
+    const parts = [];
+    let i = 0;
+    while (i < inner.length) {
+        while (i < inner.length && /[\s,]/.test(inner[i])) i++;
+        if (i >= inner.length) break;
+        if (inner[i] !== '"') { i++; continue; }
+        i++;
+        let key = '', esc = false;
+        while (i < inner.length) {
+            const c = inner[i++];
+            if (esc) { esc = false; key += c; continue; }
+            if (c === '\\') { esc = true; continue; }
+            if (c === '"') break;
+            key += c;
+        }
+        while (i < inner.length && /[\s:]/.test(inner[i])) i++;
+        const valStart = i;
+        i = skipValue(inner, i);
+        const valStr = inner.substring(valStart, i).trim();
+        if (allowedSet.has(key)) {
+            parts.push(`"${key}": ${valStr}`);
+        }
+    }
+    return parts.join(', ');
 }
 
 function parseJSON(text, contextTitle = 'LLM Ответ') {
