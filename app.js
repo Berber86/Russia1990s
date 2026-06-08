@@ -1569,18 +1569,25 @@ ${verbosity === 'concise'
 
 НЕ ПИШИ короткие варианты типа «Помочь маме». ПИШИ умеренно подробно.
 
-ОТВЕТ СТРОГО В JSON:
+ОТВЕТ СТРОГО В JSON.
+
+КРИТИЧЕСКИ ВАЖНО для "updates":
+- mind/body/family/friends/health/looks/wealth/authority — это СДВИГИ (дельты), а НЕ абсолютные значения!
+- Пример: если хочешь поднять ум на 1 — пиши "mind":1, а не "mind":8.
+- Допустимые значения: от -2 до +2. 0 = параметр не меняется.
+- Не выдумывай поля кроме перечисленных ниже.
 
 {
     "story": "Текст истории. Markdown.",
     "choices": [ ${choicesTemplate} ],
     "updates": {
-        "mind":0, "body":0, "family":0, "friends":0, "health":0, "looks":0, "wealth":0, "authority":0,
+        "mind":<-2..+2>, "body":<-2..+2>, "family":<-2..+2>, "friends":<-2..+2>,
+        "health":<-2..+2>, "looks":<-2..+2>, "wealth":<-2..+2>, "authority":<-2..+2>,
         "add_item": {"name":"...", "desc":"..."} или null,
-        "remove_item": "..." или null,
+        "remove_item": "название предмета или null",
         "update_item": {"name":"...", "desc":"..."} или null,
         "add_npc": {"name":"...", "desc":"..."} или null,
-        "remove_npc": "..." или null,
+        "remove_npc": "имя персонажа или null",
         "update_npc": {"name":"...", "desc":"..."} или null
     }
 }`;
@@ -1940,18 +1947,18 @@ async function continuesTruncatedResponse(rawSoFar, modelKind = 'main') {
     const updatesShell = alreadyHasNumbers
         // Числа уже написаны — только структурный хвост
         ? `"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null`
-        // Числа ещё не написаны — просим написать осмысленные дельты (не нули!)
-        : `"mind":<дельта>,"body":<дельта>,"family":<дельта>,"friends":<дельта>,"health":<дельта>,"looks":<дельта>,"wealth":<дельта>,"authority":<дельта>,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null`;
+        // Числа ещё не написаны — просим дельты в диапазоне -2..+2, НЕ абсолютные значения
+        : `"mind":<-2..+2>,"body":<-2..+2>,"family":<-2..+2>,"friends":<-2..+2>,"health":<-2..+2>,"looks":<-2..+2>,"wealth":<-2..+2>,"authority":<-2..+2>,"add_item":null,"remove_item":null,"update_item":null,"add_npc":null,"remove_npc":null,"update_npc":null`;
 
     if (!hasStory) {
         skeleton = `
   "story": "...ПРОДОЛЖЕНИЕ ТЕКСТА ИСТОРИИ (не начинай сначала)...",
-  "choices": [{"text":"...","action":"..."}, ...всего ${choicesCount}],
+  "choices": [РОВНО ${choicesCount} объекта вида {"text":"...","action":"..."}],
   "updates": {${updatesShell}}
 }`;
     } else if (!hasChoices) {
         skeleton = `
-  "choices": [{"text":"...","action":"..."}, ...всего ${choicesCount}],
+  "choices": [РОВНО ${choicesCount} объекта вида {"text":"...","action":"..."}],
   "updates": {${updatesShell}}
 }`;
     } else if (!hasUpdates) {
@@ -2456,14 +2463,20 @@ function getCurrentDateString() {
 // при дописывании повторяет ключи с нулями.
 function extractFirstStatDeltas(u) {
     if (!u) return {};
-    // u уже объект от JSON.parse — дубли потеряны. Поэтому sanitizeJSON теперь
-    // сохраняет первое значение через filterUpdatesFields.
-    // Здесь просто читаем что осталось.
     const result = {};
     for (const key of ['mind','body','family','friends','health','looks','wealth','authority']) {
-        if (u[key] !== undefined && typeof u[key] === 'number') {
-            result[key] = u[key];
+        if (u[key] === undefined || typeof u[key] !== 'number') continue;
+        let val = u[key];
+        // Защита от абсолютных значений: если |val| > 2, то это скорее всего
+        // абсолютный стат (7, 15, 20...) а не дельта.
+        // Вычитаем текущее значение чтобы получить настоящую дельту.
+        if (Math.abs(val) > 2) {
+            const current = state.stats[key] ?? 5;
+            const impliedDelta = val - current;
+            console.warn(`⚠️ updates.${key}=${val} выглядит как абсолютное значение (текущее=${current}), конвертируем в дельту ${impliedDelta > 0 ? '+' : ''}${impliedDelta}`);
+            val = impliedDelta;
         }
+        result[key] = val;
     }
     return result;
 }
