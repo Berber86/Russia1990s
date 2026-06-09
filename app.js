@@ -607,7 +607,7 @@ function getDateLabel(seasonIdx = state.seasonIdx, year = state.year) {
 
 function buildArchiveStoryMarkup(entry) {
     if (!entry) return renderMarkdown(state.lastStory || '');
-    let html = renderMarkdown(entry.storyEnhanced || entry.story || '');
+    let html = renderMarkdown(entry.storyEnhanced || entry.storyOriginal || entry.story || '');
 
     if (entry && entry.polishFailed) {
         // Полировка сорвалась — показываем предупреждение сверху
@@ -619,13 +619,23 @@ function buildArchiveStoryMarkup(entry) {
             </div>
         ` + html;
     } else if (entry && entry.turn && entry.storyOriginal) {
-        // Полировка прошла успешно — тихая кнопка переполировки под текстом
-        html += `
-            <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                <button class="control-btn control-btn--ghost" style="font-size: 0.82rem; padding: 6px 14px; opacity: 0.55; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'" onclick="window.retryPolish('${entry.turn}')">✦ Переполировать текст</button>
-                <span style="font-size: 0.78rem; color: var(--ink-muted); font-family: var(--mono);">второй проход заново — механики не затронуты</span>
-            </div>
-        `;
+        if (entry.storyEnhanced) {
+            // Полировка прошла успешно — тихая кнопка переполировки под текстом
+            html += `
+                <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <button class="control-btn control-btn--ghost" style="font-size: 0.82rem; padding: 6px 14px; opacity: 0.55; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'" onclick="window.retryPolish('${entry.turn}')">✦ Переполировать текст</button>
+                    <span style="font-size: 0.78rem; color: var(--ink-muted); font-family: var(--mono);">второй проход заново — механики не затронуты</span>
+                </div>
+            `;
+        } else {
+            // Ещё не было полировки — кнопка создания чистовика
+            html += `
+                <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <button class="control-btn control-btn--ghost" style="font-size: 0.82rem; padding: 6px 14px; opacity: 0.85; transition: opacity 0.2s; border: 1px dashed var(--link); color: var(--link);" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'" onclick="window.retryPolish('${entry.turn}')">✦ Отполировать текст (чистовик)</button>
+                    <span style="font-size: 0.78rem; color: var(--ink-muted); font-family: var(--mono);">сделать текст более сочным, добавить атмосферные диалоги и детали эпохи</span>
+                </div>
+            `;
+        }
     }
 
     if (entry) {
@@ -1601,6 +1611,146 @@ ${verbosity === 'concise'
 }`;
 }
 
+function buildStorySystemPrompt(nextSeasonName, nextYear, verbosity = state.verbosity || 'normal') {
+    const statsDesc = buildStatsDescription();
+    const genderInfo = GENDER_INFO[state.gender];
+    const locInfo = getLocationInfo();
+    const contextBlock = buildContextBlock();
+    const summaryBlock = buildSummaryBlock();
+    
+    // Получаем особые указания по статам (statsGuidance), чтобы сюжет сразу отражал низкие/высокие параметры!
+    let statsGuidance = '';
+    for (const [key, val] of Object.entries(state.stats)) {
+        const info = STATS_INFO[key];
+        if (!info || val === 5) continue;
+        let levelDesc = '';
+        if (val === 4) levelDesc = `У героя слегка низкий параметр ${info.name}. Лёгкий намёк в тексте, без трагизма.`;
+        else if (val === 6) levelDesc = `У героя слегка высокий параметр ${info.name}. Лёгкий намёк в тексте, без трагизма.`;
+        else if (val === 3) levelDesc = `У героя тревожно низкий параметр ${info.name}. Сам он не видит проблемы, но проблемы есть. Отрази это.`;
+        else if (val === 7) levelDesc = `У героя тревожно высокий параметр ${info.name}. Сам он не видит проблемы, но проблемы есть. Отрази это.`;
+        else if (val === 2) levelDesc = `У героя очень низкий параметр ${info.name}. Красной нитью по всему тексту.`;
+        else if (val === 8) levelDesc = `У героя очень высокий параметр ${info.name}. Красной нитью по всему тексту.`;
+        else if (val <= 1 || val >= 9) {
+            const critical = val <= 1 ? 'критически низкий' : 'критически высокий';
+            levelDesc = `У героя ${critical} параметр ${info.name}. Значительная часть текста должна быть обращена к этому.`;
+        }
+        if (levelDesc) statsGuidance += levelDesc + '\n';
+    }
+
+    return `Придумай 4 случайных слова. Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа: 
+    Ты — мастер драматической и детально атмосферной текстовой RPG о жизни в России 90-х. Драма и атмосферная ностальгия — это вся твоя суть.
+
+ГЕРОЙ: ${genderInfo.name} (${state.age} лет)
+
+ЛОКАЦИЯ: ${locInfo.fullName} — ${locInfo.desc}
+
+Жанр: социальная драма, реализм, атмосферная ностальгия, историческая хроника.
+
+Пиши интересно, подробно, атмосферно, с деталями быта 90-х и учётом географической локации. Придумывай запоминающиеся яркие диалоги и используй детали, от которых бы ёкало сердце у тех, кто был ребёнком в 90-е.
+
+Текущее время: ${SEASONS[state.seasonIdx]} ${state.year}. Возраст: ${state.age}.
+
+Следующий сезон: ${nextSeasonName} ${nextYear}.
+
+${summaryBlock}
+
+${contextBlock}
+
+${statsDesc}
+
+${statsGuidance ? `!!! ОСОБЫЕ УКАЗАНИЯ ПО ХАРАКТЕРИСТИКАМ ГЕРОЯ !!!\n${statsGuidance}\n` : ''}
+
+!!! КРИТИЧЕСКИЕ ПРАВИЛА ПОВЕСТВОВАНИЯ !!!
+
+1. Учитывай пол (${genderInfo.name}), локацию (${locInfo.fullName} — ${locInfo.desc}), возраст (${state.age}).
+2. Достаток влияет на доступные варианты, одежду, еду, отношение окружающих и возможность лечить плохое здоровье.
+3. Авторитет у сверстников влияет на то, боятся или презирают героя, может ли он отказать, ведёт или ведомый.
+4. СТИЛЬ И ПУНКТУАЦИЯ: СТРОЖАЙШИЙ ЗАПРЕТ на избыточное использование длинных тире (—) и многоточий. Используй тире только там, где оно грамматически необходимо (в диалогах или тире между подлежащим и сказуемым), но не для "красоты" или связки предложений. Если в абзаце больше двух длинных тире — это плохой текст.
+5. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.
+
+ЗАДАЧА:
+1. Опиши последствия выбора (60% текста).
+2. Описывай текст глазами ребёнка, уместным для его возраста и ума языком.
+3. ПЕРЕХОД к ${nextSeasonName} ${nextYear} (40% текста). Опиши смену времени, корреляцию с предыдущим выбором, изменения некоторых из NPC.
+
+ОБЪЁМ ПОВЕСТВОВАНИЯ:
+${verbosity === 'concise'
+    ? 'Целевой объём: ~2000 токенов (примерно 1400–1600 слов). Не растягивай.'
+    : verbosity === 'detailed'
+    ? 'Целевой объём: ~4000 токенов (примерно 2800–3200 слов). Пиши подробно.'
+    : 'Целевой объём: ~3000 токенов (примерно 2000–2400 слов).'}
+
+ВАЖНО: Пиши ТОЛЬКО текст истории (рассказ) в формате Markdown. НЕ генерируй варианты выбора, сдвиги характеристик или JSON-форматирование. Только чистый художественный текст повествования.`;
+}
+
+function buildStructureSystemPrompt(story, nextSeasonName, nextYear, choicesCount) {
+    const statsDesc = buildStatsDescription();
+    const genderInfo = GENDER_INFO[state.gender];
+    const locInfo = getLocationInfo();
+    const contextBlock = buildContextBlock();
+    const summaryBlock = buildSummaryBlock();
+    
+    let choicesTemplate = '';
+    for (let i = 1; i <= choicesCount; i++) {
+        choicesTemplate += `{"text": "Действие ${i}", "action": "художественное описание действия ${i}"}`;
+        if (i < choicesCount) choicesTemplate += ',\n';
+    }
+
+    return `Ты — аналитический модуль драматической текстовой RPG о жизни в России 90-х.
+Твоя задача — проанализировать свежесгенерированный текст истории и составить для игрока дальнейшие варианты выбора и технические обновления игрового состояния (updates) в формате JSON.
+
+ГЕРОЙ: ${genderInfo.name} (${state.age} лет)
+ЛОКАЦИЯ: ${locInfo.fullName} — ${locInfo.desc}
+ТЕКУЩЕЕ СОСТОЯНИЕ ХАРАКТЕРИСТИК:
+${JSON.stringify(state.stats)}
+
+${summaryBlock}
+${contextBlock}
+${statsDesc}
+
+ПРАВИЛА ДЛЯ СДВИГОВ ПАРАМЕТРОВ (updates):
+1. Проанализируй текст истории. На основе событий в истории определи, какие параметры героя изменились.
+2. mind/body/family/friends/health/looks/wealth/authority — это СДВИГИ (дельты от -2 до +2), а НЕ абсолютные значения!
+   - Пример: если у героя поднялся ум — пиши "mind": 1, если упал — "mind": -1, если не изменился — "mind": 0.
+   - Максимум ±2 за ход. Общая сумма сдвигов по всем статам за ход должна быть ≤ 4.
+   - Учитывай "ВЯЗКОСТЬ СТАТОВ" (статы близкие к крайностям 1, 9, 2, 8 меняются гораздо сложнее и реже).
+3. Проверь появление/удаление/изменение персонажей (NPC):
+   - add_npc: {"name":"...","desc":"..."} если в истории появился НОВЫЙ человек, иначе null
+   - remove_npc: "имя" если персонаж умер/ушёл навсегда, иначе null
+   - update_npc: {"name":"...","desc":"..."} если что-то изменилось у существующего, иначе null (например, его статус, описание)
+4. Проверь появление/удаление/изменение предметов:
+   - add_item: {"name":"...","desc":"..."} если герой получил новый предмет, иначе null
+   - remove_item: "название" если предмет утрачен, иначе null
+   - update_item: {"name":"...","desc":"..."} если предмет изменился, иначе null
+
+ПРАВИЛА ДЛЯ ВАРИАНТОВ ВЫБОРА (choices):
+1. Сгенерируй ровно ${choicesCount} варианта выбора для следующего хода!
+2. КАЖДЫЙ вариант — развёрнутое описание действия игрока (1-2 предложения, минимум 6 слов).
+3. Варианты должны быть логичным продолжением текущей истории и учитывать текущий возраст (${state.age} лет).
+4. Пытайся придумать варианты, которые не только сюжетно уместны, но и задействуют самые высокие и низкие атрибуты героя (для проверки или изменения). Не пиши короткие скучные варианты типа "Помочь маме". Пиши атмосферно и развёрнуто.
+
+ИСТОРИЯ ДЛЯ АНАЛИЗА:
+=== СТАРТ ИСТОРИИ ===
+${story}
+=== КОНЕЦ ИСТОРИИ ===
+
+ОТВЕТЬ СТРОГО В ФОРМАТЕ JSON. Никакого другого текста, преамбул, комментариев или markdown-разметки вне JSON.
+Формат ответа должен строго соответствовать этой схеме:
+{
+    "choices": [ ${choicesTemplate} ],
+    "updates": {
+        "mind": <-2..+2>, "body": <-2..+2>, "family": <-2..+2>, "friends": <-2..+2>,
+        "health": <-2..+2>, "looks": <-2..+2>, "wealth": <-2..+2>, "authority": <-2..+2>,
+        "add_item": {"name":"...", "desc":"..."} или null,
+        "remove_item": "название предмета или null",
+        "update_item": {"name":"...", "desc":"..."} или null,
+        "add_npc": {"name":"...", "desc":"..."} или null,
+        "remove_npc": "имя персонажа или null",
+        "update_npc": {"name":"...", "desc":"..."} или null
+    }
+}`;
+}
+
 // ========== УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ВЫЗОВА LLM ==========
 async function callLLM({
     messages,
@@ -1926,6 +2076,42 @@ ${fullDialogForCompress}
 
 
 // ========== ДОПИСЫВАНИЕ ОБРЕЗАННОГО ОТВЕТА ==========
+async function continueTruncatedText(rawSoFar, modelKind = 'main') {
+    addSystemLog('Дописывание текста (запуск)', `Длина обрыва: ${rawSoFar.length} симв.`, true);
+    const messages = [
+        {
+            role: 'user',
+            content: `Ниже — незавершённый художественный рассказ. Твоя задача: дописать его ровно с места обрыва.
+НЕ начинай сначала, не повторяй уже написанное. Пиши СРАЗУ продолжение текста, чтобы при склеивании получился единый связный рассказ.
+
+--- НЕЗАВЕРШЁННЫЙ ТЕКСТ ---
+${rawSoFar}
+--- КОНЕЦ НЕЗАВЕРШЁННОГО ТЕКСТА ---
+
+Допиши рассказ до логического конца (включая плавный переход в следующий сезон/год). Пиши в том же стиле, от первого лица.`
+        }
+    ];
+    try {
+        const completion = await callLLM({
+            messages,
+            modelKind,
+            temperature: 0.5,
+            max_tokens: 4000
+        }, 1);
+        const continuation = completion?.choices?.[0]?.message?.content;
+        if (!continuation) {
+            addSystemLog('Дописывание текста (пустой ответ)', '', true);
+            return null;
+        }
+        const joined = rawSoFar + '\n' + continuation.trim();
+        addSystemLog('Дописывание текста (успех)', `Итого: ${joined.length} симв. (было ${rawSoFar.length} + добавлено ${continuation.length})`, false);
+        return joined;
+    } catch (e) {
+        addSystemLog('Дописывание текста (ошибка)', e.message, true);
+        return null;
+    }
+}
+
 // Вызывается когда finish_reason === 'length' (обрезан лимитом).
 // Стратегия:
 //   • Если JSON не спарсился вообще — просим дописать начиная с обрыва (сырой текст).
@@ -2066,7 +2252,7 @@ function isTruncated(completion) {
 // ========== ОСНОВНОЙ ХОД ==========
 async function turn(action) {
     if (state.gameOver) return;
-    setLoading(true, "Листаю страницы судьбы... Первый черновик пишется.");
+    setLoading(true, "Листаю страницы судьбы... Рождается черновик истории...");
     state.turnCount++;
     try {
         const needSummary = (state.turnCount - state.lastSummaryTurn) >= SUMMARY_INTERVAL && state.history.length >= 10;
@@ -2076,20 +2262,13 @@ async function turn(action) {
         const nextSeasonName = SEASONS[nextSeasonIdx];
         const choicesCount = getChoicesCount();
 
-        // ── ФОРМИРОВАНИЕ КОНТЕКСТА (1-й проход) ──
-        // Структура: [SYSTEM: системный промпт + dialogArchive] → [история-хвост] → [USER: выбор]
-        // dialogArchive — сжатый архив старых ходов (обновляется фоново каждые 3 хода)
-        // state.history — только свежий хвост (последние 2 пары после сжатия)
-
-        const systemPrompt = buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount);
-
-        // Добавляем архив прямо в system-промпт (не в отдельное сообщение)
+        // ── ШАГ 1: ГЕНЕРАЦИЯ СЮЖЕТА (Черновик) ──
+        const storySystemPrompt = buildStorySystemPrompt(nextSeasonName, nextYear);
         const archiveBlock = state.dialogArchive
             ? '\n\n=== АРХИВ ИСТОРИИ (сжато) ===\n' + state.dialogArchive + '\n=== КОНЕЦ АРХИВА ==='
             : '';
-        const fullSystemPrompt = systemPrompt + archiveBlock;
+        const fullStorySystemPrompt = storySystemPrompt + archiveBlock;
 
-        // Хвост истории — только нужные сообщения (без JSON/технических данных)
         const historyForLLM = state.history.map((msg) => {
             if (msg.role === 'assistant') {
                 return { role: 'assistant', content: msg.enhanced || msg.original || msg.content };
@@ -2097,165 +2276,95 @@ async function turn(action) {
             return { role: 'user', content: msg.content };
         });
 
-        // max_tokens первого прохода зависит от выбранного стиля повествования
-        const pass1MaxTokens = 10000; // жёсткий потолок; желаемый объём задан в промпте
-
         const completion1 = await callLLM({
             messages: [
-                { role: 'system', content: fullSystemPrompt },
+                { role: 'system', content: fullStorySystemPrompt },
                 ...historyForLLM,
                 { role: 'user', content: `Мой выбор: ${action}. (Сгенерируй атмосферно описанный результат и переход в ${nextSeasonName} ${nextYear})` }
             ],
             modelKind: 'main',
-            temperature: 0.5,
-            max_tokens: pass1MaxTokens,
-            response_format: { type: 'json_object' }
+            temperature: 0.6,
+            max_tokens: 10000
         });
 
-        let raw1 = completion1?.choices?.[0]?.message?.content || '';
+        let originalStory = completion1?.choices?.[0]?.message?.content || '';
 
-        // Детект обрыва: finish_reason === 'length' → пробуем дописать
+        // Детект обрыва сюжета
         if (isTruncated(completion1)) {
-            addSystemLog('Обрыв 1-го прохода', `finish_reason=length, длина: ${raw1.length}`, true);
-            setLoading(true, 'История оборвалась на полуслове — дописываю первый проход...');
-            const continued = await continuesTruncatedResponse(raw1, 'main');
-            if (continued) raw1 = continued;
+            addSystemLog('Обрыв 1-го прохода (сюжет)', `finish_reason=length, длина: ${originalStory.length}`, true);
+            setLoading(true, 'История оборвалась на полуслове — дописываю черновик...');
+            const continued = await continueTruncatedText(originalStory, 'main');
+            if (continued) originalStory = continued;
         }
 
-        let data = parseJSON(raw1, 'Основной ход');
+        originalStory = originalStory.trim();
 
-        // Если JSON всё ещё не парсится — пробуем дописать даже без флага length
-        if ((!data?.story || !Array.isArray(data?.choices)) && raw1.includes('{')) {
-            addSystemLog('Парсинг провалился', 'Пробуем дописать без флага length', true);
-            setLoading(true, 'Страница вышла неполной — восстанавливаю черновик...');
-            const continued = await continuesTruncatedResponse(raw1, 'main');
-            if (continued) {
-                const retryData = parseJSON(continued, 'Основной ход (после дописывания)');
-                if (retryData?.story && Array.isArray(retryData?.choices)) {
-                    raw1 = continued;
-                    data = retryData;
+        if (!originalStory) {
+            throw new Error("Не удалось получить текст истории от нейросети.");
+        }
+
+        // ── ШАГ 2: ГЕНЕРАЦИЯ ВЫБОРОВ И АПДЕЙТОВ (Структура) ──
+        setLoading(true, "История записана. Продумываю возможные последствия и варианты выбора...");
+
+        const structureSystemPrompt = buildStructureSystemPrompt(originalStory, nextSeasonName, nextYear, choicesCount);
+
+        let data = null;
+        let structureRaw = '';
+        let step2Attempts = 2;
+
+        for (let attempt = 1; attempt <= step2Attempts; attempt++) {
+            try {
+                const completion2 = await callLLM({
+                    messages: [
+                        { role: 'system', content: structureSystemPrompt },
+                        { role: 'user', content: 'Проанализируй историю выше и верни JSON со сдвигами параметров и новыми выборами.' }
+                    ],
+                    modelKind: 'main',
+                    temperature: attempt === 1 ? 0.3 : 0.1,
+                    max_tokens: 4000,
+                    response_format: { type: 'json_object' }
+                });
+
+                structureRaw = completion2?.choices?.[0]?.message?.content || '';
+                data = parseJSON(structureRaw, 'Структура хода');
+
+                if (data?.choices && Array.isArray(data.choices)) {
+                    // Успешно распарсили нужные поля!
+                    break;
                 }
+            } catch (err) {
+                console.warn(`Попытка ${attempt} разбора структуры провалилась:`, err);
+            }
+
+            if (attempt < step2Attempts) {
+                setLoading(true, "Формирую альтернативные пути судьбы — восстанавливаю варианты выбора...");
             }
         }
 
-        if (!data?.story || !Array.isArray(data?.choices)) {
-            console.error('Invalid JSON:', raw1);
-            els.story.innerHTML = renderMarkdown('**Ошибка:** некорректный ответ.\n\nПовторите ход.');
+        if (!data?.choices || !Array.isArray(data.choices)) {
+            console.error('Invalid JSON structure:', structureRaw);
+            els.story.innerHTML = renderMarkdown('**Ошибка:** не удалось сгенерировать варианты выбора.\n\nПовторите ход.');
             showRetryButton(action);
             return;
         }
 
-        const originalStory = data.story;
+        // Автоматическую полировку (шлифовку) пропускаем, она запускается только вручную по желанию
+        const enhancedStory = originalStory; 
+        const polishFailed = false;
+
         state.originalHistory.push(originalStory);
-
-        const lastEnhanced = state.enhancedHistory.length ? state.enhancedHistory[state.enhancedHistory.length - 1] : null;
-        const prevOriginal = state.originalHistory.length > 1 ? state.originalHistory[state.originalHistory.length - 2] : null;
-        const locInfo = getLocationInfo();
-        const genderInfo = GENDER_INFO[state.gender];
-        const npcList = state.npcs.map((n) => `- ${n.name}: ${n.desc}`).join('\n');
-        const itemList = state.inventory.map((i) => `- ${i.name}: ${i.desc}`).join('\n');
-        const summary = state.lifeSummary ? `Краткая история жизни: ${state.lifeSummary}` : '';
-        const locationTypeStr = { capital: 'большой город (столица)', town: 'город', village: 'село' }[state.locationType] || 'город';
-
-        let statsGuidance = '';
-        for (const [key, val] of Object.entries(state.stats)) {
-            const info = STATS_INFO[key];
-            if (!info || val === 5) continue;
-            let levelDesc = '';
-            if (val === 4) levelDesc = `У героя слегка низкий параметр ${info.name}. Лёгкий намёк в тексте, без трагизма.`;
-            else if (val === 6) levelDesc = `У героя слегка высокий параметр ${info.name}. Лёгкий намёк в тексте, без трагизма.`;
-            else if (val === 3) levelDesc = `У героя тревожно низкий параметр ${info.name}. Сам он не видит проблемы, но проблемы есть. Отрази это.`;
-            else if (val === 7) levelDesc = `У героя тревожно высокий параметр ${info.name}. Сам он не видит проблемы, но проблемы есть. Отрази это.`;
-            else if (val === 2) levelDesc = `У героя очень низкий параметр ${info.name}. Красной нитью по всему тексту.`;
-            else if (val === 8) levelDesc = `У героя очень высокий параметр ${info.name}. Красной нитью по всему тексту.`;
-            else if (val <= 1 || val >= 9) {
-                const critical = val <= 1 ? 'критически низкий' : 'критически высокий';
-                levelDesc = `У героя ${critical} параметр ${info.name}. Значительная часть текста должна быть обращена к этому.`;
-            }
-            if (levelDesc) statsGuidance += levelDesc + '\n';
-        }
-
-        // ── КОНТЕКСТ ДЛЯ ПОЛИРОВКИ (2-й проход) ──
-        // Архив даёт фоновое знание об истории, хвост — каноническая истина последних ходов.
-        const canonTail = state.history.slice(-4).map(m => {
-            if (m.role === 'user') return `>> Выбор игрока: ${m.content} <<`;
-            return m.enhanced || m.original || m.content || '';
-        }).join('\n\n');
-
-        const archiveForEnhance = state.dialogArchive
-            ? `\n=== АРХИВ ИСТОРИИ (канон, сжато) ===\n${state.dialogArchive}\n=== КОНЕЦ АРХИВА ===\n`
-            : '';
-
-        const canonBlock = canonTail
-            ? `\n=== ПОСЛЕДНИЕ ХОДЫ (канон, дословно) ===\n${canonTail}\n=== КОНЕЦ ===\n`
-            : '';
-
-        const verbosityStyleNote = state.verbosity === 'concise'
-            ? 'Текст должен остаться КОРОТКИМ и ЁМКИМ. Убирай лишнее, не добавляй описаний. Целевой объём ~2000 токенов.'
-            : state.verbosity === 'detailed'
-            ? 'Текст должен быть ПОДРОБНЫМ и АТМОСФЕРНЫМ. Добавляй атмосферные запоминающиеся диалоги, ощущения, детали. Целевой объём ~4000 токенов.'
-            : 'Сохраняй естественный объём, не растягивай и не обрезай. Целевой объём ~3000 токенов.';
-
-        const enhancementPrompt = `Придумай 4 случайных слова.  Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа: Ты мастер социально-драматической художественной текстовой игры про детство в 1990-х. Ниже текст — насыть его аутентичными и интересными запоминающимися диалогами и описаниями. Исправь очевидные ляпы, ориентируйся на предыдущую историю как на абсолютный канон. Не пиши предисловий и послесловий. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.
-
-${verbosityStyleNote}
-
-ВАЖНО: Запрет на избыток длинных тире (—). Не используй тире чаще одного раза на абзац.
-
-ТЕКСТ ДЛЯ УЛУЧШЕНИЯ:
-
-${originalStory}
-
-Контекст для понимания (справочно):
-- знакомые люди:
-${npcList || 'Нет'}
-- предметы:
-${itemList || 'Нет'}
-${summary ? '\n' + summary : ''}
-${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указания по параметрам:\n${statsGuidance}` : ''}`
-        let enhancedStory = originalStory;
-        let polishFailed = false;
-        try {
-            setLoading(true, "Черновик готов. Шлифую детали и диалоги...");
-            const pass2MaxTokens = 10000; // жёсткий потолок; желаемый объём задан в промпте
-            const completion2 = await callLLM({
-                messages: [{ role: 'user', content: enhancementPrompt }],
-                modelKind: 'enhance',
-                temperature: 0.7,
-                max_tokens: pass2MaxTokens
-            });
-            let raw2 = completion2?.choices?.[0]?.message?.content || '';
-
-            // Детект обрыва в enhance-ответе
-            if (isTruncated(completion2) && raw2.trim()) {
-                addSystemLog('Обрыв 2-го прохода', `finish_reason=length, длина: ${raw2.length}`, true);
-                setLoading(true, 'Полировка оборвалась — дописываю второй проход...');
-                const continued2 = await continuesTruncatedResponse(raw2, 'enhance');
-                if (continued2) raw2 = continued2;
-            }
-
-            if (raw2.trim()) enhancedStory = raw2.trim();
-            else polishFailed = true;
-        } catch (e) {
-            console.error('Ошибка улучшения:', e);
-            polishFailed = true;
-        }
-
-        state.enhancedHistory.push(enhancedStory);
+        state.enhancedHistory.push(originalStory);
 
         // Добавляем новые сообщения в хвост истории
         state.history.push({ role: 'user', content: action });
-        state.history.push({ role: 'assistant', content: raw1, original: originalStory, enhanced: enhancedStory });
+        state.history.push({ role: 'assistant', content: originalStory, original: originalStory, enhanced: null });
 
         // ── ФОНОВОЕ СЖАТИЕ ДИАЛОГА ──
-        // Плановое: каждые 3 хода + ответ > 800 симв. + есть что сжимать (≥ 6 сообщ.)
         const planCompress = (
             state.turnCount % 3 === 0 &&
-            enhancedStory.length > 800 &&
+            originalStory.length > 800 &&
             state.history.length >= 6
         );
-        // Аварийное: история слишком разрослась (≥ 12 сообщений) — запускаем force-режим
-        // независимо от кратности хода (если плановое сжатие раньше падало)
         const forceCompress = (
             !planCompress &&
             state.history.length >= 12 &&
@@ -2264,13 +2373,13 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
         if (planCompress || forceCompress) {
             const isForce = forceCompress;
             if (isForce) addSystemLog('Сжатие диалога (аварийный запуск)', `История разрослась до ${state.history.length} сообщ.`, true);
-            // Запускаем фоново — не ждём, не блокируем UI
             compressDialogHistory(isForce).catch(e => console.error('Фоновое сжатие диалога:', e));
         }
 
         // Снимок статов ДО применения — для отображения финальных сдвигов игроку
         const statsBeforeUpdate = { ...state.stats };
         applyUpdates(data.updates);
+        
         // Считаем фактические (финальные) сдвиги после всех фильтров вязкости
         const statDeltas = {};
         for (const key of Object.keys(state.stats)) {
@@ -2278,7 +2387,7 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
             if (diff !== 0) statDeltas[key] = diff;
         }
         state.lastStatDeltas = Object.keys(statDeltas).length > 0 ? statDeltas : null;
-        state.lastStory = enhancedStory;
+        state.lastStory = originalStory;
         state.lastChoices = data.choices;
         advanceTime();
 
@@ -2292,11 +2401,11 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
             year: state.year,
             age: state.age,
             storyOriginal: originalStory,
-            storyEnhanced: enhancedStory,
+            storyEnhanced: null,
             miracleStory: state.lastMiracle || null,
             gameOverData: cloneData(state.gameOverData),
             polishFailed,
-            enhancementPrompt: polishFailed ? enhancementPrompt : null
+            enhancementPrompt: null
         };
 
         newEntry.illustrationStatus = 'pending';
@@ -3270,7 +3379,7 @@ ${itemList || 'Нет'}
 ${summary ? '\n' + summary : ''}
 ${archiveForEnhance}${canonBlock}`;
 
-    setLoading(true, 'Повторная попытка полировки...');
+    setLoading(true, 'Шлифую детали и диалоги... Создаю чистовик...');
     try {
         const pass2MaxTokens = 10000;
         const completion2 = await callLLM({
@@ -3372,7 +3481,7 @@ window.startGenImgUI = function(turnStr) {
     const metaAction= document.getElementById('prompt-meta-action');
     const tabBtns   = document.querySelectorAll('.prompt-tab-btn');
 
-    let currentTab = 'main'; // 'main' | 'enhance'
+    let currentTab = 'main'; // 'main' | 'structure' | 'enhance'
 
     // ---------- вспомогательные функции ----------
 
@@ -3389,10 +3498,9 @@ window.startGenImgUI = function(turnStr) {
 
         const { nextSeasonIdx, nextYear } = getNextTime();
         const nextSeasonName = SEASONS[nextSeasonIdx];
-        const choicesCount   = getChoicesCount();
 
         // Инспектор использует ту же логику что и реальный turn()
-        const systemPromptI    = buildMainSystemPrompt(nextSeasonName, nextYear, choicesCount);
+        const systemPromptI    = buildStorySystemPrompt(nextSeasonName, nextYear);
         const archiveBlockI    = state.dialogArchive
             ? '\n\n=== АРХИВ ИСТОРИИ (сжато) ===\n' + state.dialogArchive + '\n=== КОНЕЦ АРХИВА ==='
             : '';
@@ -3414,7 +3522,18 @@ window.startGenImgUI = function(turnStr) {
         return { messagesMain, simulatedAction, nextSeasonName, nextYear };
     }
 
-    /** Строит промпт для 2-го прохода (полировки) — точная копия логики из turn().
+    /** Строит промпт для Шага 2 (анализ и генерация выборов/апдейтов) */
+    function buildStructurePayload(simulatedAction, nextSeasonName, nextYear) {
+        const choicesCount = getChoicesCount();
+        const placeholderStory = `[⚠ ЗАГЛУШКА: реальный текст 1-го прохода появится после запроса]\nСимулированный выбор: «${simulatedAction}»`;
+        const structureSystemPrompt = buildStructureSystemPrompt(placeholderStory, nextSeasonName, nextYear, choicesCount);
+        return [
+            { role: 'system', content: structureSystemPrompt },
+            { role: 'user', content: 'Проанализируй историю выше и верни JSON со сдвигами параметров и новыми выборами.' }
+        ];
+    }
+
+    /** Строит промпт для 3-го прохода (полировки) — точная копия логики из turn().
      *  originalStory заменена заглушкой, т.к. реального ответа 1-го прохода ещё нет. */
     function buildEnhancePayload(simulatedAction) {
         const npcList  = state.npcs.map((n) => `- ${n.name}: ${n.desc}`).join('\n');
@@ -3497,13 +3616,19 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
 
         const { messagesMain, simulatedAction, nextSeasonName, nextYear } = buildInspectorPayload();
 
-        let messages, tabLabel;
+        let messages, tabLabel, modelKindForTab;
         if (currentTab === 'enhance') {
             messages = buildEnhancePayload(simulatedAction);
-            tabLabel = 'Полировка (2-й pass) — enhance-модель';
+            tabLabel = 'Шаг 3: Полировка (ручная) — enhance-модель';
+            modelKindForTab = 'enhance';
+        } else if (currentTab === 'structure') {
+            messages = buildStructurePayload(simulatedAction, nextSeasonName, nextYear);
+            tabLabel = 'Шаг 2: Анализ/Выборы — main-модель';
+            modelKindForTab = 'main';
         } else {
             messages = messagesMain;
-            tabLabel = 'Основной (1-й pass) — main-модель';
+            tabLabel = 'Шаг 1: Сюжет — main-модель';
+            modelKindForTab = 'main';
         }
 
         const totalChars = messages.reduce((s, m) => s + m.content.length, 0);
@@ -3515,7 +3640,7 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
         if (metaMsgs)   metaMsgs.textContent    = `сообщений: ${messages.length}`;
         if (metaAction) metaAction.textContent  = `симул. выбор: «${simulatedAction.substring(0, 60)}${simulatedAction.length > 60 ? '…' : ''}»`;
 
-        content.textContent = `═══ ${tabLabel} ═══\nМодель: ${getProviderModel(currentTab === 'enhance' ? 'enhance' : 'main')}\nПровайдер: ${getProviderConfig().label}\n\n` + formatMessages(messages);
+        content.textContent = `═══ ${tabLabel} ═══\nМодель: ${getProviderModel(modelKindForTab)}\nПровайдер: ${getProviderConfig().label}\n\n` + formatMessages(messages);
     }
 
     // ---------- Tab switching ----------
@@ -3546,7 +3671,7 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
         document.body.style.overflow = '';
     }
 
-    fab?.addEventListener('click', openModal);
+        fab?.addEventListener('click', openModal);
     closeBtn?.addEventListener('click', closeModal);
     backdrop?.addEventListener('click', closeModal);
     refreshBtn?.addEventListener('click', renderPromptInspector);
