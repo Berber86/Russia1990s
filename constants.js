@@ -2,7 +2,7 @@
 
 // Константы игры
 
-export const DEFAULT_PROVIDER = "hybrid";
+export const DEFAULT_PROVIDER = "hydra";
 
 export const LLM_PROVIDERS = {
     hydra: {
@@ -12,31 +12,7 @@ export const LLM_PROVIDERS = {
         serverPath: "/api/hydra",
         storageKey: "rpg90_key_hydra",
         models: {
-            main: "glm-4.6",
-            enhance: "gemini-3.1-pro"
-        }
-    },
-    openrouter: {
-        label: "OpenRouter",
-        icon: "🧭",
-        directUrl: "https://openrouter.ai/api/v1/chat/completions",
-        serverPath: "/api/openrouter",
-        storageKey: "rpg90_key_openrouter",
-        models: {
-            main: "qwen/qwen3.7-plus",
-            enhance: "qwen/qwen3.7-plus"
-        }
-    },
-    hybrid: {
-        label: "Hybrid",
-        icon: "🧩",
-        storageKey: "rpg90_key_hybrid",
-        executionProviders: {
-            main: "openrouter",
-            enhance: "hydra"
-        },
-        models: {
-            main: "z-ai/glm-5.1",
+            main: "glm-5.2",
             enhance: "gemini-3.1-pro"
         }
     }
