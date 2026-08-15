@@ -2738,3 +2738,92 @@ body.admin-tools-enabled .dev-tool-fab { display: flex !important; }
 @media (prefers-reduced-motion: reduce) {
     .ui-icon { transition: none; }
 }
+
+/* ============================================================
+   STAGE 4 — ФИНАЛЬНАЯ ДОСТУПНОСТЬ И АДАПТИВНАЯ ПОЛИРОВКА
+   ============================================================ */
+
+:root {
+    /* Алиасы для старых служебных блоков и иллюстраций. */
+    --muted: var(--ink-dim);
+    --border: var(--line-strong);
+    --surface-1: var(--paper-1);
+    --surface-2: var(--paper-2);
+    --bg-card: var(--paper-2);
+    --border-soft: var(--line);
+}
+
+body[data-theme="paper"] {
+    --muted: var(--ink-dim);
+    --border: var(--line-strong);
+    --surface-1: var(--paper-1);
+    --surface-2: var(--paper-2);
+    --bg-card: var(--paper-2);
+    --border-soft: var(--line);
+}
+
+.settings-modal,
+.lore-panel {
+    overscroll-behavior: contain;
+}
+
+.settings-sheet {
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+}
+
+/* Не полагаемся только на цвет: выбранный пункт получает явный маркер. */
+.option-btn.selected::after {
+    content: "✓";
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    line-height: 1;
+    opacity: 0.78;
+}
+
+.option-btn {
+    min-height: 52px;
+}
+
+button:disabled {
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    .date-badge__time,
+    .date-badge__location {
+        padding: 10px 12px;
+    }
+
+    .date-badge__time {
+        font-size: 0.84rem;
+        letter-spacing: 0.1em;
+    }
+
+    .date-badge .location {
+        font-size: 0.96rem;
+    }
+
+    .choice-btn {
+        min-height: 64px;
+        padding: 13px 14px 13px 16px;
+    }
+
+    .settings-sheet {
+        max-height: calc(100vh - 16px);
+        margin-top: 8px;
+        padding: 18px;
+    }
+
+    .settings-tabs {
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .settings-tabs::-webkit-scrollbar { display: none; }
+}

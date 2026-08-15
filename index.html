@@ -423,18 +423,18 @@
 
             <div class="story-stage">
                 <div class="story-shell">
-                    <div id="story-display" class="story-content"></div>
+                    <div id="story-display" class="story-content" aria-live="polite" aria-atomic="false"></div>
                 </div>
-                <div class="loading-container" id="loader" style="display:none;"><div class="loading-bar"></div><div class="loading-message" id="loader-message" style="text-align:center; font-size:0.85em; color:var(--muted); margin-top:0.5rem;"></div></div>
+                <div class="loading-container" id="loader" role="status" aria-live="polite" style="display:none;"><div class="loading-bar"></div><div class="loading-message" id="loader-message" style="text-align:center; font-size:0.85em; color:var(--muted); margin-top:0.5rem;"></div></div>
                 <div class="choices-wrap choices-wrap--minimal" id="choices-wrap">
-                    <div class="choices" id="choices-display"></div>
+                    <div class="choices" id="choices-display" aria-live="polite"></div>
                 </div>
             </div>
         </section>
 
         <aside class="panel panel-sidebar">
             <div class="sidebar-scroll">
-                <div id="mode-display" class="status-stack"></div>
+                <div id="mode-display" class="status-stack" aria-live="polite"></div>
 
                 <section class="sidebar-card personality-card">
                     <div class="sidebar-card__head">
@@ -448,7 +448,7 @@
                         <div><h3>Близкие люди</h3></div>
                         <span class="sidebar-card__count" id="npcs-count">0</span>
                     </div>
-                    <button class="lore-trigger" id="npcs-trigger">
+                    <button type="button" class="lore-trigger" id="npcs-trigger" aria-haspopup="dialog">
                         <span class="lore-trigger__icon"><svg class="ui-icon"><use href="#icon-book"></use></svg></span>
                         <span class="lore-trigger__hint">Открыть альбом памяти</span>
                         <span class="lore-trigger__arrow">→</span>
@@ -460,7 +460,7 @@
                         <div><h3>Память и вещи</h3></div>
                         <span class="sidebar-card__count" id="items-count">0</span>
                     </div>
-                    <button class="lore-trigger lore-trigger--items" id="items-trigger">
+                    <button type="button" class="lore-trigger lore-trigger--items" id="items-trigger" aria-haspopup="dialog">
                         <span class="lore-trigger__icon"><svg class="ui-icon"><use href="#icon-bag"></use></svg></span>
                         <span class="lore-trigger__hint">Открыть вещи героя</span>
                         <span class="lore-trigger__arrow">→</span>

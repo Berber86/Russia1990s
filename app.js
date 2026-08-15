@@ -846,16 +846,21 @@ function renderSetupWizard() {
 
 function openSettingsModal() {
     if (!els.settingsModal) return;
+    settingsReturnFocus = document.activeElement;
     syncSettingsVerbosityBtns();
     syncSettingsEnhanceModelBtns();
     els.settingsModal.classList.remove('hidden');
     els.settingsModal.setAttribute('aria-hidden', 'false');
 }
 
+let settingsReturnFocus = null;
+
 function closeSettingsModal() {
     if (!els.settingsModal) return;
     els.settingsModal.classList.add('hidden');
     els.settingsModal.setAttribute('aria-hidden', 'true');
+    settingsReturnFocus?.focus?.();
+    settingsReturnFocus = null;
 }
 
 function syncSettingsVerbosityBtns() {
@@ -898,6 +903,9 @@ function setupSettingsModal() {
     els.gameSettingsBtn?.addEventListener('click', openSettingsModal);
     els.settingsCloseBtn?.addEventListener('click', closeSettingsModal);
     els.settingsBackdrop?.addEventListener('click', closeSettingsModal);
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !els.settingsModal?.classList.contains('hidden')) closeSettingsModal();
+    });
 
     setAdminToolsEnabled(areAdminToolsEnabled());
     document.getElementById('admin-tools-toggle')?.addEventListener('change', (event) => {
