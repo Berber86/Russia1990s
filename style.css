@@ -2419,3 +2419,25 @@ body[data-theme="paper"] .settings-tab-btn.selected { color: #fff8e7; }
 
 .settings-tab-panel { }
 .settings-tab-panel.hidden { display: none !important; }
+
+/* ---------- UX CLEANUP ---------- */
+/* Служебные панели остаются доступными для разработки, но не конкурируют
+   с игровым интерфейсом в пользовательской сборке. */
+.dev-tool-fab { display: none !important; }
+.support-card--setup { display: none; }
+
+/* Клавиатурная навигация должна быть заметна не меньше, чем hover. */
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+select:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+}
+
+/* В объединённых этапах мастер показывает несколько связанных секций,
+   но они воспринимаются как один экран. */
+.setup-step[data-wizard-group] + .setup-step[data-wizard-group] {
+    margin-top: 14px;
+}

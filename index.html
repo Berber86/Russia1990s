@@ -94,7 +94,7 @@
 
                 <div class="setup-wizard" id="setup-wizard">
                     <!-- Шаг 0: Пролог -->
-                    <section class="setup-step active" data-step="0">
+                    <section class="setup-step active" data-step="0" data-wizard-group="0">
                         <div class="setup-section setup-section--focus">
                             <h3>Добро пожаловать</h3>
                             <p class="setup-copy">
@@ -109,7 +109,7 @@
                     </section>
 
                     <!-- Шаг 1: Персонаж -->
-                    <section class="setup-step" data-step="1">
+                    <section class="setup-step" data-step="1" data-wizard-group="1">
                         <div class="setup-section">
                             <h3>Кто твой герой</h3>
                             <div class="setup-row setup-row-stack-mobile">
@@ -140,7 +140,7 @@
                     </section>
 
                     <!-- Шаг 2: Локация -->
-                    <section class="setup-step" data-step="2">
+                    <section class="setup-step" data-step="2" data-wizard-group="2">
                         <div class="setup-section location-section">
                             <h3>Где всё начинается</h3>
                             <div class="setup-row setup-row-stack-mobile">
@@ -159,7 +159,7 @@
                     </section>
 
                     <!-- Шаг 3: Конкретное место -->
-                    <section class="setup-step" data-step="3">
+                    <section class="setup-step" data-step="3" data-wizard-group="2">
                         <div class="setup-section location-section">
                             <h3>Где именно</h3>
                             <div class="setup-row" id="region-select-row" style="display:none;">
@@ -193,7 +193,7 @@
                     </section>
 
                     <!-- Шаг 3: Ритм игры -->
-                    <section class="setup-step" data-step="4">
+                    <section class="setup-step" data-step="4" data-wizard-group="3">
                         <div class="setup-grid-2 setup-grid-2--tight">
                             <div class="setup-section">
                                 <h3>Темп повествования</h3>
@@ -228,7 +228,7 @@
                     </section>
 
                     <!-- Шаг 5: Стиль повествования -->
-                    <section class="setup-step" data-step="5">
+                    <section class="setup-step" data-step="5" data-wizard-group="3">
                         <div class="setup-section">
                             <h3>Стиль повествования</h3>
                             <div class="setup-row setup-row-stack-mobile">
@@ -250,7 +250,7 @@
                     </section>
 
                     <!-- Шаг 6: Старт -->
-                    <section class="setup-step" data-step="6">
+                    <section class="setup-step" data-step="6" data-wizard-group="4">
                         <div class="setup-section setup-section--focus">
                             <h3>Твой старт</h3>
                             <p class="setup-copy setup-copy--small">
@@ -481,10 +481,10 @@
             </div>
         </div>
     </div>
-    <button id="debug-log-fab" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--border); border-radius: 50%; width: 48px; height: 48px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--ink);">🐞</button>
+    <button class="dev-tool-fab" id="debug-log-fab" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--border); border-radius: 50%; width: 48px; height: 48px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--ink);">🐞</button>
 
     <!-- Prompt Inspector Button -->
-    <button id="prompt-fab" title="Инспектор промпта" style="position: fixed; bottom: 20px; right: 76px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--line-warm, #c98a3a); border-radius: 50%; width: 48px; height: 48px; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--amber, #e8b061);">🔬</button>
+    <button class="dev-tool-fab" id="prompt-fab" title="Инспектор промпта" style="position: fixed; bottom: 20px; right: 76px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--line-warm, #c98a3a); border-radius: 50%; width: 48px; height: 48px; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--amber, #e8b061);">🔬</button>
 
     <!-- Prompt Inspector Modal -->
     <div class="settings-modal hidden" id="prompt-modal" aria-hidden="true" style="z-index: 10001;">

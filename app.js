@@ -108,14 +108,16 @@ let userApiKeys = {
 };
 let setupStepIndex = 0;
 
+// Пользовательский сценарий создания героя состоит из пяти коротких этапов.
+// Несколько связанных секций могут отображаться внутри одного этапа — так мы
+// сохраняем существующую логику выбора, но не заставляем игрока проходить
+// семь почти одинаковых экранов.
 const SETUP_STEPS = [
     { title: 'Пролог', caption: 'Вступление', badge: 'Начнём спокойно, шаг за шагом.' },
-    { title: 'Кто твой герой', caption: 'Персонаж', badge: 'Пол и возраст определяют интонацию всей жизни.' },
-    { title: 'Где всё начинается', caption: 'Инфраструктура', badge: 'Место рождения — это тоже часть судьбы.' },
-    { title: 'Где именно', caption: 'Регион', badge: 'У каждого уголка — свой характер.' },
-    { title: 'Как течёт время', caption: 'Ритм игры', badge: 'Темп и сложность задают драматургию прохождения.' },
-    { title: 'Стиль повествования', caption: 'Нарратив', badge: 'Краткость оставляет простор воображению. Подробность — погружает.' },
-    { title: 'Первый срез жизни', caption: 'Старт', badge: 'Последний взгляд перед тем, как всё начнётся по-настоящему.' }
+    { title: 'Кто ты', caption: 'Герой', badge: 'Возраст и характер задают интонацию всей жизни.' },
+    { title: 'Где ты живёшь', caption: 'Место', badge: 'Город, село или регион — это часть судьбы героя.' },
+    { title: 'Как прожить историю', caption: 'Ритм', badge: 'Выбери темп и количество деталей. Остальное можно изменить позже.' },
+    { title: 'Первый день', caption: 'Старт', badge: 'Последний взгляд перед тем, как история начнётся по-настоящему.' }
 ];
 
 // ========== ЭЛЕМЕНТЫ DOM ==========
@@ -814,8 +816,10 @@ function renderSetupWizard() {
     const safeIndex = Math.max(0, Math.min(lastIndex, setupStepIndex));
     setupStepIndex = safeIndex;
     steps.forEach((step, index) => {
-        step.classList.toggle('active', index === safeIndex);
-        step.classList.toggle('hidden', index !== safeIndex);
+        const group = Number(step.dataset.wizardGroup ?? step.dataset.step ?? index);
+        const visible = group === safeIndex;
+        step.classList.toggle('active', visible);
+        step.classList.toggle('hidden', !visible);
     });
     const meta = SETUP_STEPS[safeIndex];
     if (els.setupStepTitle) els.setupStepTitle.textContent = meta.title;
