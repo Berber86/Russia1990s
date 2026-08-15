@@ -41,10 +41,35 @@ export default async function handler(req, res) {
       body: JSON.stringify(requestBody)
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+    let data = null;
+    try {
+      data = JSON.parse(rawText);
+    } catch (e) {
+      data = null;
+    }
+
+    if (!response.ok) {
+      // Нормализуем ошибку: клиент всегда получает строку в { error: "..." }.
+      let message;
+      if (data && typeof data === 'object') {
+        if (typeof data.error === 'string' && data.error) message = data.error;
+        else if (data.error && typeof data.error === 'object') message = data.error.message || data.error.error || JSON.stringify(data.error);
+        else if (typeof data.message === 'string' && data.message) message = data.message;
+        else message = JSON.stringify(data);
+      } else {
+        message = rawText || `HTTP ${response.status}`;
+      }
+      return res.status(response.status).json({ error: message });
+    }
+
+    if (data === null) {
+      return res.status(502).json({ error: `Hydra вернул не-JSON ответ: ${String(rawText).slice(0, 300)}` });
+    }
+
     return res.status(response.status).json(data);
   } catch (error) {
     console.error('[Hydra API] Error:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message || String(error) });
   }
 }

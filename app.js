@@ -1777,6 +1777,26 @@ ${story}
 }
 
 // ========== УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ВЫЗОВА LLM ==========
+// Извлекает человекочитаемое сообщение из тела ошибки API (OpenAI-совместимый формат:
+// { error: "..." } или { error: { message: "..." } } или { message: "..." }).
+function extractApiError(data, fallback) {
+    if (data == null) return fallback;
+    if (typeof data === 'string') return data.trim() || fallback;
+    if (typeof data.error === 'string' && data.error.trim()) return data.error.trim();
+    if (data.error && typeof data.error === 'object') {
+        const m = data.error.message || data.error.error || data.error.msg;
+        if (m) return String(m);
+        try { return JSON.stringify(data.error); } catch (e) { /* ignore */ }
+    }
+    if (typeof data.message === 'string' && data.message.trim()) return data.message.trim();
+    if (typeof data.detail === 'string' && data.detail.trim()) return data.detail.trim();
+    try {
+        const s = JSON.stringify(data);
+        if (s && s !== '{}' && s !== '[]') return s;
+    } catch (e) { /* ignore */ }
+    return fallback;
+}
+
 async function callLLM({
     messages,
     model,
@@ -1824,7 +1844,7 @@ async function callLLM({
                 clearTimeout(timeoutId);
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error(data.error || `Сервер вернул ${response.status}`);
+                    throw new Error(`HTTP ${response.status}: ${extractApiError(data, 'нет данных от сервера')}`);
                 }
                 return data;
             }
@@ -1849,8 +1869,10 @@ async function callLLM({
                 });
                 clearTimeout(timeoutId);
                 if (!response.ok) {
-                    const err = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${err}`);
+                    const errText = await response.text();
+                    let parsed = null;
+                    try { parsed = JSON.parse(errText); } catch (e) { parsed = null; }
+                    throw new Error(extractApiError(parsed, `HTTP ${response.status}: ${errText.slice(0, 500)}`));
                 }
                 return await response.json();
             }
@@ -1868,12 +1890,18 @@ async function callLLM({
             clearTimeout(timeoutId);
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(data.error || `Сервер вернул ${response.status}`);
+                throw new Error(`HTTP ${response.status}: ${extractApiError(data, 'нет данных от сервера')}`);
             }
             return data;
         } catch (err) {
             console.error(`Ошибка вызова ${cfg.label}:`, err);
-            addSystemLog(`Ошибка вызова ${cfg.label}`, err.message || err.toString(), true);
+            let errText;
+            if (err && err.message) errText = err.message;
+            else if (typeof err === 'string') errText = err;
+            else {
+                try { errText = JSON.stringify(err); } catch (e) { errText = String(err); }
+            }
+            addSystemLog(`Ошибка вызова ${cfg.label}`, errText, true);
             if (attempt > 1) {
                 await new Promise((resolve) => setTimeout(resolve, 2000 * (4 - attempt)));
                 return makeRequest(attempt - 1);
@@ -3226,7 +3254,7 @@ async function callOpenRouterImageGeneration(promptText) {
 
     if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `Сервер вернул статус ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${extractApiError(errData, 'нет данных от сервера')}`);
     }
 
     const result = await response.json();
