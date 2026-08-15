@@ -7,7 +7,7 @@ export const DEFAULT_PROVIDER = "hydra";
 export const LLM_PROVIDERS = {
     hydra: {
         label: "Hydra",
-        icon: "🌀",
+        icon: "orbit",
         directUrl: "https://api.hydraai.ru/v1/chat/completions",
         serverPath: "/api/hydra",
         storageKey: "rpg90_key_hydra",
@@ -51,28 +51,28 @@ export const GENDER_INFO = {
 
 // ========== СИСТЕМА ЛОКАЦИЙ ==========
 export const LOCATION_TYPES = {
-    village: { name: "Село", icon: "🏡" },
-    town:    { name: "Город", icon: "🏘️" },
-    capital: { name: "Столица", icon: "🏙️" }
+    village: { name: "Село", icon: "home" },
+    town:    { name: "Город", icon: "city" },
+    capital: { name: "Столица", icon: "capital" }
 };
 
 export const REGIONS = {
-    central:    { name: "Центральная Россия", icon: "🌲" },
-    siberia:    { name: "Сибирь", icon: "❄️" },
-    far_east:   { name: "Дальний Восток", icon: "🌊" },
-    ural:       { name: "Урал", icon: "⛰️" },
-    black_sea:  { name: "Черноморское побережье", icon: "🏖️" },
-    north_caucasus: { name: "Северный Кавказ", icon: "🏔️" }
+    central:    { name: "Центральная Россия", icon: "tree" },
+    siberia:    { name: "Сибирь", icon: "snow" },
+    far_east:   { name: "Дальний Восток", icon: "wave" },
+    ural:       { name: "Урал", icon: "mountain" },
+    black_sea:  { name: "Черноморское побережье", icon: "beach" },
+    north_caucasus: { name: "Северный Кавказ", icon: "mountain" }
 };
 
 export const CITIES = {
-    moscow:      { name: "Москва", icon: "🏛️", region: "central" },
-    spb:         { name: "Санкт-Петербург", icon: "🌉", region: "central" },
-    novosibirsk: { name: "Новосибирск", icon: "🏭", region: "siberia" },
-    vladivostok: { name: "Владивосток", icon: "⚓", region: "far_east" },
-    ekaterinburg:{ name: "Екатеринбург", icon: "🏗️", region: "ural" },
-    rostov:      { name: "Ростов-на-Дону", icon: "🌻", region: "black_sea" },
-    grozny:      { name: "Грозный", icon: "🕌", region: "north_caucasus" }
+    moscow:      { name: "Москва", icon: "capital", region: "central" },
+    spb:         { name: "Санкт-Петербург", icon: "bridge", region: "central" },
+    novosibirsk: { name: "Новосибирск", icon: "factory", region: "siberia" },
+    vladivostok: { name: "Владивосток", icon: "anchor", region: "far_east" },
+    ekaterinburg:{ name: "Екатеринбург", icon: "construction", region: "ural" },
+    rostov:      { name: "Ростов-на-Дону", icon: "flower", region: "black_sea" },
+    grozny:      { name: "Грозный", icon: "mosque", region: "north_caucasus" }
 };
 
 export const LOCATION_DETAILS = {

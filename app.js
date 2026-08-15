@@ -41,6 +41,7 @@ import {
 const STATE_STORAGE_KEY = 'rpg90_state';
 const LEGACY_KEY_STORAGE = 'rpg90_key';
 const PROVIDER_STORAGE_KEY = 'rpg90_provider';
+const ADMIN_TOOLS_STORAGE_KEY = 'rpg90_admin_tools';
 
 function getStoredProvider() {
     try {
@@ -108,14 +109,16 @@ let userApiKeys = {
 };
 let setupStepIndex = 0;
 
+// Пользовательский сценарий создания героя состоит из пяти коротких этапов.
+// Несколько связанных секций могут отображаться внутри одного этапа — так мы
+// сохраняем существующую логику выбора, но не заставляем игрока проходить
+// семь почти одинаковых экранов.
 const SETUP_STEPS = [
     { title: 'Пролог', caption: 'Вступление', badge: 'Начнём спокойно, шаг за шагом.' },
-    { title: 'Кто твой герой', caption: 'Персонаж', badge: 'Пол и возраст определяют интонацию всей жизни.' },
-    { title: 'Где всё начинается', caption: 'Инфраструктура', badge: 'Место рождения — это тоже часть судьбы.' },
-    { title: 'Где именно', caption: 'Регион', badge: 'У каждого уголка — свой характер.' },
-    { title: 'Как течёт время', caption: 'Ритм игры', badge: 'Темп и сложность задают драматургию прохождения.' },
-    { title: 'Стиль повествования', caption: 'Нарратив', badge: 'Краткость оставляет простор воображению. Подробность — погружает.' },
-    { title: 'Первый срез жизни', caption: 'Старт', badge: 'Последний взгляд перед тем, как всё начнётся по-настоящему.' }
+    { title: 'Кто ты', caption: 'Герой', badge: 'Возраст и характер задают интонацию всей жизни.' },
+    { title: 'Где ты живёшь', caption: 'Место', badge: 'Город, село или регион — это часть судьбы героя.' },
+    { title: 'Как прожить историю', caption: 'Ритм', badge: 'Выбери темп и количество деталей. Остальное можно изменить позже.' },
+    { title: 'Первый день', caption: 'Старт', badge: 'Последний взгляд перед тем, как история начнётся по-настоящему.' }
 ];
 
 // ========== ЭЛЕМЕНТЫ DOM ==========
@@ -222,6 +225,10 @@ const els = {
     settingsModal: document.getElementById('settings-modal'),
     settingsBackdrop: document.getElementById('settings-backdrop'),
     settingsCloseBtn: document.getElementById('settings-close-btn'),
+    resetConfirmModal: document.getElementById('reset-confirm-modal'),
+    resetConfirmBackdrop: document.getElementById('reset-confirm-backdrop'),
+    resetCancelBtn: document.getElementById('reset-cancel-btn'),
+    resetConfirmBtn: document.getElementById('reset-confirm-btn'),
     setupProgressFill: document.getElementById('setup-progress-fill'),
     archiveStrip: document.getElementById('archive-strip'),
     archivePrevBtn: document.getElementById('archive-prev-btn'),
@@ -553,15 +560,21 @@ function escapeHTML(value = '') {
         .replace(/'/g, '&#39;');
 }
 
+function uiIcon(name, label = '') {
+    const safeName = String(name || 'pin').replace(/[^a-z0-9_-]/gi, '') || 'pin';
+    const title = label ? ` aria-label="${escapeHTML(label)}" role="img"` : ' aria-hidden="true"';
+    return `<svg class="ui-icon"${title} focusable="false"><use href="#icon-${safeName}"></use></svg>`;
+}
+
 const STAT_VISUALS = {
-    mind: { icon: '🧠', short: 'мышление' },
-    body: { icon: '💪', short: 'сила и ловкость' },
-    family: { icon: '🏠', short: 'дом и опора' },
-    friends: { icon: '🫂', short: 'свои люди' },
-    health: { icon: '🩺', short: 'самочувствие' },
-    looks: { icon: '✨', short: 'впечатление' },
-    wealth: { icon: '💸', short: 'деньги и быт' },
-    authority: { icon: '👑', short: 'вес во дворе' }
+    mind: { icon: 'brain', short: 'мышление' },
+    body: { icon: 'body', short: 'сила и ловкость' },
+    family: { icon: 'home', short: 'дом и опора' },
+    friends: { icon: 'users', short: 'свои люди' },
+    health: { icon: 'health', short: 'самочувствие' },
+    looks: { icon: 'sparkle', short: 'впечатление' },
+    wealth: { icon: 'money', short: 'деньги и быт' },
+    authority: { icon: 'crown', short: 'вес во дворе' }
 };
 
 function getStatClass(value) {
@@ -648,38 +661,38 @@ function buildArchiveStoryMarkup(entry) {
             html += `
                 <div class="illustration-box illustration-box--loading">
                     <div class="illustration-spinner"></div>
-                    <div class="illustration-text">📼 Проявляется набросок воспоминания...</div>
+                    <div class="illustration-text">${uiIcon('film')} Проявляется набросок воспоминания...</div>
                 </div>
             `;
         } else if (entry.illustrationStatus === 'success' && entry.illustration) {
             html += `
                 <div class="illustration-box">
                     <img src="${entry.illustration}" class="illustration-img" alt="Иллюстрация к событию" onclick="openIllustrationModal('${entry.illustration}')" style="cursor: zoom-in;" />
-                    <button type="button" class="illustration-btn" onclick="downloadIllustration('${escapeHTML(entry.dateLabel || '')}', '${entry.illustration}')">💾 Скачать рисунок</button>
+                    <button type="button" class="illustration-btn" onclick="downloadIllustration('${escapeHTML(entry.dateLabel || '')}', '${entry.illustration}')">${uiIcon('copy')} Скачать рисунок</button>
                 </div>
             `;
         } else if (entry.illustrationStatus === 'limit_reached') {
             html += `
                 <div class="illustration-box illustration-box--limit">
-                    <div class="illustration-text">📷 Лимит иллюстраций на сегодня исчерпан (макс. 20 в сутки).</div>
+                    <div class="illustration-text">${uiIcon('film')} Лимит иллюстраций на сегодня исчерпан (макс. 20 в сутки).</div>
                 </div>
             `;
         } else if (entry.illustrationStatus === 'failed') {
             html += `
                 <div class="illustration-box illustration-box--failed">
-                    <div class="illustration-text">❌ Не удалось воссоздать рисунок воспоминания.</div>
+                    <div class="illustration-text">${uiIcon('refresh')} Не удалось воссоздать рисунок воспоминания.</div>
                     <button class="btn" style="margin-top:0.5rem;" onclick="window.retryGenImg('${entry.turn}')">Попробовать снова</button>
                 </div>
             `;
         } else if (!entry.illustrationStatus || entry.illustrationStatus === 'pending') {
             html += `
                 <div class="illustration-box illustration-box--pending" id="img-pending-${entry.turn}" style="background:var(--surface-1); padding: 1rem; border-radius:8px; border: 1px dashed var(--border); margin-top:1rem;">
-                    <div style="font-weight:600; margin-bottom:0.5rem;">🎨 Создать визуальное воспоминание</div>
+                    <div style="font-weight:600; margin-bottom:0.5rem;">${uiIcon('sparkle')} Создать визуальное воспоминание</div>
                     <div style="margin-bottom:0.5rem; font-size:0.9em; color:var(--muted);">Выберите стиль:</div>
                     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;" id="img-style-group-${entry.turn}">
-                        <button type="button" class="option-btn selected" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'photo', this)">📷 Фотография</button>
-                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'book', this)">📖 Книжная</button>
-                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'child', this)">🖍️ Детская</button>
+                        <button type="button" class="option-btn selected" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'photo', this)">${uiIcon('film')} Фотография</button>
+                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'book', this)">${uiIcon('book')} Книжная</button>
+                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'child', this)">${uiIcon('child')} Детская</button>
                     </div>
                     <input type="hidden" id="img-style-val-${entry.turn}" value="photo">
                     <div style="display:flex; gap:1rem; font-size:0.9em; color:var(--muted); align-items:center; margin-bottom: 1rem;">
@@ -700,8 +713,8 @@ function buildArchiveStoryMarkup(entry) {
     }
     if (entry.gameOverData) {
         const god = entry.gameOverData;
-        html += `<hr><div class="game-over-banner"><h2>💀 GAME OVER</h2><p>${escapeHTML(entry.dateLabel || '')}, ${escapeHTML(String(entry.age || ''))} лет</p></div>`;
-        html += `<h2 style="color:var(--accent);">🕯️ Эпилог</h2>${renderMarkdown(god.epilogue || '')}`;
+        html += `<hr><div class="game-over-banner"><h2>${uiIcon('skull')} GAME OVER</h2><p>${escapeHTML(entry.dateLabel || '')}, ${escapeHTML(String(entry.age || ''))} лет</p></div>`;
+        html += `<h2 style="color:var(--accent);">${uiIcon('sparkle')} Эпилог</h2>${renderMarkdown(god.epilogue || '')}`;
         html += `<div class="game-over-reasons"><strong>Что привело:</strong><ul>${(god.reasons || []).map((r) => `<li>${escapeHTML(r)}</li>`).join('')}</ul></div>`;
         html += renderMarkdown(`> "${god.epitaph || ''}"`);
     }
@@ -814,8 +827,10 @@ function renderSetupWizard() {
     const safeIndex = Math.max(0, Math.min(lastIndex, setupStepIndex));
     setupStepIndex = safeIndex;
     steps.forEach((step, index) => {
-        step.classList.toggle('active', index === safeIndex);
-        step.classList.toggle('hidden', index !== safeIndex);
+        const group = Number(step.dataset.wizardGroup ?? step.dataset.step ?? index);
+        const visible = group === safeIndex;
+        step.classList.toggle('active', visible);
+        step.classList.toggle('hidden', !visible);
     });
     const meta = SETUP_STEPS[safeIndex];
     if (els.setupStepTitle) els.setupStepTitle.textContent = meta.title;
@@ -835,16 +850,21 @@ function renderSetupWizard() {
 
 function openSettingsModal() {
     if (!els.settingsModal) return;
+    settingsReturnFocus = document.activeElement;
     syncSettingsVerbosityBtns();
     syncSettingsEnhanceModelBtns();
     els.settingsModal.classList.remove('hidden');
     els.settingsModal.setAttribute('aria-hidden', 'false');
 }
 
+let settingsReturnFocus = null;
+
 function closeSettingsModal() {
     if (!els.settingsModal) return;
     els.settingsModal.classList.add('hidden');
     els.settingsModal.setAttribute('aria-hidden', 'true');
+    settingsReturnFocus?.focus?.();
+    settingsReturnFocus = null;
 }
 
 function syncSettingsVerbosityBtns() {
@@ -869,11 +889,32 @@ function syncSettingsEnhanceModelBtns() {
     btns.forEach(b => b.classList.toggle('selected', b.dataset.value === state.enhanceModel));
 }
 
+function areAdminToolsEnabled() {
+    try { return localStorage.getItem(ADMIN_TOOLS_STORAGE_KEY) === 'true'; }
+    catch { return false; }
+}
+
+function setAdminToolsEnabled(enabled) {
+    const active = Boolean(enabled);
+    document.body.classList.toggle('admin-tools-enabled', active);
+    const toggle = document.getElementById('admin-tools-toggle');
+    if (toggle) toggle.checked = active;
+    try { localStorage.setItem(ADMIN_TOOLS_STORAGE_KEY, String(active)); } catch {}
+}
+
 function setupSettingsModal() {
     els.setupSettingsBtn?.addEventListener('click', openSettingsModal);
     els.gameSettingsBtn?.addEventListener('click', openSettingsModal);
     els.settingsCloseBtn?.addEventListener('click', closeSettingsModal);
     els.settingsBackdrop?.addEventListener('click', closeSettingsModal);
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !els.settingsModal?.classList.contains('hidden')) closeSettingsModal();
+    });
+
+    setAdminToolsEnabled(areAdminToolsEnabled());
+    document.getElementById('admin-tools-toggle')?.addEventListener('change', (event) => {
+        setAdminToolsEnabled(event.target.checked);
+    });
 
     // ── Табы внутри модалки настроек ──
     document.querySelectorAll('.settings-tab-btn').forEach(btn => {
@@ -946,7 +987,7 @@ function setLoading(value, message = 'Пожалуйста, подождите. 
             loadingOverlay.innerHTML = `
                 <div class="retro-loader-card">
                     <div class="retro-loader-spinner"></div>
-                    <div class="retro-loader-title">📟 ХРОНИКА ВРЕМЕНИ...</div>
+                    <div class="retro-loader-title">${uiIcon('film')} ХРОНИКА ВРЕМЕНИ...</div>
                     <div class="retro-loader-sub" id="retro-loader-message">${message}</div>
                 </div>
             `;
@@ -991,6 +1032,30 @@ window.resetGame = () => {
     localStorage.removeItem(STATE_STORAGE_KEY);
     location.reload();
 };
+
+function closeResetConfirmation() {
+    els.resetConfirmModal?.classList.add('hidden');
+    els.resetConfirmModal?.setAttribute('aria-hidden', 'true');
+}
+
+window.requestResetGame = () => {
+    if (!els.resetConfirmModal) {
+        if (window.confirm('Сбросить текущую историю? Это действие нельзя отменить.')) window.resetGame();
+        return;
+    }
+    els.resetConfirmModal.classList.remove('hidden');
+    els.resetConfirmModal.setAttribute('aria-hidden', 'false');
+    els.resetConfirmBtn?.focus();
+};
+
+function setupResetConfirmation() {
+    els.resetCancelBtn?.addEventListener('click', closeResetConfirmation);
+    els.resetConfirmBackdrop?.addEventListener('click', closeResetConfirmation);
+    els.resetConfirmBtn?.addEventListener('click', () => window.resetGame());
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !els.resetConfirmModal?.classList.contains('hidden')) closeResetConfirmation();
+    });
+}
 
 function isLocalEnvironment() {
     return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -1047,7 +1112,7 @@ function updateApiKeyInput() {
     const provider = getActiveProvider();
     const cfg = getProviderConfig(provider);
     if (els.apiProviderTitle) {
-        els.apiProviderTitle.textContent = `🔑 API ключ — ${cfg.label}`;
+        els.apiProviderTitle.innerHTML = `${uiIcon('plug')} API ключ — ${escapeHTML(cfg.label)}`;
     }
     if (els.apiKeyHint) {
         if (provider === 'hybrid') {
@@ -1082,9 +1147,9 @@ function renderProviderSwitcher() {
     });
     document.querySelectorAll('[data-provider-models]').forEach((el) => {
         el.innerHTML = `
-            <div><strong>${cfg.icon} ${cfg.label}</strong></div>
-            <div>Первый ответ: <code>${cfg.models.main}</code> · ${mainExecCfg.icon} ${mainExecCfg.label}</div>
-            <div>Полировка: <code>${enhanceModel}</code> · ${enhanceExecCfg.icon} ${enhanceExecCfg.label}</div>
+            <div><strong>${uiIcon(cfg.icon)} ${cfg.label}</strong></div>
+            <div>Первый ответ: <code>${cfg.models.main}</code> · ${uiIcon(mainExecCfg.icon)} ${mainExecCfg.label}</div>
+            <div>Полировка: <code>${enhanceModel}</code> · ${uiIcon(enhanceExecCfg.icon)} ${enhanceExecCfg.label}</div>
         `;
     });
 }
@@ -1256,7 +1321,7 @@ function getLocationInfo() {
             name: city.name,
             icon: city.icon,
             region: REGIONS[city.region],
-            fullName: `${city.icon} ${city.name}`,
+            fullName: city.name,
             desc: detail.desc,
             legacyLocation: 'capital'
         };
@@ -1269,8 +1334,9 @@ function getLocationInfo() {
         type: state.locationType,
         typeName: type.name,
         typeIcon: type.icon,
+        icon: type.icon,
         region,
-        fullName: `${type.icon} ${type.name}, ${region.icon} ${region.name}`,
+        fullName: `${type.name}, ${region.name}`,
         desc: detail ? detail.desc : `${type.name} в ${region.name}`,
         legacyLocation: state.locationType
     };
@@ -1389,7 +1455,7 @@ function renderStartPreview() {
     els.preview.innerHTML = `
         <div class="preview-head">
             <div><h4>Старт героя</h4></div>
-            <button class="reroll-btn" id="reroll-btn" type="button">🎲 Перебросить</button>
+            <button class="reroll-btn" id="reroll-btn" type="button">${uiIcon('refresh')} Перебросить</button>
         </div>
         <div class="preview-location">
             <div class="preview-location__label">Локация</div>
@@ -1418,7 +1484,7 @@ function initGame() {
     els.setup.classList.add('hidden');
     els.game.classList.remove('hidden');
     const locInfo = getLocationInfo();
-    els.locationDisplay.textContent = locInfo.fullName;
+    els.locationDisplay.innerHTML = `${uiIcon(locInfo.icon || 'pin')} ${escapeHTML(locInfo.fullName)}`;
     renderUI();
     if (state.history.length === 0 && !state.gameOver) {
         turn('Начало игры. Опиши обстановку и представь героя.');
@@ -2916,13 +2982,13 @@ function renderUI() {
     const shownDate = archiveEntry?.dateLabel || getDateLabel();
     const shownAge = archiveEntry?.age ?? state.age;
     els.dateText.innerText = `${shownDate} | ${shownAge} лет`;
-    els.locationDisplay.textContent = locInfo.fullName;
+    els.locationDisplay.innerHTML = `${uiIcon(locInfo.icon || 'pin')} ${escapeHTML(locInfo.fullName)}`;
 
     let modeHTML = '';
     if (archiveMode) {
-        modeHTML += `<span class="summary-badge">📖 Архив</span>`;
+        modeHTML += `<span class="summary-badge">${uiIcon('book')} Архив</span>`;
     } else if (state.lifeSummary) {
-        modeHTML += `<span class="summary-badge">📝 Сводка: ход ${state.lastSummaryTurn}</span>`;
+        modeHTML += `<span class="summary-badge">${uiIcon('clipboard')} Сводка: ход ${state.lastSummaryTurn}</span>`;
     }
     els.modeDisplay.innerHTML = modeHTML;
 
@@ -2945,7 +3011,7 @@ function renderUI() {
                 </span>
                 <span class="choice-btn__arrow" aria-hidden="true">↺</span>
             `;
-            btn.onclick = resetGame;
+            btn.onclick = window.requestResetGame;
             els.choices.appendChild(btn);
         } else if (state.lastChoices) {
             // Плашка финальных сдвигов статов (после фильтров вязкости)
@@ -2983,7 +3049,7 @@ function renderUI() {
             <div class="stat-card ${toneClass}">
                 <div class="stat-card__top">
                     <div class="stat-card__label">
-                        <span class="stat-card__icon">${visual.icon}</span>
+                        <span class="stat-card__icon">${uiIcon(visual.icon)}</span>
                         <div>
                             <div class="stat-card__name">${escapeHTML(STATS_INFO[key].name)}</div>
                             <div class="stat-card__desc">${escapeHTML(visual.short)}</div>
@@ -3092,7 +3158,7 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
         let historyText = '';
         if (state.archiveEntries?.length) {
             historyText = state.archiveEntries.map((entry) => {
-                let block = `📖 ${entry.dateLabel || `Ход ${entry.turn}`}`;
+                let block = `${entry.dateLabel || `Ход ${entry.turn}`}`;
                 if (entry.age) block += ` · ${entry.age} лет`;
                 block += `\n\n${entry.storyEnhanced || entry.storyOriginal || ''}`;
                 if (entry.miracleStory) block += `\n\n[Чудесное спасение]\n${entry.miracleStory}`;
@@ -3100,7 +3166,7 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
                 return block;
             }).join('\n\n---\n\n');
         } else if (state.enhancedHistory.length) {
-            historyText = state.enhancedHistory.map((text, i) => `📖 Ход ${i + 1}:\n${text}`).join('\n\n---\n\n');
+            historyText = state.enhancedHistory.map((text, i) => `Ход ${i + 1}:\n${text}`).join('\n\n---\n\n');
         } else {
             historyText = 'История пока пуста.';
         }
@@ -3119,6 +3185,7 @@ loadStoredApiKeys();
 syncCurrentApiKey();
 setupProviderSwitcher();
 setupSettingsModal();
+setupResetConfirmation();
 setupArchiveControls();
 setupLorePanels();
 renderProviderSwitcher();
@@ -3747,7 +3814,7 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
             setTimeout(() => { copyBtn.textContent = orig; }, 1800);
         } catch {
             copyBtn.textContent = '❌ Ошибка';
-            setTimeout(() => { copyBtn.textContent = '📋 Копировать'; }, 1800);
+            setTimeout(() => { copyBtn.textContent = 'Копировать'; }, 1800);
         }
     });
 })();

@@ -23,6 +23,50 @@
     </script>
 </head>
 <body>
+    <!-- Единый набор монохромных UI-иконок вместо системных эмодзи -->
+    <svg class="icon-sprite" aria-hidden="true" focusable="false">
+        <symbol id="icon-film" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18M3 16h18M8 4v4M16 4v4M8 16v4M16 16v4"/></symbol>
+        <symbol id="icon-child" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><path d="M9 21l1-8-3-2.5M15 21l-1-8 3-2.5M10 10h4M8 12l4-2 4 2"/></symbol>
+        <symbol id="icon-map" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></symbol>
+        <symbol id="icon-theatre" viewBox="0 0 24 24"><path d="M4 5h16v12H4zM8 9h.01M16 9h.01M8 13c1.5 1.2 2.5 1.2 4 0 1.5 1.2 2.5 1.2 4 0"/><path d="M8 17v3M16 17v3"/></symbol>
+        <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="5"/></symbol>
+        <symbol id="icon-plug" viewBox="0 0 24 24"><path d="M9 3v6M15 3v6M7 8h10v2a5 5 0 0 1-10 0V8ZM12 15v6M9 21h6"/></symbol>
+        <symbol id="icon-orbit" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(32 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(-32 12 12)"/></symbol>
+        <symbol id="icon-sparkle" viewBox="0 0 24 24"><path d="m12 2 1.5 7 7 1.5-7 1.5-1.5 7-1.5-7-7-1.5 7-1.5L12 2ZM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></symbol>
+        <symbol id="icon-brain" viewBox="0 0 24 24"><path d="M9 5a3 3 0 0 0-5 2 3 3 0 0 0 1 5 3 3 0 0 0 2 5 3 3 0 0 0 4 2V5a3 3 0 0 0-2 0ZM15 5a3 3 0 0 1 5 2 3 3 0 0 1-1 5 3 3 0 0 1-2 5 3 3 0 0 1-4 2V5a3 3 0 0 1 2 0Z"/><path d="M8 8h2M6 13h4M16 8h-2M18 13h-4"/></symbol>
+        <symbol id="icon-body" viewBox="0 0 24 24"><path d="M8 6 5 8l-2 4 3 2 2-3M16 6l3 2 2 4-3 2-2-3M9 5a3 3 0 0 1 6 0v4l3 5-3 7H9l-3-7 3-5V5Z"/></symbol>
+        <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 11 9-7 9 7v9H3v-9Z"/><path d="M9 20v-5h6v5M7 11h.01M17 11h.01"/></symbol>
+        <symbol id="icon-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M15 17a5 5 0 0 1 6 3"/></symbol>
+        <symbol id="icon-health" viewBox="0 0 24 24"><path d="M12 21S4 16 4 9a4 4 0 0 1 8-2 4 4 0 0 1 8 2c0 7-8 12-8 12Z"/><path d="M8 11h3l1-3 2 6 1-3h2"/></symbol>
+        <symbol id="icon-money" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M7 9h.01M17 15h.01"/></symbol>
+        <symbol id="icon-crown" viewBox="0 0 24 24"><path d="m4 7 4 4 4-7 4 7 4-4-2 11H6L4 7Z"/><path d="M6 21h12"/></symbol>
+        <symbol id="icon-book" viewBox="0 0 24 24"><path d="M4 5a3 3 0 0 1 3-2h13v17H7a3 3 0 0 0-3 2V5Z"/><path d="M4 5v15M8 7h8M8 11h7"/></symbol>
+        <symbol id="icon-bag" viewBox="0 0 24 24"><path d="M5 8h14l1 13H4L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2M8 12h8"/></symbol>
+        <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/></symbol>
+        <symbol id="icon-skull" viewBox="0 0 24 24"><path d="M12 3a7 7 0 0 0-4 12.7V19h8v-3.3A7 7 0 0 0 12 3Z"/><path d="M9 19v2h6v-2M9 10h.01M15 10h.01M9 14h6"/></symbol>
+        <symbol id="icon-scissors" viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="m8.5 8.5 10 10M8.5 15.5l10-10"/></symbol>
+        <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+        <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="12" rx="1"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h3"/></symbol>
+        <symbol id="icon-clipboard" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8 9h8M8 13h6"/></symbol>
+        <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4L3 10M3 5v5h5M4 13a8 8 0 0 0 14 4l3-3M21 19v-5h-5"/></symbol>
+        <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M20 8c0 6-8 11-8 11S4 14 4 8a4 4 0 0 1 7-2 4 4 0 0 1 7 2Z"/></symbol>
+        <symbol id="icon-bug" viewBox="0 0 24 24"><path d="M9 7a3 3 0 0 1 6 0v10a3 3 0 0 1-6 0V7Z"/><path d="M5 10h4M15 10h4M5 15h4M15 15h4M12 4V2M7 7 5 5M17 7l2-2M7 19l-2 2M17 19l2 2"/></symbol>
+        <symbol id="icon-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v7l-5 9a1 1 0 0 0 1 2h12a1 1 0 0 0 1-2l-5-9V3"/><path d="M7 16h10"/></symbol>
+        <symbol id="icon-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></symbol>
+        <symbol id="icon-city" viewBox="0 0 24 24"><path d="M4 21V6l8-3v18M12 21h8V9l-8-3M7 8h2M7 12h2M7 16h2M15 12h2M15 16h2"/></symbol>
+        <symbol id="icon-capital" viewBox="0 0 24 24"><path d="m3 10 9-6 9 6M5 10v9M9 10v9M15 10v9M19 10v9M3 19h18M2 22h20"/></symbol>
+        <symbol id="icon-tree" viewBox="0 0 24 24"><path d="M12 3 6 11h3l-4 5h5v5h4v-5h5l-4-5h3l-6-8Z"/></symbol>
+        <symbol id="icon-snow" viewBox="0 0 24 24"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M12 3l-2 2M12 3l2 2M12 21l-2-2M12 21l2-2"/></symbol>
+        <symbol id="icon-wave" viewBox="0 0 24 24"><path d="M3 8c3-4 6 4 9 0s6 4 9 0M3 14c3-4 6 4 9 0s6 4 9 0M3 20c3-4 6 4 9 0s6 4 9 0"/></symbol>
+        <symbol id="icon-mountain" viewBox="0 0 24 24"><path d="m3 20 7-12 3 5 2-3 6 10H3Z"/><path d="m10 8 2 3 2-3"/></symbol>
+        <symbol id="icon-beach" viewBox="0 0 24 24"><path d="M4 20h16M6 20l5-10M11 10l5 10M5 7c3-2 6-2 9 0M14 7c2-.5 3-.2 5 1"/></symbol>
+        <symbol id="icon-bridge" viewBox="0 0 24 24"><path d="M3 17c3-7 15-7 18 0M3 20h18M6 14v6M18 14v6M12 12v8"/></symbol>
+        <symbol id="icon-factory" viewBox="0 0 24 24"><path d="M3 21V9l6 3V8l6 3V5h6v16H3Z"/><path d="M7 16h2M12 16h2M17 9h2M17 13h2M17 17h2"/></symbol>
+        <symbol id="icon-anchor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 7v13M6 11h12M4 17a8 8 0 0 0 16 0M8 21h8"/></symbol>
+        <symbol id="icon-construction" viewBox="0 0 24 24"><path d="M4 21h16M6 21V8h12v13M3 8h18M8 5h8l2 3H6l2-3Z"/><path d="M9 12h6M9 16h6"/></symbol>
+        <symbol id="icon-flower" viewBox="0 0 24 24"><circle cx="12" cy="9" r="2"/><path d="M12 11v10M12 17c-3 0-5-1-6-3M12 14c3 0 5-1 6-3M9 9c-3-1-3-5 0-6 2 0 3 2 3 4 0-2 1-4 3-4 3 1 2 5-1 6 3-1 5 2 3 4-2 1-4-1-5-3 0 2-1 4-3 3-2-2-1-4 0-5Z"/></symbol>
+        <symbol id="icon-mosque" viewBox="0 0 24 24"><path d="M4 21V10h16v11M2 21h20M6 10c0-3 2-5 6-7 4 2 6 4 6 7M12 3v-2M8 14v3M12 14v3M16 14v3"/></symbol>
+    </svg>
     <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Переключить тему" title="Переключить тему">◐</button>
     <div class="screen-noise" aria-hidden="true"></div>
     <div class="screen-vignette" aria-hidden="true"></div>
@@ -40,28 +84,28 @@
                     </p>
                     <div class="setup-feature-grid">
                         <div class="setup-feature-card">
-                            <span class="setup-feature-icon">📼</span>
+                            <span class="setup-feature-icon"><svg class="ui-icon"><use href="#icon-film"></use></svg></span>
                             <div>
                                 <strong>Ностальгия без глянца</strong>
                                 <p>Не открытка, а настоящая эпоха — с холодом лестничных клеток и светом кухонь.</p>
                             </div>
                         </div>
                         <div class="setup-feature-card">
-                            <span class="setup-feature-icon">🧒</span>
+                            <span class="setup-feature-icon"><svg class="ui-icon"><use href="#icon-child"></use></svg></span>
                             <div>
                                 <strong>Взгляд ребёнка</strong>
                                 <p>История рассказывается не с высоты взрослого, а изнутри возраста героя.</p>
                             </div>
                         </div>
                         <div class="setup-feature-card">
-                            <span class="setup-feature-icon">🗺️</span>
+                            <span class="setup-feature-icon"><svg class="ui-icon"><use href="#icon-map"></use></svg></span>
                             <div>
                                 <strong>Разные судьбы</strong>
                                 <p>Москва, Сибирь, село на Урале или Кавказ — место меняет сам ритм жизни.</p>
                             </div>
                         </div>
                         <div class="setup-feature-card">
-                            <span class="setup-feature-icon">🎭</span>
+                            <span class="setup-feature-icon"><svg class="ui-icon"><use href="#icon-theatre"></use></svg></span>
                             <div>
                                 <strong>Крайности опасны</strong>
                                 <p>Здесь не работает логика «чем больше — тем лучше». Любой перекос чего-то стоит.</p>
@@ -73,7 +117,7 @@
 
             <section class="setup-form-wrap">
                 <div class="setup-form-topbar">
-                    <button type="button" class="icon-btn icon-btn--ghost" id="setup-settings-btn" aria-label="Открыть настройки">⚙</button>
+                    <button type="button" class="icon-btn icon-btn--ghost" id="setup-settings-btn" aria-label="Открыть настройки"><svg class="ui-icon"><use href="#icon-settings"></use></svg></button>
                 </div>
                 <div class="setup-form-head">
                     <div>
@@ -94,7 +138,7 @@
 
                 <div class="setup-wizard" id="setup-wizard">
                     <!-- Шаг 0: Пролог -->
-                    <section class="setup-step active" data-step="0">
+                    <section class="setup-step active" data-step="0" data-wizard-group="0">
                         <div class="setup-section setup-section--focus">
                             <h3>Добро пожаловать</h3>
                             <p class="setup-copy">
@@ -109,7 +153,7 @@
                     </section>
 
                     <!-- Шаг 1: Персонаж -->
-                    <section class="setup-step" data-step="1">
+                    <section class="setup-step" data-step="1" data-wizard-group="1">
                         <div class="setup-section">
                             <h3>Кто твой герой</h3>
                             <div class="setup-row setup-row-stack-mobile">
@@ -140,15 +184,15 @@
                     </section>
 
                     <!-- Шаг 2: Локация -->
-                    <section class="setup-step" data-step="2">
+                    <section class="setup-step" data-step="2" data-wizard-group="2">
                         <div class="setup-section location-section">
                             <h3>Где всё начинается</h3>
                             <div class="setup-row setup-row-stack-mobile">
                                 <label>Тип:</label>
                                 <div class="option-buttons option-buttons-wrap" id="location-type-btns">
-                                    <button class="option-btn" data-value="village">🏡 Село</button>
-                                    <button class="option-btn" data-value="town">🏘️ Город</button>
-                                    <button class="option-btn selected" data-value="capital">🏙️ Столица</button>
+                                    <button class="option-btn" data-value="village">Село</button>
+                                    <button class="option-btn" data-value="town">Город</button>
+                                    <button class="option-btn selected" data-value="capital">Столица</button>
                                 </div>
                             </div>
                             <div class="setup-tip">
@@ -159,30 +203,30 @@
                     </section>
 
                     <!-- Шаг 3: Конкретное место -->
-                    <section class="setup-step" data-step="3">
+                    <section class="setup-step" data-step="3" data-wizard-group="2">
                         <div class="setup-section location-section">
                             <h3>Где именно</h3>
-                            <div class="setup-row" id="region-select-row" style="display:none;">
+                            <div class="setup-row" id="region-select-row" class="is-hidden">
                                 <label>Регион:</label>
                                 <select id="region-select" class="region-select">
-                                    <option value="central">🌲 Центральная Россия</option>
-                                    <option value="siberia">❄️ Сибирь</option>
-                                    <option value="far_east">🌊 Дальний Восток</option>
-                                    <option value="ural">⛰️ Урал</option>
-                                    <option value="black_sea">🏖️ Черноморское побережье</option>
-                                    <option value="north_caucasus">🏔️ Северный Кавказ</option>
+                                    <option value="central">Центральная Россия</option>
+                                    <option value="siberia">Сибирь</option>
+                                    <option value="far_east">Дальний Восток</option>
+                                    <option value="ural">Урал</option>
+                                    <option value="black_sea">Черноморское побережье</option>
+                                    <option value="north_caucasus">Северный Кавказ</option>
                                 </select>
                             </div>
                             <div class="setup-row" id="city-select-row">
                                 <label>Город:</label>
                                 <select id="city-select" class="city-select">
-                                    <option value="moscow">🏛️ Москва</option>
-                                    <option value="spb">🌉 Санкт-Петербург</option>
-                                    <option value="novosibirsk">🏭 Новосибирск</option>
-                                    <option value="vladivostok">⚓ Владивосток</option>
-                                    <option value="ekaterinburg">🏗️ Екатеринбург</option>
-                                    <option value="rostov">🌻 Ростов-на-Дону</option>
-                                    <option value="grozny">🕌 Грозный</option>
+                                    <option value="moscow">Москва</option>
+                                    <option value="spb">Санкт-Петербург</option>
+                                    <option value="novosibirsk">Новосибирск</option>
+                                    <option value="vladivostok">Владивосток</option>
+                                    <option value="ekaterinburg">Екатеринбург</option>
+                                    <option value="rostov">Ростов-на-Дону</option>
+                                    <option value="grozny">Грозный</option>
                                 </select>
                             </div>
                             <div class="location-description" id="location-description">
@@ -193,7 +237,7 @@
                     </section>
 
                     <!-- Шаг 3: Ритм игры -->
-                    <section class="setup-step" data-step="4">
+                    <section class="setup-step" data-step="4" data-wizard-group="3">
                         <div class="setup-grid-2 setup-grid-2--tight">
                             <div class="setup-section">
                                 <h3>Темп повествования</h3>
@@ -212,8 +256,8 @@
                                 <h3>Сложность</h3>
                                 <div class="setup-row">
                                     <div class="option-buttons" id="difficulty-btns">
-                                        <button class="option-btn selected" data-value="normal">🛡️ Норма</button>
-                                        <button class="option-btn" data-value="hardcore">💀 Хардкор</button>
+                                        <button class="option-btn selected" data-value="normal">Норма</button>
+                                        <button class="option-btn" data-value="hardcore">Хардкор</button>
                                     </div>
                                 </div>
                                 <div class="difficulty-info" id="difficulty-info">
@@ -228,14 +272,14 @@
                     </section>
 
                     <!-- Шаг 5: Стиль повествования -->
-                    <section class="setup-step" data-step="5">
+                    <section class="setup-step" data-step="5" data-wizard-group="3">
                         <div class="setup-section">
                             <h3>Стиль повествования</h3>
                             <div class="setup-row setup-row-stack-mobile">
                                 <div class="option-buttons" id="verbosity-btns">
-                                    <button class="option-btn" data-value="concise">✂️ Лаконично</button>
-                                    <button class="option-btn selected" data-value="normal">📖 Обычно</button>
-                                    <button class="option-btn" data-value="detailed">🔍 Подробно</button>
+                                    <button class="option-btn" data-value="concise">Лаконично</button>
+                                    <button class="option-btn selected" data-value="normal">Обычно</button>
+                                    <button class="option-btn" data-value="detailed">Подробно</button>
                                 </div>
                             </div>
                             <div class="verbosity-info" id="verbosity-info">
@@ -250,7 +294,7 @@
                     </section>
 
                     <!-- Шаг 6: Старт -->
-                    <section class="setup-step" data-step="6">
+                    <section class="setup-step" data-step="6" data-wizard-group="4">
                         <div class="setup-section setup-section--focus">
                             <h3>Твой старт</h3>
                             <p class="setup-copy setup-copy--small">
@@ -273,7 +317,7 @@
                 </div>
 
                 <div class="support-card support-card--setup">
-                    <p class="support-card__title">💖 Поддержать проект</p>
+                    <p class="support-card__title"><svg class="ui-icon"><use href="#icon-heart"></use></svg> Поддержать проект</p>
                     <p>
                         Ответы нейросети не бесплатны для автора проекта. Помочь с оплатой API:<br>
                         <strong>+7 950 004-88-24</strong> (Озон, Дарья)
@@ -297,8 +341,9 @@
 
             <!-- Табы -->
             <div class="settings-tabs">
-                <button type="button" class="settings-tab-btn selected" data-stab="connection">🔌 Соединение</button>
-                <button type="button" class="settings-tab-btn" data-stab="narration">📖 Повествование</button>
+                <button type="button" class="settings-tab-btn selected" data-stab="connection">Соединение</button>
+                <button type="button" class="settings-tab-btn" data-stab="narration">Повествование</button>
+                <button type="button" class="settings-tab-btn" data-stab="developer">Разработчик</button>
             </div>
 
             <!-- Вкладка: Соединение -->
@@ -306,14 +351,14 @@
                 <div class="provider-switch">
                     <div class="provider-switch-title">Провайдер</div>
                     <div class="provider-buttons">
-                        <button type="button" class="provider-btn" data-provider="hydra">🌀 Hydra</button>
+                        <button type="button" class="provider-btn" data-provider="hydra">Hydra</button>
                     </div>
                     <div class="provider-models" data-provider-models></div>
-                    <div class="enhance-model-block" style="margin-top:16px;">
+                    <div class="enhance-model-block settings-block-gap">
                         <div class="provider-switch-title">Модель полировки текста</div>
                         <div class="option-buttons" id="settings-enhance-model-btns">
-                            <button type="button" class="option-btn" data-value="gemini-3.1-pro">✨ Gemini 3.1 Pro</button>
-                            <button type="button" class="option-btn selected" data-value="glm-5.2">🧠 GLM 5.2</button>
+                            <button type="button" class="option-btn" data-value="gemini-3.1-pro">Gemini 3.1 Pro</button>
+                            <button type="button" class="option-btn selected" data-value="glm-5.2">GLM 5.2</button>
                         </div>
                     </div>
                 </div>
@@ -328,19 +373,49 @@
 
             <!-- Вкладка: Повествование -->
             <div class="settings-tab-panel hidden" id="stab-narration">
-                <div class="settings-label" style="margin-bottom:12px;">Стиль и объём текста</div>
+                <div class="settings-label settings-label--spaced">Стиль и объём текста</div>
                 <div class="option-buttons" id="settings-verbosity-btns">
-                    <button class="option-btn" data-value="concise">✂️ Лаконично</button>
-                    <button class="option-btn selected" data-value="normal">📖 Обычно</button>
-                    <button class="option-btn" data-value="detailed">🔍 Подробно</button>
+                    <button class="option-btn" data-value="concise">Лаконично</button>
+                    <button class="option-btn selected" data-value="normal">Обычно</button>
+                    <button class="option-btn" data-value="detailed">Подробно</button>
                 </div>
-                <div class="verbosity-info" id="settings-verbosity-info" style="margin-top:14px;">
+                <div class="verbosity-info settings-info--spaced" id="settings-verbosity-info">
                     <strong>Обычно:</strong> сбалансированный объём текста, живые детали без излишеств. Лимит — 5 000 токенов.
                 </div>
-                <div class="setup-tip" style="margin-top:14px;">
+                <div class="setup-tip settings-tip--spaced">
                     <strong>Подсказка:</strong>
                     смена стиля применяется со следующего хода. Не влияет на уже написанную историю.
                 </div>
+            </div>
+
+            <!-- Вкладка: Разработчик -->
+            <div class="settings-tab-panel hidden" id="stab-developer">
+                <div class="settings-advanced settings-advanced--first">
+                    <div class="settings-label">Служебные инструменты</div>
+                    <label class="settings-switch">
+                        <input type="checkbox" id="admin-tools-toggle">
+                        <span class="settings-switch__track" aria-hidden="true"><span></span></span>
+                        <span class="settings-switch__copy">
+                            <strong>Показывать админские инструменты</strong>
+                            <small>Системный лог и инспектор промпта появятся внизу экрана.</small>
+                        </span>
+                    </label>
+                </div>
+                <p class="developer-note">Эти инструменты нужны для диагностики запросов и проверки промптов. Они не влияют на ход игры.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm reset -->
+    <div class="confirm-modal hidden" id="reset-confirm-modal" aria-hidden="true">
+        <div class="settings-backdrop" id="reset-confirm-backdrop"></div>
+        <div class="confirm-sheet" role="dialog" aria-modal="true" aria-labelledby="reset-confirm-title">
+            <div class="confirm-sheet__eyebrow">Начать заново</div>
+            <h3 id="reset-confirm-title">Сбросить текущую историю?</h3>
+            <p>Прогресс героя и накопленные события будут удалены. Это действие нельзя отменить.</p>
+            <div class="confirm-sheet__actions">
+                <button type="button" class="control-btn control-btn--ghost" id="reset-cancel-btn">Оставить историю</button>
+                <button type="button" class="control-btn control-btn--danger" id="reset-confirm-btn">Сбросить игру</button>
             </div>
         </div>
     </div>
@@ -354,7 +429,7 @@
                 </div>
                 <div class="date-badge__location">
                     <span class="location" id="location-display"></span>
-                    <button type="button" class="icon-btn icon-btn--inline" id="game-settings-btn" aria-label="Открыть настройки">⚙</button>
+                    <button type="button" class="icon-btn icon-btn--inline" id="game-settings-btn" aria-label="Открыть настройки"><svg class="ui-icon"><use href="#icon-settings"></use></svg></button>
                 </div>
             </div>
 
@@ -368,22 +443,22 @@
 
             <div class="story-stage">
                 <div class="story-shell">
-                    <div id="story-display" class="story-content"></div>
+                    <div id="story-display" class="story-content" aria-live="polite" aria-atomic="false"></div>
                 </div>
-                <div class="loading-container" id="loader" style="display:none;"><div class="loading-bar"></div><div class="loading-message" id="loader-message" style="text-align:center; font-size:0.85em; color:var(--muted); margin-top:0.5rem;"></div></div>
+                <div class="loading-container is-hidden" id="loader" role="status" aria-live="polite"><div class="loading-bar"></div><div class="loading-message" id="loader-message"></div></div>
                 <div class="choices-wrap choices-wrap--minimal" id="choices-wrap">
-                    <div class="choices" id="choices-display"></div>
+                    <div class="choices" id="choices-display" aria-live="polite"></div>
                 </div>
             </div>
         </section>
 
         <aside class="panel panel-sidebar">
             <div class="sidebar-scroll">
-                <div id="mode-display" class="status-stack"></div>
+                <div id="mode-display" class="status-stack" aria-live="polite"></div>
 
                 <section class="sidebar-card personality-card">
                     <div class="sidebar-card__head">
-                        <div><h3>Личность</h3></div>
+                        <div><h3>Состояние героя</h3></div>
                     </div>
                     <div id="stats-display" class="stats-grid"></div>
                 </section>
@@ -393,8 +468,8 @@
                         <div><h3>Близкие люди</h3></div>
                         <span class="sidebar-card__count" id="npcs-count">0</span>
                     </div>
-                    <button class="lore-trigger" id="npcs-trigger">
-                        <span class="lore-trigger__icon">📖</span>
+                    <button type="button" class="lore-trigger" id="npcs-trigger" aria-haspopup="dialog">
+                        <span class="lore-trigger__icon"><svg class="ui-icon"><use href="#icon-book"></use></svg></span>
                         <span class="lore-trigger__hint">Открыть альбом памяти</span>
                         <span class="lore-trigger__arrow">→</span>
                     </button>
@@ -402,24 +477,24 @@
 
                 <section class="sidebar-card">
                     <div class="sidebar-card__head">
-                        <div><h3>Вещи и память</h3></div>
+                        <div><h3>Память и вещи</h3></div>
                         <span class="sidebar-card__count" id="items-count">0</span>
                     </div>
-                    <button class="lore-trigger lore-trigger--items" id="items-trigger">
-                        <span class="lore-trigger__icon">🎒</span>
+                    <button type="button" class="lore-trigger lore-trigger--items" id="items-trigger" aria-haspopup="dialog">
+                        <span class="lore-trigger__icon"><svg class="ui-icon"><use href="#icon-bag"></use></svg></span>
                         <span class="lore-trigger__hint">Открыть вещи героя</span>
                         <span class="lore-trigger__arrow">→</span>
                     </button>
                 </section>
 
                 <div class="controls-row controls-row--stack">
-                    <button onclick="copyCurrentPeriodToClipboard()" class="control-btn">⧉ Период</button>
-                    <button onclick="copyHistoryToClipboard()" class="control-btn">📋 Вся история</button>
-                    <button onclick="resetGame()" class="control-btn control-btn--danger">↺ Сброс</button>
+                    <button onclick="copyCurrentPeriodToClipboard()" class="control-btn"><svg class="ui-icon"><use href="#icon-copy"></use></svg> Период</button>
+                    <button onclick="copyHistoryToClipboard()" class="control-btn"><svg class="ui-icon"><use href="#icon-clipboard"></use></svg> Вся история</button>
+                    <button onclick="requestResetGame()" class="control-btn control-btn--danger"><svg class="ui-icon"><use href="#icon-refresh"></use></svg> Сброс</button>
                 </div>
 
                 <div class="support-card support-card--sidebar">
-                    <p class="support-card__title">💖 Поддержать проект</p>
+                    <p class="support-card__title"><svg class="ui-icon"><use href="#icon-heart"></use></svg> Поддержать проект</p>
                     <p><strong>+7 950 004-88-24</strong> (Дарья, Озон)</p>
                 </div>
             </div>
@@ -435,7 +510,7 @@
                 <button type="button" class="lore-panel__close" id="npcs-close" aria-label="Закрыть альбом">✕</button>
             </div>
             <div class="lore-panel__header">
-                <h2 class="lore-panel__title">👥 Близкие люди</h2>
+                <h2 class="lore-panel__title"><svg class="ui-icon"><use href="#icon-users"></use></svg> Близкие люди</h2>
                 <p class="lore-panel__subtitle">Те, кто рядом. Те, кто был. Те, кто остался в памяти навсегда.</p>
             </div>
             <div class="lore-panel__grid" id="npcs-grid"></div>
@@ -452,7 +527,7 @@
                 <button type="button" class="lore-panel__close" id="items-close" aria-label="Закрыть сундук">✕</button>
             </div>
             <div class="lore-panel__header">
-                <h2 class="lore-panel__title">🎒 Вещи и память</h2>
+                <h2 class="lore-panel__title"><svg class="ui-icon"><use href="#icon-bag"></use></svg> Вещи и память</h2>
                 <p class="lore-panel__subtitle">Предметы, что попали в руки героя. У каждого — своя история.</p>
             </div>
             <div class="lore-panel__grid" id="items-grid"></div>
@@ -481,10 +556,10 @@
             </div>
         </div>
     </div>
-    <button id="debug-log-fab" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--border); border-radius: 50%; width: 48px; height: 48px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--ink);">🐞</button>
+    <button class="dev-tool-fab" id="debug-log-fab" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--border); border-radius: 50%; width: 48px; height: 48px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--ink);">🐞</button>
 
     <!-- Prompt Inspector Button -->
-    <button id="prompt-fab" title="Инспектор промпта" style="position: fixed; bottom: 20px; right: 76px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--line-warm, #c98a3a); border-radius: 50%; width: 48px; height: 48px; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--amber, #e8b061);">🔬</button>
+    <button class="dev-tool-fab" id="prompt-fab" title="Инспектор промпта" style="position: fixed; bottom: 20px; right: 76px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--line-warm, #c98a3a); border-radius: 50%; width: 48px; height: 48px; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--amber, #e8b061);">🔬</button>
 
     <!-- Prompt Inspector Modal -->
     <div class="settings-modal hidden" id="prompt-modal" aria-hidden="true" style="z-index: 10001;">

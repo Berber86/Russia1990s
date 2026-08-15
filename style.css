@@ -2419,3 +2419,531 @@ body[data-theme="paper"] .settings-tab-btn.selected { color: #fff8e7; }
 
 .settings-tab-panel { }
 .settings-tab-panel.hidden { display: none !important; }
+
+/* ---------- UX CLEANUP ---------- */
+/* Служебные панели остаются доступными для разработки, но не конкурируют
+   с игровым интерфейсом в пользовательской сборке. */
+.dev-tool-fab { display: none !important; }
+.support-card--setup { display: none; }
+
+/* Клавиатурная навигация должна быть заметна не меньше, чем hover. */
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+select:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+}
+
+/* В объединённых этапах мастер показывает несколько связанных секций,
+   но они воспринимаются как один экран. */
+.setup-step[data-wizard-group] + .setup-step[data-wizard-group] {
+    margin-top: 14px;
+}
+
+/* ============================================================
+   STAGE 2 — ИГРОВОЙ ЭКРАН
+   Главный фокус: сцена и следующий выбор, а не панель управления.
+   ============================================================ */
+
+.app-shell {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+    gap: 20px;
+}
+
+.panel {
+    border-radius: var(--radius-lg);
+}
+
+.panel-main {
+    min-height: calc(100vh - 2 * clamp(12px, 2vw, 28px));
+    padding: clamp(22px, 3vw, 48px);
+}
+
+.date-badge {
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+}
+
+.date-badge__time,
+.date-badge__location {
+    padding: 11px 14px;
+    background: color-mix(in srgb, var(--paper-2) 72%, transparent);
+}
+
+.story-stage { gap: 22px; }
+
+.story-content {
+    max-width: 66ch;
+    font-size: clamp(1.08rem, 1.4vw, 1.22rem);
+    line-height: 1.82;
+}
+
+.choices-wrap {
+    max-width: 66ch;
+    margin-top: 10px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+}
+
+.choices::before {
+    content: "Что ты сделаешь?";
+    display: block;
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.choice-btn {
+    min-height: 68px;
+    padding: 15px 18px 15px 20px;
+    background: color-mix(in srgb, var(--paper-2) 88%, var(--amber) 12%);
+}
+
+.choice-btn__title { font-size: 1.06rem; }
+
+.panel-sidebar {
+    padding: 16px;
+    background: color-mix(in srgb, var(--paper-1) 92%, var(--amber) 8%);
+}
+
+.sidebar-scroll {
+    padding-right: 3px;
+}
+
+.status-stack {
+    margin: 0 2px 12px;
+}
+
+.sidebar-card {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: var(--radius-md);
+}
+
+.sidebar-card__head {
+    margin-bottom: 11px;
+    padding-bottom: 8px;
+}
+
+.personality-card .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.personality-card .stat-card {
+    padding: 9px 10px;
+}
+
+.personality-card .stat-card__top {
+    gap: 6px;
+    margin-bottom: 7px;
+}
+
+.personality-card .stat-card__label {
+    gap: 7px;
+}
+
+.personality-card .stat-card__icon {
+    width: 25px;
+    height: 25px;
+    font-size: 0.8rem;
+}
+
+.personality-card .stat-card__name {
+    font-size: 0.84rem;
+}
+
+.personality-card .stat-card__desc {
+    display: none;
+}
+
+.personality-card .stat-card__value {
+    min-width: 28px;
+    padding: 2px 4px;
+    font-size: 0.76rem;
+}
+
+.personality-card .stat-meter { height: 3px; }
+
+.lore-trigger {
+    padding: 11px 12px;
+    font-size: 0.9rem;
+}
+
+.controls-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin: 12px 0;
+}
+
+.controls-row .control-btn {
+    padding: 9px 7px;
+    font-size: 0.78rem;
+}
+
+.controls-row .control-btn--danger {
+    grid-column: 1 / -1;
+}
+
+.support-card--sidebar {
+    margin-top: 10px;
+}
+
+/* Настройка админских инструментов остаётся в пользовательских настройках. */
+.dev-tool-fab { display: none !important; }
+body.admin-tools-enabled .dev-tool-fab { display: flex !important; }
+
+.settings-advanced {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+}
+
+.settings-switch {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    cursor: pointer;
+}
+
+.settings-switch input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.settings-switch__track {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 22px;
+    padding: 3px;
+    margin-top: 2px;
+    border-radius: 999px;
+    background: var(--paper-3);
+    border: 1px solid var(--line-strong);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-switch__track span {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--ink-dim);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.settings-switch input:checked + .settings-switch__track {
+    background: var(--amber-soft);
+    border-color: var(--amber);
+}
+
+.settings-switch input:checked + .settings-switch__track span {
+    background: var(--amber);
+    transform: translateX(16px);
+}
+
+.settings-switch__copy {
+    display: grid;
+    gap: 3px;
+    color: var(--ink-soft);
+    line-height: 1.35;
+}
+
+.settings-switch__copy strong { font-size: 0.95rem; color: var(--ink); }
+.settings-switch__copy small { font-size: 0.82rem; color: var(--ink-dim); }
+
+@media (max-width: 700px) {
+    .app-shell { gap: 12px; }
+    .panel-main { padding: 18px; }
+    .panel-sidebar { padding: 12px; }
+    .personality-card .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .choices::before { margin-top: 2px; }
+}
+
+@media (max-width: 1080px) {
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-sidebar {
+        position: relative;
+        top: 0;
+        max-height: none;
+    }
+
+    .sidebar-scroll {
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+/* ---------- ИКОНКИ ---------- */
+.icon-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+.ui-icon {
+    display: inline-block;
+    width: 1.08em;
+    height: 1.08em;
+    flex: 0 0 auto;
+    vertical-align: -0.16em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.65;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.setup-feature-icon .ui-icon {
+    width: 1.35em;
+    height: 1.35em;
+    vertical-align: middle;
+}
+
+.stat-card__icon .ui-icon,
+.lore-trigger__icon .ui-icon,
+.support-card__title .ui-icon {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.12em;
+}
+
+.icon-btn .ui-icon {
+    width: 1.05em;
+    height: 1.05em;
+    vertical-align: middle;
+}
+
+.archive-btn .ui-icon,
+.control-btn .ui-icon { margin-right: 0.25em; }
+
+.lore-panel__title .ui-icon {
+    width: 1.05em;
+    height: 1.05em;
+    color: var(--amber);
+    vertical-align: -0.1em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ui-icon { transition: none; }
+}
+
+/* ============================================================
+   STAGE 4 — ФИНАЛЬНАЯ ДОСТУПНОСТЬ И АДАПТИВНАЯ ПОЛИРОВКА
+   ============================================================ */
+
+:root {
+    /* Алиасы для старых служебных блоков и иллюстраций. */
+    --muted: var(--ink-dim);
+    --border: var(--line-strong);
+    --surface-1: var(--paper-1);
+    --surface-2: var(--paper-2);
+    --bg-card: var(--paper-2);
+    --border-soft: var(--line);
+}
+
+body[data-theme="paper"] {
+    --muted: var(--ink-dim);
+    --border: var(--line-strong);
+    --surface-1: var(--paper-1);
+    --surface-2: var(--paper-2);
+    --bg-card: var(--paper-2);
+    --border-soft: var(--line);
+}
+
+.settings-modal,
+.lore-panel {
+    overscroll-behavior: contain;
+}
+
+.settings-sheet {
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+}
+
+/* Не полагаемся только на цвет: выбранный пункт получает явный маркер. */
+.option-btn.selected::after {
+    content: "✓";
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    line-height: 1;
+    opacity: 0.78;
+}
+
+.option-btn {
+    min-height: 52px;
+}
+
+button:disabled {
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    .date-badge__time,
+    .date-badge__location {
+        padding: 10px 12px;
+    }
+
+    .date-badge__time {
+        font-size: 0.84rem;
+        letter-spacing: 0.1em;
+    }
+
+    .date-badge .location {
+        font-size: 0.96rem;
+    }
+
+    .choice-btn {
+        min-height: 64px;
+        padding: 13px 14px 13px 16px;
+    }
+
+    .settings-sheet {
+        max-height: calc(100vh - 16px);
+        margin-top: 8px;
+        padding: 18px;
+    }
+
+    .settings-tabs {
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .settings-tabs::-webkit-scrollbar { display: none; }
+}
+
+/* ============================================================
+   STAGE 7/9 — НАСТРОЙКИ И PRODUCTION POLISH
+   ============================================================ */
+
+.is-hidden { display: none !important; }
+
+.settings-block-gap { margin-top: 16px; }
+.settings-label--spaced { margin-bottom: 12px; }
+.settings-info--spaced { margin-top: 14px; }
+.settings-tip--spaced { margin-top: 14px; }
+
+.settings-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.settings-tab-btn {
+    white-space: nowrap;
+}
+
+.settings-advanced--first {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.developer-note {
+    margin-top: 18px;
+    padding: 13px 15px;
+    border-left: 2px solid var(--amber);
+    background: var(--amber-soft);
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-size: 0.94rem;
+    line-height: 1.55;
+}
+
+.confirm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+}
+
+.confirm-sheet {
+    position: relative;
+    z-index: 1;
+    width: min(460px, calc(100% - 28px));
+    margin: max(80px, 15vh) auto 0;
+    padding: 26px;
+    border: 1px solid color-mix(in srgb, var(--rust) 42%, var(--line));
+    border-radius: var(--radius-xl);
+    background: var(--paper-1);
+    box-shadow: var(--shadow-deep);
+    animation: stepIn 0.25s ease;
+}
+
+.confirm-sheet__eyebrow {
+    color: var(--rust);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.confirm-sheet h3 {
+    margin: 0 0 10px;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 1.55rem;
+    font-weight: 500;
+    line-height: 1.15;
+}
+
+.confirm-sheet p {
+    margin: 0;
+    color: var(--ink-soft);
+    line-height: 1.6;
+}
+
+.confirm-sheet__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    margin-top: 22px;
+}
+
+.confirm-sheet__actions .control-btn {
+    width: 100%;
+    min-height: 46px;
+}
+
+.control-btn--danger {
+    border-color: color-mix(in srgb, var(--rust) 55%, var(--line-strong));
+}
+
+.loading-message {
+    margin-top: 0.5rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85em;
+}
+
+/* Служебная разметка не должна протекать в пользовательский визуальный слой. */
+.retro-loader-title .ui-icon,
+.illustration-text .ui-icon,
+.illustration-btn .ui-icon {
+    margin-right: 0.28em;
+}
+
+@media (max-width: 480px) {
+    .confirm-sheet { padding: 22px 18px; }
+    .confirm-sheet__actions { grid-template-columns: 1fr; }
+}
+
+.loading-container { display: block; }
+.loading-container.is-hidden { display: none !important; }
