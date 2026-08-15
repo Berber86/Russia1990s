@@ -2,10 +2,19 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Эпоха Перемен</title>
-    <link rel="stylesheet" href="style.css?v=20260603-3">
-    <script type="module" src="app.js?v=20260603-2"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Эпоха Перемен — текстовая RPG о детстве в России 90-х</title>
+    <meta name="description" content="Атмосферная текстовая RPG о жизни ребёнка в России 90-х: дворы, подъезды, дефицит и события, которые помнятся всю жизнь.">
+    <meta name="theme-color" content="#0c0a08" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f4ead4" media="(prefers-color-scheme: light)">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Эпоха Перемен">
+    <meta property="og:description" content="Интерактивная хроника детства в России 90-х. Проживи жизнь героя от первого класса до взросления.">
+    <meta property="og:image" content="images/hero.png">
+    <meta property="og:locale" content="ru_RU">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230c0a08'/%3E%3Ctext x='16' y='23' font-size='19' font-family='Georgia,serif' fill='%23e8b061' text-anchor='middle'%3E%D0%AD%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="style.css?v=20260816-1">
+    <script type="module" src="app.js?v=20260816-1"></script>
     <link rel="preload" href="fonts/EBGaramond-400-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/EBGaramond-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/JetBrainsMono-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
@@ -66,12 +75,19 @@
         <symbol id="icon-construction" viewBox="0 0 24 24"><path d="M4 21h16M6 21V8h12v13M3 8h18M8 5h8l2 3H6l2-3Z"/><path d="M9 12h6M9 16h6"/></symbol>
         <symbol id="icon-flower" viewBox="0 0 24 24"><circle cx="12" cy="9" r="2"/><path d="M12 11v10M12 17c-3 0-5-1-6-3M12 14c3 0 5-1 6-3M9 9c-3-1-3-5 0-6 2 0 3 2 3 4 0-2 1-4 3-4 3 1 2 5-1 6 3-1 5 2 3 4-2 1-4-1-5-3 0 2-1 4-3 3-2-2-1-4 0-5Z"/></symbol>
         <symbol id="icon-mosque" viewBox="0 0 24 24"><path d="M4 21V10h16v11M2 21h20M6 10c0-3 2-5 6-7 4 2 6 4 6 7M12 3v-2M8 14v3M12 14v3M16 14v3"/></symbol>
+        <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></symbol>
+        <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+        <symbol id="icon-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></symbol>
+        <symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/></symbol>
+        <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></symbol>
+        <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></symbol>
     </svg>
-    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Переключить тему" title="Переключить тему">◐</button>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Переключить тему" title="Переключить тему"><svg class="ui-icon" aria-hidden="true"><use href="#icon-moon" id="theme-toggle-use"></use></svg></button>
     <div class="screen-noise" aria-hidden="true"></div>
     <div class="screen-vignette" aria-hidden="true"></div>
 
-    <div id="setup-screen">
+    <main id="setup-screen">
         <div class="setup-shell">
             <section class="setup-showcase">
                 <div class="setup-hero-art"></div>
@@ -81,6 +97,8 @@
                     <p class="setup-lead">
                         Атмосферная текстовая RPG о жизни в России 90-х — с дворами, подъездами, дефицитом,
                         тревогой перемен и теми маленькими событиями, которые потом помнятся всю жизнь.
+                        Каждый ход — маленький сдвиг судьбы: в семье, здоровье, дружбе и месте в мире.
+                        Игра любит не «победные» решения, а жизненные.
                     </p>
                     <div class="setup-feature-grid">
                         <div class="setup-feature-card">
@@ -122,49 +140,34 @@
                 <div class="setup-form-head">
                     <div>
                         <div class="setup-eyebrow">Создание героя</div>
-                        <h2 id="setup-step-title">Пролог</h2>
+                        <h2 id="setup-step-title">Кто ты</h2>
                     </div>
-                    <div class="setup-badge" id="setup-step-hint-badge">Начнём спокойно, шаг за шагом.</div>
+                    <div class="setup-badge" id="setup-step-hint-badge">Возраст и характер задают интонацию всей жизни.</div>
                 </div>
                 <div class="setup-progress-wrap">
                     <div class="setup-progress-labels">
-                        <span id="setup-step-counter">Шаг 1 из 5</span>
-                        <span id="setup-step-caption">Вступление</span>
+                        <span id="setup-step-counter">Шаг 1 из 4</span>
+                        <span id="setup-step-caption">Герой</span>
                     </div>
-                    <div class="setup-progress-track">
-                        <div class="setup-progress-fill" id="setup-progress-fill"></div>
-                    </div>
+                    <!-- Кликабельный степпер: к пройденному шагу можно вернуться
+                         за один клик, а не листать «Назад» по одному. -->
+                    <nav class="setup-stepper" id="setup-stepper" aria-label="Шаги создания героя"></nav>
                 </div>
 
                 <div class="setup-wizard" id="setup-wizard">
-                    <!-- Шаг 0: Пролог -->
-                    <section class="setup-step active" data-step="0" data-wizard-group="0">
-                        <div class="setup-section setup-section--focus">
-                            <h3>Добро пожаловать</h3>
-                            <p class="setup-copy">
-                                Ты проживёшь жизнь ребёнка в России 90-х. Каждый ход — не просто событие, а маленький сдвиг судьбы:
-                                в семье, здоровье, дружбе, самоощущении и месте в мире.
-                            </p>
-                            <div class="setup-tip">
-                                <strong>Подсказка:</strong>
-                                игра любит не «победные» решения, а жизненные. Иногда самый осторожный выбор — тоже драма.
-                            </div>
-                        </div>
-                    </section>
-
                     <!-- Шаг 1: Персонаж -->
-                    <section class="setup-step" data-step="1" data-wizard-group="1">
+                    <section class="setup-step active" data-step="0" data-wizard-group="0">
                         <div class="setup-section">
                             <h3>Кто твой герой</h3>
                             <div class="setup-row setup-row-stack-mobile">
-                                <label>Пол:</label>
-                                <div class="option-buttons" id="gender-btns">
-                                    <button class="option-btn selected" data-value="male">♂ Мальчик</button>
-                                    <button class="option-btn" data-value="female">♀ Девочка</button>
+                                <label id="gender-label">Пол:</label>
+                                <div class="option-buttons" id="gender-btns" role="radiogroup" aria-labelledby="gender-label">
+                                    <button type="button" class="option-btn selected" role="radio" aria-checked="true" data-value="male">Мальчик</button>
+                                    <button type="button" class="option-btn" role="radio" aria-checked="false" data-value="female">Девочка</button>
                                 </div>
                             </div>
                             <div class="setup-row">
-                                <label>Возраст:</label>
+                                <label for="start-age">Возраст:</label>
                                 <select id="start-age">
                                     <option value="5">5 лет (детсад)</option>
                                     <option value="6">6 лет (подготовка)</option>
@@ -184,15 +187,15 @@
                     </section>
 
                     <!-- Шаг 2: Локация -->
-                    <section class="setup-step" data-step="2" data-wizard-group="2">
+                    <section class="setup-step" data-step="1" data-wizard-group="1">
                         <div class="setup-section location-section">
                             <h3>Где всё начинается</h3>
                             <div class="setup-row setup-row-stack-mobile">
-                                <label>Тип:</label>
-                                <div class="option-buttons option-buttons-wrap" id="location-type-btns">
-                                    <button class="option-btn" data-value="village">Село</button>
-                                    <button class="option-btn" data-value="town">Город</button>
-                                    <button class="option-btn selected" data-value="capital">Столица</button>
+                                <label id="location-type-label">Тип:</label>
+                                <div class="option-buttons option-buttons-wrap" id="location-type-btns" role="radiogroup" aria-labelledby="location-type-label">
+                                    <button type="button" class="option-btn" role="radio" aria-checked="false" data-value="village">Село</button>
+                                    <button type="button" class="option-btn" role="radio" aria-checked="false" data-value="town">Город</button>
+                                    <button type="button" class="option-btn selected" role="radio" aria-checked="true" data-value="capital">Столица</button>
                                 </div>
                             </div>
                             <div class="setup-tip">
@@ -200,14 +203,11 @@
                                 локация влияет не только на декорации. Она меняет быт, темп взросления, уровень опасности и даже то, что считается нормой.
                             </div>
                         </div>
-                    </section>
 
-                    <!-- Шаг 3: Конкретное место -->
-                    <section class="setup-step" data-step="3" data-wizard-group="2">
                         <div class="setup-section location-section">
                             <h3>Где именно</h3>
-                            <div class="setup-row" id="region-select-row" class="is-hidden">
-                                <label>Регион:</label>
+                            <div class="setup-row is-hidden" id="region-select-row">
+                                <label for="region-select">Регион:</label>
                                 <select id="region-select" class="region-select">
                                     <option value="central">Центральная Россия</option>
                                     <option value="siberia">Сибирь</option>
@@ -218,7 +218,7 @@
                                 </select>
                             </div>
                             <div class="setup-row" id="city-select-row">
-                                <label>Город:</label>
+                                <label for="city-select">Город:</label>
                                 <select id="city-select" class="city-select">
                                     <option value="moscow">Москва</option>
                                     <option value="spb">Санкт-Петербург</option>
@@ -237,14 +237,14 @@
                     </section>
 
                     <!-- Шаг 3: Ритм игры -->
-                    <section class="setup-step" data-step="4" data-wizard-group="3">
+                    <section class="setup-step" data-step="2" data-wizard-group="2">
                         <div class="setup-grid-2 setup-grid-2--tight">
                             <div class="setup-section">
                                 <h3>Темп повествования</h3>
                                 <div class="setup-row">
-                                    <div class="option-buttons" id="pace-btns">
-                                        <button class="option-btn selected" data-value="season">По сезонам</button>
-                                        <button class="option-btn" data-value="year">По годам</button>
+                                    <div class="option-buttons" id="pace-btns" role="radiogroup" aria-label="Темп повествования">
+                                        <button type="button" class="option-btn selected" role="radio" aria-checked="true" data-value="season">По сезонам</button>
+                                        <button type="button" class="option-btn" role="radio" aria-checked="false" data-value="year">По годам</button>
                                     </div>
                                 </div>
                                 <div class="pace-info" id="pace-info">
@@ -255,9 +255,9 @@
                             <div class="setup-section">
                                 <h3>Сложность</h3>
                                 <div class="setup-row">
-                                    <div class="option-buttons" id="difficulty-btns">
-                                        <button class="option-btn selected" data-value="normal">Норма</button>
-                                        <button class="option-btn" data-value="hardcore">Хардкор</button>
+                                    <div class="option-buttons" id="difficulty-btns" role="radiogroup" aria-label="Сложность">
+                                        <button type="button" class="option-btn selected" role="radio" aria-checked="true" data-value="normal">Норма</button>
+                                        <button type="button" class="option-btn" role="radio" aria-checked="false" data-value="hardcore">Хардкор</button>
                                     </div>
                                 </div>
                                 <div class="difficulty-info" id="difficulty-info">
@@ -265,21 +265,14 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="setup-tip">
-                            <strong>Подсказка:</strong>
-                            сезонный режим даёт больше сцен, нюансов и медленного взросления. Годовой — резче и эпичнее, но многое пролетает быстрее.
-                        </div>
-                    </section>
 
-                    <!-- Шаг 5: Стиль повествования -->
-                    <section class="setup-step" data-step="5" data-wizard-group="3">
                         <div class="setup-section">
                             <h3>Стиль повествования</h3>
                             <div class="setup-row setup-row-stack-mobile">
-                                <div class="option-buttons" id="verbosity-btns">
-                                    <button class="option-btn" data-value="concise">Лаконично</button>
-                                    <button class="option-btn selected" data-value="normal">Обычно</button>
-                                    <button class="option-btn" data-value="detailed">Подробно</button>
+                                <div class="option-buttons" id="verbosity-btns" role="radiogroup" aria-label="Стиль повествования">
+                                    <button type="button" class="option-btn" role="radio" aria-checked="false" data-value="concise">Лаконично</button>
+                                    <button type="button" class="option-btn selected" role="radio" aria-checked="true" data-value="normal">Обычно</button>
+                                    <button type="button" class="option-btn" role="radio" aria-checked="false" data-value="detailed">Подробно</button>
                                 </div>
                             </div>
                             <div class="verbosity-info" id="verbosity-info">
@@ -287,14 +280,14 @@
                             </div>
                             <div class="setup-tip">
                                 <strong>Подсказка:</strong>
-                                лаконичный стиль — быстрые ходы, суть без лирики. Подробный — медленное погружение,
-                                запахи, диалоги, неожиданные детали при каждой смене сезона. Влияет на длину ответа нейросети.
+                                сезонный режим даёт больше сцен и медленного взросления, годовой — резче и эпичнее.
+                                Лаконичный стиль — быстрые ходы; подробный — запахи, диалоги и неожиданные детали.
                             </div>
                         </div>
                     </section>
 
-                    <!-- Шаг 6: Старт -->
-                    <section class="setup-step" data-step="6" data-wizard-group="4">
+                    <!-- Шаг 4: Старт -->
+                    <section class="setup-step" data-step="3" data-wizard-group="3">
                         <div class="setup-section setup-section--focus">
                             <h3>Твой старт</h3>
                             <p class="setup-copy setup-copy--small">
@@ -325,7 +318,7 @@
                 </div>
             </section>
         </div>
-    </div>
+    </main>
 
     <!-- Settings Modal -->
     <div class="settings-modal hidden" id="settings-modal" aria-hidden="true">
@@ -336,7 +329,7 @@
                     <div class="setup-eyebrow">Настройки игры</div>
                     <h3 id="settings-title">Параметры</h3>
                 </div>
-                <button type="button" class="icon-btn icon-btn--ghost" id="settings-close-btn" aria-label="Закрыть настройки">✕</button>
+                <button type="button" class="icon-btn icon-btn--ghost" id="settings-close-btn" aria-label="Закрыть настройки"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
             </div>
 
             <!-- Табы -->
@@ -421,9 +414,10 @@
     </div>
 
     <!-- Game UI -->
-    <div class="container app-shell hidden" id="game-ui">
+    <main class="container app-shell hidden" id="game-ui">
         <section class="panel panel-main">
-            <div class="date-badge" id="date-display">
+            <h1 class="visually-hidden">Эпоха Перемен — текущая сцена</h1>
+            <header class="date-badge" id="date-display">
                 <div class="date-badge__time">
                     <span id="date-text">...</span>
                 </div>
@@ -431,21 +425,34 @@
                     <span class="location" id="location-display"></span>
                     <button type="button" class="icon-btn icon-btn--inline" id="game-settings-btn" aria-label="Открыть настройки"><svg class="ui-icon"><use href="#icon-settings"></use></svg></button>
                 </div>
-            </div>
+            </header>
 
-            <div class="archive-strip" id="archive-strip">
-                <button type="button" class="archive-btn" id="archive-prev-btn" aria-label="Предыдущий период">←</button>
-                <div class="archive-label" id="archive-label">Текущий период</div>
-                <button type="button" class="archive-btn" id="archive-current-btn" aria-label="Вернуться к текущему периоду">●</button>
-                <button type="button" class="archive-btn" id="archive-copy-btn" aria-label="Скопировать текущий период">⧉</button>
-                <button type="button" class="archive-btn" id="archive-next-btn" aria-label="Следующий период">→</button>
-            </div>
+            <nav class="archive-strip" id="archive-strip" aria-label="Навигация по периодам истории">
+                <button type="button" class="archive-btn" id="archive-prev-btn" aria-label="Предыдущий период" title="Предыдущий период">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+                </button>
+                <label class="archive-select-wrap">
+                    <span class="visually-hidden">Перейти к периоду</span>
+                    <select class="archive-select" id="archive-select"></select>
+                </label>
+                <button type="button" class="archive-btn" id="archive-current-btn" aria-label="Вернуться к текущему периоду" title="Вернуться к текущему периоду">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-pin"></use></svg>
+                </button>
+                <button type="button" class="archive-btn" id="archive-next-btn" aria-label="Следующий период" title="Следующий период">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
+                </button>
+            </nav>
 
             <div class="story-stage">
                 <div class="story-shell">
                     <div id="story-display" class="story-content" aria-live="polite" aria-atomic="false"></div>
                 </div>
-                <div class="loading-container is-hidden" id="loader" role="status" aria-live="polite"><div class="loading-bar"></div><div class="loading-message" id="loader-message"></div></div>
+                <div class="loading-container is-hidden" id="loader" role="status" aria-live="polite">
+                    <div class="loading-bar"></div>
+                    <ul class="loading-stages" id="loader-stages"></ul>
+                    <div class="loading-message" id="loader-message"></div>
+                    <button type="button" class="control-btn control-btn--ghost loading-cancel" id="loader-cancel-btn">Отменить ход</button>
+                </div>
                 <div class="choices-wrap choices-wrap--minimal" id="choices-wrap">
                     <div class="choices" id="choices-display" aria-live="polite"></div>
                 </div>
@@ -499,7 +506,7 @@
                 </div>
             </div>
         </aside>
-    </div>
+    </main>
 
     <!-- NPC Panel — Альбом памяти -->
     <div class="lore-panel hidden" id="npcs-panel" aria-hidden="true">
@@ -507,7 +514,7 @@
         <div class="lore-panel__sheet">
             <div class="lore-panel__topbar">
                 <div class="lore-panel__eyebrow">Альбом памяти</div>
-                <button type="button" class="lore-panel__close" id="npcs-close" aria-label="Закрыть альбом">✕</button>
+                <button type="button" class="lore-panel__close" id="npcs-close" aria-label="Закрыть альбом"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
             </div>
             <div class="lore-panel__header">
                 <h2 class="lore-panel__title"><svg class="ui-icon"><use href="#icon-users"></use></svg> Близкие люди</h2>
@@ -524,7 +531,7 @@
         <div class="lore-panel__sheet lore-panel__sheet--items">
             <div class="lore-panel__topbar">
                 <div class="lore-panel__eyebrow">Сундук памяти</div>
-                <button type="button" class="lore-panel__close" id="items-close" aria-label="Закрыть сундук">✕</button>
+                <button type="button" class="lore-panel__close" id="items-close" aria-label="Закрыть сундук"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
             </div>
             <div class="lore-panel__header">
                 <h2 class="lore-panel__title"><svg class="ui-icon"><use href="#icon-bag"></use></svg> Вещи и память</h2>
@@ -536,55 +543,61 @@
     </div>
 
     <!-- Debug Log Modal -->
-    <div class="settings-modal hidden" id="debug-modal" aria-hidden="true" style="z-index: 10000;">
+    <div class="settings-modal dev-modal hidden" id="debug-modal" aria-hidden="true">
         <div class="settings-backdrop" id="debug-backdrop"></div>
-        <div class="settings-sheet" role="dialog" aria-modal="true" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="settings-sheet dev-sheet dev-sheet--log" role="dialog" aria-modal="true" aria-label="Системный лог">
             <div class="settings-sheet__head">
                 <div>
                     <div class="setup-eyebrow">Для отладки нейросетей</div>
                     <h2 class="settings-title">Системный лог</h2>
                 </div>
-                <button type="button" class="icon-btn" id="debug-close-btn" aria-label="Закрыть">✕</button>
+                <button type="button" class="icon-btn" id="debug-close-btn" aria-label="Закрыть"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
             </div>
-            <div class="settings-sheet__body" style="overflow-y: auto; flex: 1; padding: 1rem;">
-                <div id="debug-log-container" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="settings-sheet__body dev-sheet__body">
+                <div id="debug-log-container" class="dev-log-list">
                     <!-- Logs will appear here -->
                 </div>
             </div>
-            <div style="padding: 1rem; border-top: 1px solid var(--border); display: flex; gap: 1rem;">
-                <button type="button" class="btn" id="debug-clear-btn">Очистить лог</button>
+            <div class="dev-sheet__foot">
+                <button type="button" class="control-btn" id="debug-clear-btn">Очистить лог</button>
             </div>
         </div>
     </div>
-    <button class="dev-tool-fab" id="debug-log-fab" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--border); border-radius: 50%; width: 48px; height: 48px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--ink);">🐞</button>
-
-    <!-- Prompt Inspector Button -->
-    <button class="dev-tool-fab" id="prompt-fab" title="Инспектор промпта" style="position: fixed; bottom: 20px; right: 76px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--line-warm, #c98a3a); border-radius: 50%; width: 48px; height: 48px; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--amber, #e8b061);">🔬</button>
+    <!-- Служебные кнопки: позиционирование и вид описаны в CSS (.dev-tool-fab),
+         показываются только при включённом режиме разработчика. -->
+    <div class="dev-tool-dock" id="dev-tool-dock">
+        <button type="button" class="dev-tool-fab" id="prompt-fab" title="Инспектор промпта" aria-label="Инспектор промпта">
+            <svg class="ui-icon" aria-hidden="true"><use href="#icon-flask"></use></svg>
+        </button>
+        <button type="button" class="dev-tool-fab" id="debug-log-fab" title="Системный лог" aria-label="Системный лог">
+            <svg class="ui-icon" aria-hidden="true"><use href="#icon-bug"></use></svg>
+        </button>
+    </div>
 
     <!-- Prompt Inspector Modal -->
-    <div class="settings-modal hidden" id="prompt-modal" aria-hidden="true" style="z-index: 10001;">
+    <div class="settings-modal dev-modal dev-modal--top hidden" id="prompt-modal" aria-hidden="true">
         <div class="settings-backdrop" id="prompt-backdrop"></div>
-        <div class="settings-sheet" role="dialog" aria-modal="true" style="max-width: 900px; max-height: 92vh; display: flex; flex-direction: column;">
+        <div class="settings-sheet dev-sheet dev-sheet--prompt" role="dialog" aria-modal="true" aria-label="Инспектор промпта">
             <div class="settings-sheet__head">
                 <div>
                     <div class="setup-eyebrow">Промпт-инжиниринг</div>
-                    <h2 class="settings-title" style="font-size:1.4rem;">Инспектор промпта</h2>
+                    <h2 class="settings-title dev-sheet__title">Инспектор промпта</h2>
                 </div>
-                <button type="button" class="icon-btn" id="prompt-close-btn" aria-label="Закрыть">✕</button>
+                <button type="button" class="icon-btn" id="prompt-close-btn" aria-label="Закрыть"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
             </div>
 
             <!-- Tabs -->
-            <div style="display:flex; gap:6px; padding: 0 1rem 0.75rem; border-bottom: 1px solid var(--line);">
-                <button class="prompt-tab-btn selected" data-tab="main" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-warm,#c98a3a); background:var(--amber,#e8b061); color:var(--paper-0,#0c0a08); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Шаг 1: Сюжет</button>
-                <button class="prompt-tab-btn" data-tab="structure" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:var(--paper-2,#26201a); color:var(--ink-soft); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Шаг 2: Анализ/Выборы</button>
-                <button class="prompt-tab-btn" data-tab="enhance" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:var(--paper-2,#26201a); color:var(--ink-soft); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Шаг 3: Полировка (ручная)</button>
-                <div style="flex:1;"></div>
-                <button id="prompt-refresh-btn" title="Пересчитать промпт" style="padding:6px 12px; border-radius:6px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-dim); font-family:var(--mono); font-size:0.75rem; cursor:pointer;">↺ Обновить</button>
-                <button id="prompt-copy-btn" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-dim); font-family:var(--mono); font-size:0.75rem; cursor:pointer;">📋 Копировать</button>
+            <div class="dev-tabs">
+                <button type="button" class="prompt-tab-btn selected" data-tab="main">Шаг 1: Сюжет</button>
+                <button type="button" class="prompt-tab-btn" data-tab="structure">Шаг 2: Анализ/Выборы</button>
+                <button type="button" class="prompt-tab-btn" data-tab="enhance">Шаг 3: Полировка (ручная)</button>
+                <div class="dev-tabs__spacer"></div>
+                <button type="button" class="dev-tabs__action" id="prompt-refresh-btn" title="Пересчитать промпт"><svg class="ui-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg> Обновить</button>
+                <button type="button" class="dev-tabs__action" id="prompt-copy-btn"><svg class="ui-icon" aria-hidden="true"><use href="#icon-copy"></use></svg> Копировать</button>
             </div>
 
             <!-- Meta info bar -->
-            <div id="prompt-meta" style="display:flex; gap:16px; flex-wrap:wrap; padding:0.6rem 1rem; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:0.7rem; color:var(--ink-dim); background:var(--paper-2,#1c1812);">
+            <div id="prompt-meta" class="dev-meta">
                 <span id="prompt-meta-turns"></span>
                 <span id="prompt-meta-chars"></span>
                 <span id="prompt-meta-msgs"></span>
@@ -592,20 +605,12 @@
             </div>
 
             <!-- Content -->
-            <div class="settings-sheet__body" style="overflow-y:auto; flex:1; padding:0;">
-                <div id="prompt-content" style="
-                    white-space: pre-wrap;
-                    font-family: var(--mono, monospace);
-                    font-size: 0.78rem;
-                    line-height: 1.65;
-                    color: var(--ink, #efe5d0);
-                    background: var(--paper-0, #0c0a08);
-                    padding: 1.25rem 1.5rem;
-                    margin: 0;
-                    min-height: 300px;
-                ">— Промпт появится здесь. Начните или продолжите игру —</div>
+            <div class="settings-sheet__body dev-sheet__body dev-sheet__body--flush">
+                <div id="prompt-content" class="dev-prompt-content">— Промпт появится здесь. Начните или продолжите игру —</div>
             </div>
         </div>
     </div>
+    <!-- Тосты: заменяют системные alert() -->
+    <div class="toast-stack" id="toast-stack" role="status" aria-live="polite" aria-atomic="false"></div>
 </body>
 </html>

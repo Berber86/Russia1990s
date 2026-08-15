@@ -113,13 +113,105 @@ let setupStepIndex = 0;
 // Несколько связанных секций могут отображаться внутри одного этапа — так мы
 // сохраняем существующую логику выбора, но не заставляем игрока проходить
 // семь почти одинаковых экранов.
+// Пролог убран: он был экраном без единого действия. Его текст переехал
+// в левую showcase-колонку, где и так рассказывается о продукте.
 const SETUP_STEPS = [
-    { title: 'Пролог', caption: 'Вступление', badge: 'Начнём спокойно, шаг за шагом.' },
     { title: 'Кто ты', caption: 'Герой', badge: 'Возраст и характер задают интонацию всей жизни.' },
     { title: 'Где ты живёшь', caption: 'Место', badge: 'Город, село или регион — это часть судьбы героя.' },
     { title: 'Как прожить историю', caption: 'Ритм', badge: 'Выбери темп и количество деталей. Остальное можно изменить позже.' },
     { title: 'Первый день', caption: 'Старт', badge: 'Последний взгляд перед тем, как история начнётся по-настоящему.' }
 ];
+
+// ========== ТОСТЫ ==========
+// Заменяют системные alert(): не выбивают из атмосферы, не требуют клика,
+// не блокируют экран и корректно озвучиваются скринридером.
+
+const TOAST_ICONS = {
+    success: 'check',
+    error:   'alert',
+    info:    'film'
+};
+
+function showToast(message, type = 'info', timeout = 3200) {
+    const stack = document.getElementById('toast-stack');
+    if (!stack) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast--${type}`;
+    toast.innerHTML = `
+        <span class="toast__icon"><svg class="ui-icon" aria-hidden="true"><use href="#icon-${TOAST_ICONS[type] || TOAST_ICONS.info}"></use></svg></span>
+        <span class="toast__text"></span>
+    `;
+    toast.querySelector('.toast__text').textContent = message;
+    stack.appendChild(toast);
+
+    // Ограничиваем стопку, чтобы серия действий не залила весь экран.
+    while (stack.children.length > 3) stack.firstElementChild.remove();
+
+    const dismiss = () => {
+        if (!toast.isConnected) return;
+        toast.classList.add('toast--out');
+        toast.addEventListener('animationend', () => toast.remove(), { once: true });
+        setTimeout(() => toast.remove(), 400);
+    };
+    toast.addEventListener('click', dismiss);
+    setTimeout(dismiss, timeout);
+}
+
+// ========== ФОКУС-ЛОВУШКА И БЛОКИРОВКА СКРОЛЛА ==========
+// Раньше Tab внутри модалок уводил фокус на элементы под оверлеем,
+// а .lore-panel не блокировала прокрутку фона.
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+let scrollLockCount = 0;
+
+function lockScroll() {
+    scrollLockCount++;
+    document.body.style.overflow = 'hidden';
+}
+
+function unlockScroll() {
+    scrollLockCount = Math.max(0, scrollLockCount - 1);
+    if (scrollLockCount === 0) document.body.style.overflow = '';
+}
+
+const trapRegistry = new WeakMap();
+
+function trapFocus(container) {
+    if (!container || trapRegistry.has(container)) return;
+    const handler = (event) => {
+        if (event.key !== 'Tab') return;
+        const nodes = Array.from(container.querySelectorAll(FOCUSABLE))
+            .filter((el) => el.offsetParent !== null || el === document.activeElement);
+        if (!nodes.length) return;
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    };
+    container.addEventListener('keydown', handler);
+    trapRegistry.set(container, handler);
+
+    // Переносим фокус внутрь оверлея.
+    const target = container.querySelector('[data-autofocus]')
+        || container.querySelector(FOCUSABLE);
+    target?.focus?.();
+}
+
+function releaseFocus(container) {
+    if (!container) return;
+    const handler = trapRegistry.get(container);
+    if (handler) {
+        container.removeEventListener('keydown', handler);
+        trapRegistry.delete(container);
+    }
+}
 
 // ========== ЭЛЕМЕНТЫ DOM ==========
 
@@ -146,17 +238,17 @@ function renderDebugLogs() {
     if (!container) return;
     
     if (window.appSystemLogs.length === 0) {
-        container.innerHTML = '<div style="color: var(--muted); text-align: center; padding: 2rem;">Лог пуст. Запросы и ошибки появятся здесь.</div>';
+        container.innerHTML = '<div class="dev-log-empty">Лог пуст. Запросы и ошибки появятся здесь.</div>';
         return;
     }
 
     container.innerHTML = window.appSystemLogs.map((log, i) => `
-        <div style="background: var(--surface-1); border: 1px solid ${log.isError ? 'var(--danger)' : 'var(--border)'}; border-radius: 6px; padding: 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <strong style="color: ${log.isError ? 'var(--danger)' : 'var(--ink)'};">${log.title}</strong>
-                <span style="font-size: 0.85em; color: var(--muted);">${log.time}</span>
+        <div class="dev-log-item${log.isError ? ' dev-log-item--error' : ''}">
+            <div class="dev-log-item__head">
+                <strong>${log.title}</strong>
+                <span class="dev-log-item__time">${log.time}</span>
             </div>
-            <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.85em; background: var(--surface-2); padding: 0.5rem; border-radius: 4px; color: var(--ink); margin: 0; max-height: 300px; overflow-y: auto;"><code>${escapeDebugHTML(typeof log.content === 'object' ? JSON.stringify(log.content, null, 2) : log.content)}</code></pre>
+            <pre class="dev-log-item__body"><code>${escapeDebugHTML(typeof log.content === 'object' ? JSON.stringify(log.content, null, 2) : log.content)}</code></pre>
         </div>
     `).join('');
 }
@@ -171,12 +263,22 @@ function initDebugUI() {
         fab.addEventListener('click', () => {
             modal.classList.remove('hidden');
             modal.setAttribute('aria-hidden', 'false');
+            lockScroll();
+            trapFocus(modal.querySelector('.settings-sheet'));
             renderDebugLogs();
         });
-        
-        closeBtn.addEventListener('click', () => {
+
+        const closeDebug = () => {
+            if (modal.classList.contains('hidden')) return;
+            releaseFocus(modal.querySelector('.settings-sheet'));
             modal.classList.add('hidden');
             modal.setAttribute('aria-hidden', 'true');
+            unlockScroll();
+        };
+        closeBtn.addEventListener('click', closeDebug);
+        document.getElementById('debug-backdrop')?.addEventListener('click', closeDebug);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeDebug();
         });
         
         clearBtn.addEventListener('click', () => {
@@ -201,8 +303,6 @@ const els = {
     story: document.getElementById('story-display'),
     choices: document.getElementById('choices-display'),
     stats: document.getElementById('stats-display'),
-    npcs: document.getElementById('npcs-display'),
-    inv: document.getElementById('inventory-display'),
     loader: document.getElementById('loader'),
     loaderMessage: document.getElementById('loader-message'),
     modeDisplay: document.getElementById('mode-display'),
@@ -217,6 +317,9 @@ const els = {
     setupPrevBtn: document.getElementById('setup-prev-btn'),
     setupNextBtn: document.getElementById('setup-next-btn'),
     setupStepCounter: document.getElementById('setup-step-counter'),
+    setupStepper: document.getElementById('setup-stepper'),
+    archiveSelect: document.getElementById('archive-select'),
+    loaderCancelBtn: document.getElementById('loader-cancel-btn'),
     setupStepCaption: document.getElementById('setup-step-caption'),
     setupStepTitle: document.getElementById('setup-step-title'),
     setupStepHintBadge: document.getElementById('setup-step-hint-badge'),
@@ -229,13 +332,10 @@ const els = {
     resetConfirmBackdrop: document.getElementById('reset-confirm-backdrop'),
     resetCancelBtn: document.getElementById('reset-cancel-btn'),
     resetConfirmBtn: document.getElementById('reset-confirm-btn'),
-    setupProgressFill: document.getElementById('setup-progress-fill'),
     archiveStrip: document.getElementById('archive-strip'),
     archivePrevBtn: document.getElementById('archive-prev-btn'),
     archiveNextBtn: document.getElementById('archive-next-btn'),
     archiveCurrentBtn: document.getElementById('archive-current-btn'),
-    archiveCopyBtn: document.getElementById('archive-copy-btn'),
-    archiveLabel: document.getElementById('archive-label'),
     // lore panels
     npcsPanel: document.getElementById('npcs-panel'),
     npcsBackdrop: document.getElementById('npcs-backdrop'),
@@ -598,7 +698,13 @@ function getStatDescriptor(value) {
 
 function buildChoiceMarkup(choice, index = 0) {
     const label = choice.text || choice.action || `Выбор ${index + 1}`;
+    // Цифра — подсказка к горячей клавише: в текстовой RPG выбирать
+    // варианты с клавиатуры естественнее, чем целиться мышью.
+    const hotkey = index < 9
+        ? `<span class="choice-btn__key" aria-hidden="true">${index + 1}</span>`
+        : '';
     return `
+        ${hotkey}
         <span class="choice-btn__body choice-btn__body--single">
             <span class="choice-btn__title">${escapeHTML(label)}</span>
         </span>
@@ -630,27 +736,30 @@ function buildArchiveStoryMarkup(entry) {
     if (entry && entry.polishFailed) {
         // Полировка сорвалась — показываем предупреждение сверху
         html = `
-            <div style="background: rgba(220,50,50,0.1); border: 1px dashed var(--danger); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                <strong style="color: var(--danger);">⚠️ Полировка текста сорвалась</strong>
-                <span style="font-size:0.9em;">Отображается черновой вариант. Вы можете повторить попытку (например, после смены провайдера в настройках).</span>
-                <button class="btn" style="align-self: flex-start; border-color: var(--danger); color: var(--danger);" onclick="window.retryPolish('${entry.turn}')">Отполировать заново</button>
+            <div class="inline-alert inline-alert--danger">
+                <span class="inline-alert__icon"><svg class="ui-icon" aria-hidden="true"><use href="#icon-alert"></use></svg></span>
+                <div class="inline-alert__body">
+                    <strong>Полировка текста сорвалась</strong>
+                    <p>Отображается черновой вариант. Можно повторить попытку — например, после смены провайдера в настройках.</p>
+                    <button type="button" class="control-btn control-btn--danger" onclick="window.retryPolish('${entry.turn}')">Отполировать заново</button>
+                </div>
             </div>
         ` + html;
     } else if (entry && entry.turn && entry.storyOriginal) {
         if (entry.storyEnhanced) {
             // Полировка прошла успешно — тихая кнопка переполировки под текстом
             html += `
-                <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                    <button class="control-btn control-btn--ghost" style="font-size: 0.82rem; padding: 6px 14px; opacity: 0.55; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'" onclick="window.retryPolish('${entry.turn}')">✦ Переполировать текст</button>
-                    <span style="font-size: 0.78rem; color: var(--ink-muted); font-family: var(--mono);">второй проход заново — механики не затронуты</span>
+                <div class="story-tools story-tools--quiet">
+                    <button type="button" class="control-btn control-btn--ghost story-tools__btn" onclick="window.retryPolish('${entry.turn}')">${uiIcon('sparkle')} Переполировать текст</button>
+                    <span class="story-tools__note">второй проход заново — механики не затронуты</span>
                 </div>
             `;
         } else {
             // Ещё не было полировки — кнопка создания чистовика
             html += `
-                <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                    <button class="control-btn control-btn--ghost" style="font-size: 0.82rem; padding: 6px 14px; opacity: 0.85; transition: opacity 0.2s; border: 1px dashed var(--link); color: var(--link);" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'" onclick="window.retryPolish('${entry.turn}')">✦ Отполировать текст (чистовик)</button>
-                    <span style="font-size: 0.78rem; color: var(--ink-muted); font-family: var(--mono);">сделать текст более сочным, добавить атмосферные диалоги и детали эпохи</span>
+                <div class="story-tools">
+                    <button type="button" class="control-btn story-tools__btn story-tools__btn--offer" onclick="window.retryPolish('${entry.turn}')">${uiIcon('sparkle')} Отполировать текст</button>
+                    <span class="story-tools__note">добавить атмосферные диалоги и детали эпохи</span>
                 </div>
             `;
         }
@@ -667,7 +776,7 @@ function buildArchiveStoryMarkup(entry) {
         } else if (entry.illustrationStatus === 'success' && entry.illustration) {
             html += `
                 <div class="illustration-box">
-                    <img src="${entry.illustration}" class="illustration-img" alt="Иллюстрация к событию" onclick="openIllustrationModal('${entry.illustration}')" style="cursor: zoom-in;" />
+                    <img src="${entry.illustration}" class="illustration-img" alt="Иллюстрация к событию" onclick="openIllustrationModal('${entry.illustration}')" />
                     <button type="button" class="illustration-btn" onclick="downloadIllustration('${escapeHTML(entry.dateLabel || '')}', '${entry.illustration}')">${uiIcon('copy')} Скачать рисунок</button>
                 </div>
             `;
@@ -681,40 +790,40 @@ function buildArchiveStoryMarkup(entry) {
             html += `
                 <div class="illustration-box illustration-box--failed">
                     <div class="illustration-text">${uiIcon('refresh')} Не удалось воссоздать рисунок воспоминания.</div>
-                    <button class="btn" style="margin-top:0.5rem;" onclick="window.retryGenImg('${entry.turn}')">Попробовать снова</button>
+                    <button type="button" class="control-btn illustration-retry" onclick="window.retryGenImg('${entry.turn}')">Попробовать снова</button>
                 </div>
             `;
         } else if (!entry.illustrationStatus || entry.illustrationStatus === 'pending') {
             html += `
-                <div class="illustration-box illustration-box--pending" id="img-pending-${entry.turn}" style="background:var(--surface-1); padding: 1rem; border-radius:8px; border: 1px dashed var(--border); margin-top:1rem;">
-                    <div style="font-weight:600; margin-bottom:0.5rem;">${uiIcon('sparkle')} Создать визуальное воспоминание</div>
-                    <div style="margin-bottom:0.5rem; font-size:0.9em; color:var(--muted);">Выберите стиль:</div>
-                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;" id="img-style-group-${entry.turn}">
-                        <button type="button" class="option-btn selected" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'photo', this)">${uiIcon('film')} Фотография</button>
-                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'book', this)">${uiIcon('book')} Книжная</button>
-                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'child', this)">${uiIcon('child')} Детская</button>
+                <div class="illustration-box illustration-box--pending" id="img-pending-${entry.turn}">
+                    <div class="illustration-pending__title">${uiIcon('sparkle')} Создать визуальное воспоминание</div>
+                    <div class="illustration-pending__label">Выберите стиль:</div>
+                    <div class="illustration-pending__styles" id="img-style-group-${entry.turn}">
+                        <button type="button" class="option-btn selected" onclick="window.selectImgStyle('${entry.turn}', 'photo', this)">${uiIcon('film')} Фотография</button>
+                        <button type="button" class="option-btn" onclick="window.selectImgStyle('${entry.turn}', 'book', this)">${uiIcon('book')} Книжная</button>
+                        <button type="button" class="option-btn" onclick="window.selectImgStyle('${entry.turn}', 'child', this)">${uiIcon('child')} Детская</button>
                     </div>
                     <input type="hidden" id="img-style-val-${entry.turn}" value="photo">
-                    <div style="display:flex; gap:1rem; font-size:0.9em; color:var(--muted); align-items:center; margin-bottom: 1rem;">
+                    <div class="illustration-pending__paras">
                         <span>Текста в промпт (абзацы):</span>
                         <label><input type="radio" name="img_paras_${entry.turn}" value="3"> 3</label>
                         <label><input type="radio" name="img_paras_${entry.turn}" value="5" checked> 5</label>
                         <label><input type="radio" name="img_paras_${entry.turn}" value="7"> 7</label>
                     </div>
-                    <button type="button" class="btn primary" style="width: 100%;" onclick="window.startGenImgUI('${entry.turn}')">Начать создание иллюстрации</button>
+                    <button type="button" class="primary" onclick="window.startGenImgUI('${entry.turn}')">Начать создание иллюстрации</button>
                 </div>
             `;
         }
     }
 
     if (entry.miracleStory) {
-        html += `<hr><div class="miracle-banner"><h2>✨ ЧУДЕСНОЕ СПАСЕНИЕ</h2><p>Судьба смилостивилась...</p></div>`;
+        html += `<hr><div class="miracle-banner"><h2>${uiIcon('sparkle')} ЧУДЕСНОЕ СПАСЕНИЕ</h2><p>Судьба смилостивилась...</p></div>`;
         html += renderMarkdown(entry.miracleStory);
     }
     if (entry.gameOverData) {
         const god = entry.gameOverData;
         html += `<hr><div class="game-over-banner"><h2>${uiIcon('skull')} GAME OVER</h2><p>${escapeHTML(entry.dateLabel || '')}, ${escapeHTML(String(entry.age || ''))} лет</p></div>`;
-        html += `<h2 style="color:var(--accent);">${uiIcon('sparkle')} Эпилог</h2>${renderMarkdown(god.epilogue || '')}`;
+        html += `<h2 class="epilogue-title">${uiIcon('sparkle')} Эпилог</h2>${renderMarkdown(god.epilogue || '')}`;
         html += `<div class="game-over-reasons"><strong>Что привело:</strong><ul>${(god.reasons || []).map((r) => `<li>${escapeHTML(r)}</li>`).join('')}</ul></div>`;
         html += renderMarkdown(`> "${god.epitaph || ''}"`);
     }
@@ -790,16 +899,26 @@ function renderArchiveStrip() {
     const hasArchive = !!state.archiveEntries?.length;
     els.archiveStrip.style.display = hasArchive ? 'flex' : 'none';
     if (!hasArchive) return;
-    const entry = getSelectedArchiveEntry();
     const isArchive = isArchiveMode();
-    const currentIndex = isArchive ? state.archiveViewIndex : state.archiveEntries.length - 1;
-    els.archiveLabel.textContent = entry
-        ? `${entry.dateLabel || ''}${entry.age ? ` · ${entry.age} лет` : ''}${isArchive ? '' : ' · сейчас'}`
-        : 'Текущий период';
+    const total = state.archiveEntries.length;
+    const currentIndex = isArchive ? state.archiveViewIndex : total - 1;
+
+    // Выпадающий список вместо перелистывания по одному ходу.
+    if (els.archiveSelect) {
+        els.archiveSelect.innerHTML = state.archiveEntries.map((item, i) => {
+            const parts = [item.dateLabel || `Ход ${i + 1}`];
+            if (item.age) parts.push(`${item.age} лет`);
+            parts.push(`ход ${i + 1} из ${total}`);
+            if (i === total - 1) parts.push('сейчас');
+            return `<option value="${i}">${escapeHTML(parts.join(' · '))}</option>`;
+        }).join('');
+        els.archiveSelect.value = String(currentIndex);
+    }
+
     els.archivePrevBtn.disabled = currentIndex <= 0;
     els.archiveNextBtn.disabled = !isArchive;
     els.archiveCurrentBtn.disabled = !isArchive;
-    els.archiveCopyBtn.disabled = !entry;
+    els.archiveStrip.classList.toggle('is-archive', isArchive);
 }
 
 function setArchiveView(index = null) {
@@ -837,15 +956,50 @@ function renderSetupWizard() {
     if (els.setupStepCaption) els.setupStepCaption.textContent = meta.caption;
     if (els.setupStepCounter) els.setupStepCounter.textContent = `Шаг ${safeIndex + 1} из ${SETUP_STEPS.length}`;
     if (els.setupStepHintBadge) els.setupStepHintBadge.textContent = meta.badge;
-    if (els.setupProgressFill) els.setupProgressFill.style.width = `${((safeIndex + 1) / SETUP_STEPS.length) * 100}%`;
-    if (els.setupPrevBtn) els.setupPrevBtn.disabled = safeIndex === 0;
+    if (els.setupPrevBtn) els.setupPrevBtn.classList.toggle('is-hidden', safeIndex === 0);
     if (els.setupNextBtn) {
-        els.setupNextBtn.style.display = safeIndex === lastIndex ? 'none' : 'inline-flex';
-        els.setupNextBtn.textContent = safeIndex === 0 ? 'Начать' : 'Дальше';
+        els.setupNextBtn.classList.toggle('is-hidden', safeIndex === lastIndex);
+        els.setupNextBtn.textContent = 'Дальше';
     }
     if (els.startBtn) {
-        els.startBtn.style.display = safeIndex === lastIndex ? 'inline-flex' : 'none';
+        els.startBtn.classList.toggle('is-hidden', safeIndex !== lastIndex);
     }
+    renderSetupStepper(safeIndex);
+}
+
+// Степпер вместо «слепой» полосы прогресса: видно все шаги сразу и можно
+// вернуться к любому пройденному за один клик.
+function renderSetupStepper(activeIndex) {
+    const nav = els.setupStepper;
+    if (!nav) return;
+    nav.innerHTML = SETUP_STEPS.map((step, i) => {
+        const state = i < activeIndex ? 'done' : (i === activeIndex ? 'active' : 'todo');
+        const reachable = i <= activeIndex;
+        return `
+            <button type="button"
+                    class="setup-stepper__item setup-stepper__item--${state}"
+                    data-step-index="${i}"
+                    ${reachable ? '' : 'disabled'}
+                    ${i === activeIndex ? 'aria-current="step"' : ''}
+                    aria-label="Шаг ${i + 1}: ${escapeHTML(step.title)}">
+                <span class="setup-stepper__mark">${
+                    state === 'done'
+                        ? '<svg class="ui-icon" aria-hidden="true"><use href="#icon-check"></use></svg>'
+                        : String(i + 1).padStart(2, '0')
+                }</span>
+                <span class="setup-stepper__caption">${escapeHTML(step.caption)}</span>
+            </button>
+        `;
+    }).join('');
+
+    nav.querySelectorAll('.setup-stepper__item').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const target = Number(btn.dataset.stepIndex);
+            if (Number.isNaN(target) || target > setupStepIndex) return;
+            setupStepIndex = target;
+            renderSetupWizard();
+        });
+    });
 }
 
 function openSettingsModal() {
@@ -855,14 +1009,18 @@ function openSettingsModal() {
     syncSettingsEnhanceModelBtns();
     els.settingsModal.classList.remove('hidden');
     els.settingsModal.setAttribute('aria-hidden', 'false');
+    lockScroll();
+    trapFocus(els.settingsModal.querySelector('.settings-sheet'));
 }
 
 let settingsReturnFocus = null;
 
 function closeSettingsModal() {
     if (!els.settingsModal) return;
+    releaseFocus(els.settingsModal.querySelector('.settings-sheet'));
     els.settingsModal.classList.add('hidden');
     els.settingsModal.setAttribute('aria-hidden', 'true');
+    unlockScroll();
     settingsReturnFocus?.focus?.();
     settingsReturnFocus = null;
 }
@@ -949,6 +1107,38 @@ function setupSettingsModal() {
     });
 }
 
+// Клавиши 1-9 выбирают вариант, стрелки листают архив.
+function setupChoiceHotkeys() {
+    document.addEventListener('keydown', (event) => {
+        if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+        // Не перехватываем ввод в полях и при открытых оверлеях.
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+        if (document.querySelector('.settings-modal:not(.hidden), .lore-panel:not(.hidden), .confirm-modal:not(.hidden)')) return;
+        if (els.game?.classList.contains('hidden')) return;
+        if (document.body.classList.contains('is-turn-loading')) return;
+
+        if (/^[1-9]$/.test(event.key)) {
+            const buttons = Array.from(els.choices?.querySelectorAll('.choice-btn:not(:disabled)') || []);
+            const target = buttons[Number(event.key) - 1];
+            if (target) {
+                event.preventDefault();
+                target.classList.add('choice-btn--pressed');
+                setTimeout(() => target.click(), 90);
+            }
+            return;
+        }
+
+        if (event.key === 'ArrowLeft') els.archivePrevBtn?.click();
+        if (event.key === 'ArrowRight') els.archiveNextBtn?.click();
+    });
+}
+
+function setupLoaderControls() {
+    els.loaderCancelBtn?.addEventListener('click', cancelCurrentTurn);
+}
+
 function setupArchiveControls() {
     els.archivePrevBtn?.addEventListener('click', () => {
         if (!state.archiveEntries?.length) return;
@@ -961,47 +1151,87 @@ function setupArchiveControls() {
         else setArchiveView(null);
     });
     els.archiveCurrentBtn?.addEventListener('click', () => setArchiveView(null));
-    els.archiveCopyBtn?.addEventListener('click', async () => {
-        try {
-            await copyArchiveEntryToClipboard(getSelectedArchiveEntry());
-            alert('✅ Период скопирован!');
-        } catch (e) {
-            console.error('Archive copy error:', e);
-            alert('❌ Не удалось скопировать период.');
-        }
+
+    // Прыжок к любому периоду. Копирование убрано отсюда — оно живёт
+    // в блоке «Экспорт» в сайдбаре и больше не дублируется трижды.
+    els.archiveSelect?.addEventListener('change', (event) => {
+        const index = Number(event.target.value);
+        if (Number.isNaN(index)) return;
+        setArchiveView(index === state.archiveEntries.length - 1 ? null : index);
     });
 }
 
-function setLoading(value, message = 'Пожалуйста, подождите. Ветер перемен наполняет паруса истории...') {
-    els.loader.style.display = value ? 'block' : 'none';
+// Ход у нейросети идёт 20-60 секунд. Раньше всё это время экран был перекрыт
+// блокирующим оверлеем: текст было не прочитать, отменить нельзя, прогресса нет.
+// Теперь ожидание инлайновое — история остаётся на экране, показываются этапы
+// генерации и скелетон на месте будущих вариантов выбора.
+
+// Этапы соответствуют реальным шагам turn(): сюжет -> структура -> готово.
+const LOADING_STAGES = [
+    { key: 'story',     label: 'Пишу сцену' },
+    { key: 'structure', label: 'Обдумываю последствия' },
+    { key: 'choices',   label: 'Готовлю варианты' }
+];
+
+let currentTurnController = null;
+
+function setLoading(value, message = 'Ветер перемен наполняет паруса истории...', stageKey = 'story') {
+    if (els.loader) els.loader.classList.toggle('is-hidden', !value);
+
     document.querySelectorAll('.choice-btn').forEach((btn) => {
         btn.disabled = value;
     });
 
-    if (value) {
-        let loadingOverlay = document.getElementById('retro-game-loader');
-        if (!loadingOverlay) {
-            loadingOverlay = document.createElement('div');
-            loadingOverlay.id = 'retro-game-loader';
-            loadingOverlay.className = 'retro-loader-overlay';
-            loadingOverlay.innerHTML = `
-                <div class="retro-loader-card">
-                    <div class="retro-loader-spinner"></div>
-                    <div class="retro-loader-title">${uiIcon('film')} ХРОНИКА ВРЕМЕНИ...</div>
-                    <div class="retro-loader-sub" id="retro-loader-message">${message}</div>
-                </div>
-            `;
-            document.body.appendChild(loadingOverlay);
-        } else {
-            const msgEl = document.getElementById('retro-loader-message');
-            if (msgEl) msgEl.textContent = message;
-        }
-    } else {
-        const loadingOverlay = document.getElementById('retro-game-loader');
-        if (loadingOverlay) {
-            loadingOverlay.remove();
-        }
+    // Пока идёт ход, блок выбора заменяется скелетоном — ожидание
+    // воспринимается короче, чем при пустой крутилке.
+    els.choicesWrap?.classList.toggle('is-loading', Boolean(value));
+    document.body.classList.toggle('is-turn-loading', Boolean(value));
+
+    if (!value) {
+        renderLoaderSkeleton(false);
+        return;
     }
+
+    renderLoaderSkeleton(true);
+
+    const activeIndex = Math.max(0, LOADING_STAGES.findIndex((s) => s.key === stageKey));
+    const stagesHtml = LOADING_STAGES.map((stage, i) => {
+        const state = i < activeIndex ? 'done' : (i === activeIndex ? 'active' : 'wait');
+        const mark = state === 'done'
+            ? `<svg class="ui-icon" aria-hidden="true"><use href="#icon-check"></use></svg>`
+            : `<span class="loading-stage__dot" aria-hidden="true"></span>`;
+        return `<li class="loading-stage loading-stage--${state}">${mark}<span>${escapeHTML(stage.label)}</span></li>`;
+    }).join('');
+
+    const stagesEl = document.getElementById('loader-stages');
+    if (stagesEl) stagesEl.innerHTML = stagesHtml;
+    if (els.loaderMessage) els.loaderMessage.textContent = message;
+}
+
+function renderLoaderSkeleton(show) {
+    const wrap = els.choicesWrap;
+    if (!wrap) return;
+    let skeleton = document.getElementById('choices-skeleton');
+    if (!show) {
+        skeleton?.remove();
+        return;
+    }
+    if (skeleton) return;
+    skeleton = document.createElement('div');
+    skeleton.id = 'choices-skeleton';
+    skeleton.className = 'choices-skeleton';
+    skeleton.setAttribute('aria-hidden', 'true');
+    skeleton.innerHTML = Array.from({ length: getChoicesCount() || 4 })
+        .map(() => '<div class="choices-skeleton__row"></div>').join('');
+    wrap.appendChild(skeleton);
+}
+
+// Позволяет прервать зависший запрос, не перезагружая страницу.
+function cancelCurrentTurn() {
+    if (!currentTurnController) return;
+    currentTurnController.abort();
+    currentTurnController = null;
+    showToast('Ход отменён', 'info');
 }
 
 function save() {
@@ -1034,8 +1264,11 @@ window.resetGame = () => {
 };
 
 function closeResetConfirmation() {
-    els.resetConfirmModal?.classList.add('hidden');
-    els.resetConfirmModal?.setAttribute('aria-hidden', 'true');
+    if (!els.resetConfirmModal || els.resetConfirmModal.classList.contains('hidden')) return;
+    releaseFocus(els.resetConfirmModal.querySelector('.confirm-sheet'));
+    els.resetConfirmModal.classList.add('hidden');
+    els.resetConfirmModal.setAttribute('aria-hidden', 'true');
+    unlockScroll();
 }
 
 window.requestResetGame = () => {
@@ -1045,7 +1278,9 @@ window.requestResetGame = () => {
     }
     els.resetConfirmModal.classList.remove('hidden');
     els.resetConfirmModal.setAttribute('aria-hidden', 'false');
-    els.resetConfirmBtn?.focus();
+    lockScroll();
+    trapFocus(els.resetConfirmModal.querySelector('.confirm-sheet'));
+    els.resetCancelBtn?.focus();
 };
 
 function setupResetConfirmation() {
@@ -1362,8 +1597,13 @@ function setupOptionButtons(containerId, stateKey, callback) {
     const buttons = container.querySelectorAll('.option-btn');
     buttons.forEach((btn) => {
         btn.onclick = () => {
-            buttons.forEach((b) => b.classList.remove('selected'));
+            buttons.forEach((b) => {
+                b.classList.remove('selected');
+                // Выбор передаётся скринридеру, а не только цветом.
+                if (b.hasAttribute('role')) b.setAttribute('aria-checked', 'false');
+            });
             btn.classList.add('selected');
+            if (btn.hasAttribute('role')) btn.setAttribute('aria-checked', 'true');
             state[stateKey] = btn.dataset.value;
             if (callback) callback(btn.dataset.value);
             if (stateKey === 'pace') updatePaceInfo(btn.dataset.value);
@@ -1870,7 +2110,8 @@ async function callLLM({
     provider = getActiveProvider(),
     temperature = 0.6,
     max_tokens = 10000,
-    response_format
+    response_format,
+    signal
 }, retries = 3) {
     const logicalCfg = getProviderConfig(provider);
     const executionProvider = resolveExecutionProvider(modelKind, provider);
@@ -1898,6 +2139,7 @@ async function callLLM({
             if (executionProvider === 'openrouter') {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 280000);
+                signal?.addEventListener('abort', () => controller.abort(), { once: true });
                 const response = await fetch(cfg.serverPath, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1918,6 +2160,7 @@ async function callLLM({
             if (executionProvider === 'hydra' && providerApiKey) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 280000);
+                signal?.addEventListener('abort', () => controller.abort(), { once: true });
                 const response = await fetch(cfg.directUrl, {
                     method: 'POST',
                     headers: {
@@ -1947,6 +2190,7 @@ async function callLLM({
             }
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 280000);
+            signal?.addEventListener('abort', () => controller.abort(), { once: true });
             const response = await fetch(cfg.serverPath, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1967,9 +2211,20 @@ async function callLLM({
             else {
                 try { errText = JSON.stringify(err); } catch (e) { errText = String(err); }
             }
+            if (err?.name === 'AbortError' || signal?.aborted) throw err;
             addSystemLog(`Ошибка вызова ${cfg.label}`, errText, true);
             if (attempt > 1) {
-                await new Promise((resolve) => setTimeout(resolve, 2000 * (4 - attempt)));
+                // Пауза между попытками тоже прерываемая: иначе «Отменить ход»
+                // не срабатывал, пока идёт backoff.
+                await new Promise((resolve, reject) => {
+                    const timer = setTimeout(resolve, 2000 * (4 - attempt));
+                    signal?.addEventListener('abort', () => {
+                        clearTimeout(timer);
+                        const abortErr = new Error('Ход отменён');
+                        abortErr.name = 'AbortError';
+                        reject(abortErr);
+                    }, { once: true });
+                });
                 return makeRequest(attempt - 1);
             }
             throw err;
@@ -2371,7 +2626,9 @@ function isTruncated(completion) {
 // ========== ОСНОВНОЙ ХОД ==========
 async function turn(action) {
     if (state.gameOver) return;
-    setLoading(true, "Листаю страницы судьбы... Рождается черновик истории...");
+    currentTurnController = new AbortController();
+    const turnSignal = currentTurnController.signal;
+    setLoading(true, 'Листаю страницы судьбы — рождается черновик истории...', 'story');
     state.turnCount++;
     try {
         const needSummary = (state.turnCount - state.lastSummaryTurn) >= SUMMARY_INTERVAL && state.history.length >= 10;
@@ -2403,7 +2660,8 @@ async function turn(action) {
             ],
             modelKind: 'main',
             temperature: 0.6,
-            max_tokens: 10000
+            max_tokens: 10000,
+            signal: turnSignal
         });
 
         let originalStory = completion1?.choices?.[0]?.message?.content || '';
@@ -2411,7 +2669,7 @@ async function turn(action) {
         // Детект обрыва сюжета
         if (isTruncated(completion1)) {
             addSystemLog('Обрыв 1-го прохода (сюжет)', `finish_reason=length, длина: ${originalStory.length}`, true);
-            setLoading(true, 'История оборвалась на полуслове — дописываю черновик...');
+            setLoading(true, 'История оборвалась на полуслове — дописываю черновик...', 'story');
             const continued = await continueTruncatedText(originalStory, 'main');
             if (continued) originalStory = continued;
         }
@@ -2423,7 +2681,7 @@ async function turn(action) {
         }
 
         // ── ШАГ 2: ГЕНЕРАЦИЯ ВЫБОРОВ И АПДЕЙТОВ (Структура) ──
-        setLoading(true, "История записана. Продумываю возможные последствия и варианты выбора...");
+        setLoading(true, 'История записана. Продумываю последствия выбора...', 'structure');
 
         const structureSystemPrompt = buildStructureSystemPrompt(originalStory, nextSeasonName, nextYear, choicesCount);
 
@@ -2441,7 +2699,8 @@ async function turn(action) {
                     modelKind: 'main',
                     temperature: attempt === 1 ? 0.3 : 0.1,
                     max_tokens: 4000,
-                    response_format: { type: 'json_object' }
+                    response_format: { type: 'json_object' },
+                    signal: turnSignal
                 });
 
                 structureRaw = completion2?.choices?.[0]?.message?.content || '';
@@ -2452,11 +2711,12 @@ async function turn(action) {
                     break;
                 }
             } catch (err) {
+                if (err?.name === 'AbortError' || turnSignal.aborted) throw err;
                 console.warn(`Попытка ${attempt} разбора структуры провалилась:`, err);
             }
 
             if (attempt < step2Attempts) {
-                setLoading(true, "Формирую альтернативные пути судьбы — восстанавливаю варианты выбора...");
+                setLoading(true, 'Формирую альтернативные пути судьбы...', 'choices');
             }
         }
 
@@ -2533,24 +2793,86 @@ async function turn(action) {
         state.lastMiracle = null;
         save();
         renderUI();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Скроллим к началу сцены, а не к верху документа: на десктопе
+        // с боковой панелью прыжок в самый верх дезориентировал.
+        const anchor = document.querySelector('.story-stage') || els.story;
+        anchor?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     } catch (error) {
-        console.error('Turn error:', error);
         state.turnCount = Math.max(0, state.turnCount - 1);
-        els.story.innerHTML = renderMarkdown(`**Ошибка запроса:** ${error.message || 'не удалось выполнить ход.'}\n\nПопробуйте ещё раз.`);
+
+        // Отмена пользователем — не ошибка: возвращаем прежние варианты.
+        if (error?.name === 'AbortError' || turnSignal.aborted) {
+            renderUI();
+            return;
+        }
+
+        console.error('Turn error:', error);
+        renderTurnError(error);
         showRetryButton(action);
     } finally {
+        currentTurnController = null;
         setLoading(false);
     }
+}
+
+// Ошибка хода оформляется как часть интерфейса, а не как «голый» markdown.
+function renderTurnError(error) {
+    const raw = error?.message || 'не удалось выполнить ход.';
+    const friendly = describeTurnError(raw);
+    els.story.innerHTML = `
+        <div class="inline-alert inline-alert--danger" role="alert">
+            <span class="inline-alert__icon"><svg class="ui-icon" aria-hidden="true"><use href="#icon-alert"></use></svg></span>
+            <div class="inline-alert__body">
+                <strong>${escapeHTML(friendly.title)}</strong>
+                <p>${escapeHTML(friendly.hint)}</p>
+                <details class="inline-alert__details">
+                    <summary>Технические подробности</summary>
+                    <code>${escapeHTML(String(raw).slice(0, 400))}</code>
+                </details>
+            </div>
+        </div>
+    `;
+}
+
+// Переводим технические ошибки API в человеческие формулировки.
+function describeTurnError(raw) {
+    const text = String(raw).toLowerCase();
+    if (text.includes('401') || text.includes('unauthorized') || text.includes('api key') || text.includes('ключ')) {
+        return {
+            title: 'Нейросеть не приняла ключ',
+            hint: 'Проверьте API-ключ в настройках — возможно, он истёк или скопирован не полностью.'
+        };
+    }
+    if (text.includes('429') || text.includes('rate limit') || text.includes('quota')) {
+        return {
+            title: 'Слишком много запросов',
+            hint: 'Провайдер временно ограничил доступ. Подождите полминуты и повторите ход.'
+        };
+    }
+    if (text.includes('timeout') || text.includes('aborted') || text.includes('network') || text.includes('failed to fetch')) {
+        return {
+            title: 'Связь оборвалась',
+            hint: 'Запрос не дошёл до нейросети. Проверьте интернет и повторите ход — прогресс сохранён.'
+        };
+    }
+    if (text.includes('500') || text.includes('502') || text.includes('503')) {
+        return {
+            title: 'Сервер нейросети не отвечает',
+            hint: 'Это временно. Повторите ход через минуту или смените провайдера в настройках.'
+        };
+    }
+    return {
+        title: 'Ход не удался',
+        hint: 'История осталась на месте — можно повторить попытку. Прогресс не потерян.'
+    };
 }
 
 function showRetryButton(action) {
     els.choices.innerHTML = '';
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'choice-btn';
-    btn.style.borderColor = 'var(--warning)';
+    btn.className = 'choice-btn choice-btn--retry';
     btn.innerHTML = `
         <span class="choice-btn__body choice-btn__body--single">
             <span class="choice-btn__title">Повторить ход</span>
@@ -2851,17 +3173,24 @@ function applyUpdates(u) {
 }
 
 // ========== АТМОСФЕРНЫЕ ПАНЕЛИ (NPC / Items) ==========
+let lorePanelReturnFocus = null;
+
 function openLorePanel(panel) {
     if (!panel) return;
+    lorePanelReturnFocus = document.activeElement;
     panel.classList.remove('hidden');
     panel.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
+    lockScroll();
+    trapFocus(panel.querySelector('.lore-panel__sheet'));
 }
 function closeLorePanel(panel) {
-    if (!panel) return;
+    if (!panel || panel.classList.contains('hidden')) return;
+    releaseFocus(panel.querySelector('.lore-panel__sheet'));
     panel.classList.add('hidden');
     panel.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    unlockScroll();
+    lorePanelReturnFocus?.focus?.();
+    lorePanelReturnFocus = null;
 }
 function setupLorePanels() {
     els.npcsTrigger?.addEventListener('click', () => { renderNpcPanel(); openLorePanel(els.npcsPanel); });
@@ -2943,7 +3272,7 @@ function renderNpcPanel() {
     }
     els.npcsEmpty.style.display = 'none';
     els.npcsGrid.innerHTML = npcs.map((npc, i) => `
-        <div class="npc-card" style="animation: cardRise 0.45s ease forwards; animation-delay: ${i * 0.05}s;">
+        <div class="npc-card" style="--stagger:${i * 0.05}s">
             <div class="npc-card__portrait">${getNpcEmoji(npc.name)}</div>
             <div class="npc-card__name">${escapeHTML(npc.name)}</div>
             <div class="npc-card__desc">${renderMarkdown(npc.desc || '')}</div>
@@ -2960,7 +3289,7 @@ function renderItemsPanel() {
     }
     els.itemsEmpty.style.display = 'none';
     els.itemsGrid.innerHTML = items.map((item, i) => `
-        <div class="item-card" style="animation: cardRise 0.45s ease forwards; animation-delay: ${i * 0.05}s;">
+        <div class="item-card" style="--stagger:${i * 0.05}s">
             <div class="item-card__icon">${getItemEmoji(item.name, i)}</div>
             <div class="item-card__name">${escapeHTML(item.name)}</div>
             <div class="item-card__desc">${renderMarkdown(item.desc || '')}</div>
@@ -2981,7 +3310,7 @@ function renderUI() {
 
     const shownDate = archiveEntry?.dateLabel || getDateLabel();
     const shownAge = archiveEntry?.age ?? state.age;
-    els.dateText.innerText = `${shownDate} | ${shownAge} лет`;
+    els.dateText.textContent = `${shownDate} · ${shownAge} лет`;
     els.locationDisplay.innerHTML = `${uiIcon(locInfo.icon || 'pin')} ${escapeHTML(locInfo.fullName)}`;
 
     let modeHTML = '';
@@ -3003,8 +3332,7 @@ function renderUI() {
         if (state.gameOver) {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'choice-btn';
-            btn.style.borderColor = 'var(--danger)';
+            btn.className = 'choice-btn choice-btn--restart';
             btn.innerHTML = `
                 <span class="choice-btn__body choice-btn__body--single">
                     <span class="choice-btn__title">Начать новую жизнь</span>
@@ -3146,10 +3474,10 @@ window.copyCurrentPeriodToClipboard = async function copyCurrentPeriodToClipboar
     try {
         const entry = getSelectedArchiveEntry();
         await copyArchiveEntryToClipboard(entry);
-        alert('✅ Период скопирован!');
+        showToast('Период скопирован в буфер обмена', 'success');
     } catch (err) {
         console.error('Ошибка копирования периода:', err);
-        alert('❌ Не удалось скопировать период.');
+        showToast('Не удалось скопировать период', 'error');
     }
 };
 
@@ -3174,10 +3502,10 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
         const header = `=== ЭПОХА ПЕРЕМЕН: 1993 ===\nПерсонаж: ${GENDER_INFO[state.gender].name}, ${state.age} лет\nЛокация: ${locInfo.fullName}\nДата: ${getDateLabel()}\nПровайдер: ${getProviderConfig().label}\n\n`;
         const statsText = Object.entries(state.stats).map(([k, v]) => `${STATS_INFO[k].name}: ${v}`).join(', ');
         await navigator.clipboard.writeText(header + `Текущие параметры: ${statsText}\n\n=== ИСТОРИЯ ===\n${historyText}`);
-        alert('✅ История скопирована!');
+        showToast('Вся история скопирована в буфер обмена', 'success');
     } catch (err) {
         console.error('Ошибка копирования:', err);
-        alert('❌ Не удалось скопировать историю.');
+        showToast('Не удалось скопировать историю', 'error');
     }
 };
 
@@ -3188,6 +3516,8 @@ setupSettingsModal();
 setupResetConfirmation();
 setupArchiveControls();
 setupLorePanels();
+setupChoiceHotkeys();
+setupLoaderControls();
 renderProviderSwitcher();
 updateApiKeyInput();
 applyVisualMood('setup');
@@ -3265,8 +3595,12 @@ els.startBtn.onclick = () => {
     const setTheme = (t) => {
         document.body.dataset.theme = t;
         try { localStorage.setItem(THEME_KEY, t); } catch {}
-        btn.textContent = t === 'paper' ? '◑' : '◐';
-        btn.setAttribute('aria-label', t === 'paper' ? 'Включить тёмную тему' : 'Включить светлую тему');
+        // Иконка показывает то, что произойдёт по клику.
+        const use = btn.querySelector('use');
+        if (use) use.setAttribute('href', t === 'paper' ? '#icon-moon' : '#icon-sun');
+        const label = t === 'paper' ? 'Включить тёмную тему' : 'Включить светлую тему';
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('title', label);
     };
     setTheme(getTheme());
     btn.addEventListener('click', () => {
@@ -3416,7 +3750,7 @@ window.openIllustrationModal = function(base64Url) {
     modal.querySelector('.illustration-modal__img').onclick = window.closeIllustrationModal;
 
     document.body.appendChild(modal);
-    document.body.style.overflow = 'hidden';
+    lockScroll();
 };
 
 window.closeIllustrationModal = function() {
@@ -3425,7 +3759,7 @@ window.closeIllustrationModal = function() {
         modal.classList.add('illustration-modal--closing');
         setTimeout(() => {
             modal.remove();
-            document.body.style.overflow = '';
+            unlockScroll();
         }, 200);
     }
 };
@@ -3502,7 +3836,7 @@ ${itemList || 'Нет'}
 ${summary ? '\n' + summary : ''}
 ${archiveForEnhance}${canonBlock}`;
 
-    setLoading(true, 'Шлифую детали и диалоги... Создаю чистовик...');
+    setLoading(true, 'Шлифую детали и диалоги — создаю чистовик...', 'structure');
     try {
         const pass2MaxTokens = 10000;
         const completion2 = await callLLM({
@@ -3528,7 +3862,7 @@ ${archiveForEnhance}${canonBlock}`;
         }
     } catch(e) {
         console.error(e);
-        alert('Не удалось отполировать: ' + e.message);
+        showToast('Не удалось отполировать текст: ' + e.message, 'error', 5000);
     } finally {
         setLoading(false);
         save();
@@ -3788,12 +4122,15 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
         renderPromptInspector();
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
+        lockScroll();
+        trapFocus(modal.querySelector('.settings-sheet'));
     }
     function closeModal() {
+        if (modal.classList.contains('hidden')) return;
+        releaseFocus(modal.querySelector('.settings-sheet'));
         modal.classList.add('hidden');
         modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
+        unlockScroll();
     }
 
         fab?.addEventListener('click', openModal);
@@ -3809,12 +4146,9 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
     copyBtn?.addEventListener('click', async () => {
         try {
             await navigator.clipboard.writeText(content.textContent);
-            const orig = copyBtn.textContent;
-            copyBtn.textContent = '✅ Скопировано!';
-            setTimeout(() => { copyBtn.textContent = orig; }, 1800);
+            showToast('Промпт скопирован', 'success');
         } catch {
-            copyBtn.textContent = '❌ Ошибка';
-            setTimeout(() => { copyBtn.textContent = 'Копировать'; }, 1800);
+            showToast('Не удалось скопировать промпт', 'error');
         }
     });
 })();
