@@ -2,7 +2,7 @@
 
 // Константы игры
 
-export const DEFAULT_PROVIDER = "hybrid";
+export const DEFAULT_PROVIDER = "hydra";
 
 export const LLM_PROVIDERS = {
     hydra: {
@@ -12,35 +12,19 @@ export const LLM_PROVIDERS = {
         serverPath: "/api/hydra",
         storageKey: "rpg90_key_hydra",
         models: {
-            main: "glm-4.6",
-            enhance: "gemini-3.1-pro"
-        }
-    },
-    openrouter: {
-        label: "OpenRouter",
-        icon: "🧭",
-        directUrl: "https://openrouter.ai/api/v1/chat/completions",
-        serverPath: "/api/openrouter",
-        storageKey: "rpg90_key_openrouter",
-        models: {
-            main: "qwen/qwen3.7-plus",
-            enhance: "qwen/qwen3.7-plus"
-        }
-    },
-    hybrid: {
-        label: "Hybrid",
-        icon: "🧩",
-        storageKey: "rpg90_key_hybrid",
-        executionProviders: {
-            main: "openrouter",
-            enhance: "hydra"
-        },
-        models: {
-            main: "z-ai/glm-5.1",
-            enhance: "gemini-3.1-pro"
+            main: "glm-5.2",
+            enhance: "glm-5.2"
         }
     }
 };
+
+// Доступные модели для полировки текста (второй проход).
+// Первый элемент — «вариант 1», второй — «вариант 2» (по умолчанию).
+export const ENHANCE_MODEL_OPTIONS = ["gemini-3.1-pro", "glm-5.2"];
+
+// Временно отключает иллюстрации (UI скрыт, генерация заблокирована).
+// Код и сохранённые картинки остаются — вернуть = true.
+export const ILLUSTRATIONS_ENABLED = false;
 
 export const MODEL = LLM_PROVIDERS[DEFAULT_PROVIDER].models.main;
 export const SEASONS = ["Зима", "Весна", "Лето", "Осень"];
