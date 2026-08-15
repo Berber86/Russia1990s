@@ -41,6 +41,7 @@ import {
 const STATE_STORAGE_KEY = 'rpg90_state';
 const LEGACY_KEY_STORAGE = 'rpg90_key';
 const PROVIDER_STORAGE_KEY = 'rpg90_provider';
+const ADMIN_TOOLS_STORAGE_KEY = 'rpg90_admin_tools';
 
 function getStoredProvider() {
     try {
@@ -873,11 +874,29 @@ function syncSettingsEnhanceModelBtns() {
     btns.forEach(b => b.classList.toggle('selected', b.dataset.value === state.enhanceModel));
 }
 
+function areAdminToolsEnabled() {
+    try { return localStorage.getItem(ADMIN_TOOLS_STORAGE_KEY) === 'true'; }
+    catch { return false; }
+}
+
+function setAdminToolsEnabled(enabled) {
+    const active = Boolean(enabled);
+    document.body.classList.toggle('admin-tools-enabled', active);
+    const toggle = document.getElementById('admin-tools-toggle');
+    if (toggle) toggle.checked = active;
+    try { localStorage.setItem(ADMIN_TOOLS_STORAGE_KEY, String(active)); } catch {}
+}
+
 function setupSettingsModal() {
     els.setupSettingsBtn?.addEventListener('click', openSettingsModal);
     els.gameSettingsBtn?.addEventListener('click', openSettingsModal);
     els.settingsCloseBtn?.addEventListener('click', closeSettingsModal);
     els.settingsBackdrop?.addEventListener('click', closeSettingsModal);
+
+    setAdminToolsEnabled(areAdminToolsEnabled());
+    document.getElementById('admin-tools-toggle')?.addEventListener('change', (event) => {
+        setAdminToolsEnabled(event.target.checked);
+    });
 
     // ── Табы внутри модалки настроек ──
     document.querySelectorAll('.settings-tab-btn').forEach(btn => {

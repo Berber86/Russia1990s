@@ -324,6 +324,17 @@
                         Можно оставить пустым, если на сервере настроен ключ для выбранного провайдера.
                     </div>
                 </div>
+                <div class="settings-advanced">
+                    <div class="settings-label">Для разработчика</div>
+                    <label class="settings-switch">
+                        <input type="checkbox" id="admin-tools-toggle">
+                        <span class="settings-switch__track" aria-hidden="true"><span></span></span>
+                        <span class="settings-switch__copy">
+                            <strong>Показывать админские инструменты</strong>
+                            <small>Системный лог и инспектор промпта появятся внизу экрана.</small>
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <!-- Вкладка: Повествование -->
@@ -383,7 +394,7 @@
 
                 <section class="sidebar-card personality-card">
                     <div class="sidebar-card__head">
-                        <div><h3>Личность</h3></div>
+                        <div><h3>Состояние героя</h3></div>
                     </div>
                     <div id="stats-display" class="stats-grid"></div>
                 </section>
@@ -402,7 +413,7 @@
 
                 <section class="sidebar-card">
                     <div class="sidebar-card__head">
-                        <div><h3>Вещи и память</h3></div>
+                        <div><h3>Память и вещи</h3></div>
                         <span class="sidebar-card__count" id="items-count">0</span>
                     </div>
                     <button class="lore-trigger lore-trigger--items" id="items-trigger">

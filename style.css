@@ -2441,3 +2441,245 @@ input:focus-visible {
 .setup-step[data-wizard-group] + .setup-step[data-wizard-group] {
     margin-top: 14px;
 }
+
+/* ============================================================
+   STAGE 2 — ИГРОВОЙ ЭКРАН
+   Главный фокус: сцена и следующий выбор, а не панель управления.
+   ============================================================ */
+
+.app-shell {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+    gap: 20px;
+}
+
+.panel {
+    border-radius: var(--radius-lg);
+}
+
+.panel-main {
+    min-height: calc(100vh - 2 * clamp(12px, 2vw, 28px));
+    padding: clamp(22px, 3vw, 48px);
+}
+
+.date-badge {
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+}
+
+.date-badge__time,
+.date-badge__location {
+    padding: 11px 14px;
+    background: color-mix(in srgb, var(--paper-2) 72%, transparent);
+}
+
+.story-stage { gap: 22px; }
+
+.story-content {
+    max-width: 66ch;
+    font-size: clamp(1.08rem, 1.4vw, 1.22rem);
+    line-height: 1.82;
+}
+
+.choices-wrap {
+    max-width: 66ch;
+    margin-top: 10px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+}
+
+.choices::before {
+    content: "Что ты сделаешь?";
+    display: block;
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.choice-btn {
+    min-height: 68px;
+    padding: 15px 18px 15px 20px;
+    background: color-mix(in srgb, var(--paper-2) 88%, var(--amber) 12%);
+}
+
+.choice-btn__title { font-size: 1.06rem; }
+
+.panel-sidebar {
+    padding: 16px;
+    background: color-mix(in srgb, var(--paper-1) 92%, var(--amber) 8%);
+}
+
+.sidebar-scroll {
+    padding-right: 3px;
+}
+
+.status-stack {
+    margin: 0 2px 12px;
+}
+
+.sidebar-card {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: var(--radius-md);
+}
+
+.sidebar-card__head {
+    margin-bottom: 11px;
+    padding-bottom: 8px;
+}
+
+.personality-card .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.personality-card .stat-card {
+    padding: 9px 10px;
+}
+
+.personality-card .stat-card__top {
+    gap: 6px;
+    margin-bottom: 7px;
+}
+
+.personality-card .stat-card__label {
+    gap: 7px;
+}
+
+.personality-card .stat-card__icon {
+    width: 25px;
+    height: 25px;
+    font-size: 0.8rem;
+}
+
+.personality-card .stat-card__name {
+    font-size: 0.84rem;
+}
+
+.personality-card .stat-card__desc {
+    display: none;
+}
+
+.personality-card .stat-card__value {
+    min-width: 28px;
+    padding: 2px 4px;
+    font-size: 0.76rem;
+}
+
+.personality-card .stat-meter { height: 3px; }
+
+.lore-trigger {
+    padding: 11px 12px;
+    font-size: 0.9rem;
+}
+
+.controls-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin: 12px 0;
+}
+
+.controls-row .control-btn {
+    padding: 9px 7px;
+    font-size: 0.78rem;
+}
+
+.controls-row .control-btn--danger {
+    grid-column: 1 / -1;
+}
+
+.support-card--sidebar {
+    margin-top: 10px;
+}
+
+/* Настройка админских инструментов остаётся в пользовательских настройках. */
+.dev-tool-fab { display: none !important; }
+body.admin-tools-enabled .dev-tool-fab { display: flex !important; }
+
+.settings-advanced {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+}
+
+.settings-switch {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    cursor: pointer;
+}
+
+.settings-switch input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.settings-switch__track {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 22px;
+    padding: 3px;
+    margin-top: 2px;
+    border-radius: 999px;
+    background: var(--paper-3);
+    border: 1px solid var(--line-strong);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-switch__track span {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--ink-dim);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.settings-switch input:checked + .settings-switch__track {
+    background: var(--amber-soft);
+    border-color: var(--amber);
+}
+
+.settings-switch input:checked + .settings-switch__track span {
+    background: var(--amber);
+    transform: translateX(16px);
+}
+
+.settings-switch__copy {
+    display: grid;
+    gap: 3px;
+    color: var(--ink-soft);
+    line-height: 1.35;
+}
+
+.settings-switch__copy strong { font-size: 0.95rem; color: var(--ink); }
+.settings-switch__copy small { font-size: 0.82rem; color: var(--ink-dim); }
+
+@media (max-width: 700px) {
+    .app-shell { gap: 12px; }
+    .panel-main { padding: 18px; }
+    .panel-sidebar { padding: 12px; }
+    .personality-card .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .choices::before { margin-top: 2px; }
+}
+
+@media (max-width: 1080px) {
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-sidebar {
+        position: relative;
+        top: 0;
+        max-height: none;
+    }
+
+    .sidebar-scroll {
+        max-height: none;
+        overflow: visible;
+    }
+}
