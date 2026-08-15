@@ -2683,3 +2683,58 @@ body.admin-tools-enabled .dev-tool-fab { display: flex !important; }
         overflow: visible;
     }
 }
+
+/* ---------- ИКОНКИ ---------- */
+.icon-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+.ui-icon {
+    display: inline-block;
+    width: 1.08em;
+    height: 1.08em;
+    flex: 0 0 auto;
+    vertical-align: -0.16em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.65;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.setup-feature-icon .ui-icon {
+    width: 1.35em;
+    height: 1.35em;
+    vertical-align: middle;
+}
+
+.stat-card__icon .ui-icon,
+.lore-trigger__icon .ui-icon,
+.support-card__title .ui-icon {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.12em;
+}
+
+.icon-btn .ui-icon {
+    width: 1.05em;
+    height: 1.05em;
+    vertical-align: middle;
+}
+
+.archive-btn .ui-icon,
+.control-btn .ui-icon { margin-right: 0.25em; }
+
+.lore-panel__title .ui-icon {
+    width: 1.05em;
+    height: 1.05em;
+    color: var(--amber);
+    vertical-align: -0.1em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ui-icon { transition: none; }
+}

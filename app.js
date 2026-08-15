@@ -556,15 +556,21 @@ function escapeHTML(value = '') {
         .replace(/'/g, '&#39;');
 }
 
+function uiIcon(name, label = '') {
+    const safeName = String(name || 'pin').replace(/[^a-z0-9_-]/gi, '') || 'pin';
+    const title = label ? ` aria-label="${escapeHTML(label)}" role="img"` : ' aria-hidden="true"';
+    return `<svg class="ui-icon"${title} focusable="false"><use href="#icon-${safeName}"></use></svg>`;
+}
+
 const STAT_VISUALS = {
-    mind: { icon: '🧠', short: 'мышление' },
-    body: { icon: '💪', short: 'сила и ловкость' },
-    family: { icon: '🏠', short: 'дом и опора' },
-    friends: { icon: '🫂', short: 'свои люди' },
-    health: { icon: '🩺', short: 'самочувствие' },
-    looks: { icon: '✨', short: 'впечатление' },
-    wealth: { icon: '💸', short: 'деньги и быт' },
-    authority: { icon: '👑', short: 'вес во дворе' }
+    mind: { icon: 'brain', short: 'мышление' },
+    body: { icon: 'body', short: 'сила и ловкость' },
+    family: { icon: 'home', short: 'дом и опора' },
+    friends: { icon: 'users', short: 'свои люди' },
+    health: { icon: 'health', short: 'самочувствие' },
+    looks: { icon: 'sparkle', short: 'впечатление' },
+    wealth: { icon: 'money', short: 'деньги и быт' },
+    authority: { icon: 'crown', short: 'вес во дворе' }
 };
 
 function getStatClass(value) {
@@ -651,38 +657,38 @@ function buildArchiveStoryMarkup(entry) {
             html += `
                 <div class="illustration-box illustration-box--loading">
                     <div class="illustration-spinner"></div>
-                    <div class="illustration-text">📼 Проявляется набросок воспоминания...</div>
+                    <div class="illustration-text">${uiIcon('film')} Проявляется набросок воспоминания...</div>
                 </div>
             `;
         } else if (entry.illustrationStatus === 'success' && entry.illustration) {
             html += `
                 <div class="illustration-box">
                     <img src="${entry.illustration}" class="illustration-img" alt="Иллюстрация к событию" onclick="openIllustrationModal('${entry.illustration}')" style="cursor: zoom-in;" />
-                    <button type="button" class="illustration-btn" onclick="downloadIllustration('${escapeHTML(entry.dateLabel || '')}', '${entry.illustration}')">💾 Скачать рисунок</button>
+                    <button type="button" class="illustration-btn" onclick="downloadIllustration('${escapeHTML(entry.dateLabel || '')}', '${entry.illustration}')">${uiIcon('copy')} Скачать рисунок</button>
                 </div>
             `;
         } else if (entry.illustrationStatus === 'limit_reached') {
             html += `
                 <div class="illustration-box illustration-box--limit">
-                    <div class="illustration-text">📷 Лимит иллюстраций на сегодня исчерпан (макс. 20 в сутки).</div>
+                    <div class="illustration-text">${uiIcon('film')} Лимит иллюстраций на сегодня исчерпан (макс. 20 в сутки).</div>
                 </div>
             `;
         } else if (entry.illustrationStatus === 'failed') {
             html += `
                 <div class="illustration-box illustration-box--failed">
-                    <div class="illustration-text">❌ Не удалось воссоздать рисунок воспоминания.</div>
+                    <div class="illustration-text">${uiIcon('refresh')} Не удалось воссоздать рисунок воспоминания.</div>
                     <button class="btn" style="margin-top:0.5rem;" onclick="window.retryGenImg('${entry.turn}')">Попробовать снова</button>
                 </div>
             `;
         } else if (!entry.illustrationStatus || entry.illustrationStatus === 'pending') {
             html += `
                 <div class="illustration-box illustration-box--pending" id="img-pending-${entry.turn}" style="background:var(--surface-1); padding: 1rem; border-radius:8px; border: 1px dashed var(--border); margin-top:1rem;">
-                    <div style="font-weight:600; margin-bottom:0.5rem;">🎨 Создать визуальное воспоминание</div>
+                    <div style="font-weight:600; margin-bottom:0.5rem;">${uiIcon('sparkle')} Создать визуальное воспоминание</div>
                     <div style="margin-bottom:0.5rem; font-size:0.9em; color:var(--muted);">Выберите стиль:</div>
                     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;" id="img-style-group-${entry.turn}">
-                        <button type="button" class="option-btn selected" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'photo', this)">📷 Фотография</button>
-                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'book', this)">📖 Книжная</button>
-                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'child', this)">🖍️ Детская</button>
+                        <button type="button" class="option-btn selected" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'photo', this)">${uiIcon('film')} Фотография</button>
+                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'book', this)">${uiIcon('book')} Книжная</button>
+                        <button type="button" class="option-btn" style="flex:1;" onclick="window.selectImgStyle('${entry.turn}', 'child', this)">${uiIcon('child')} Детская</button>
                     </div>
                     <input type="hidden" id="img-style-val-${entry.turn}" value="photo">
                     <div style="display:flex; gap:1rem; font-size:0.9em; color:var(--muted); align-items:center; margin-bottom: 1rem;">
@@ -703,8 +709,8 @@ function buildArchiveStoryMarkup(entry) {
     }
     if (entry.gameOverData) {
         const god = entry.gameOverData;
-        html += `<hr><div class="game-over-banner"><h2>💀 GAME OVER</h2><p>${escapeHTML(entry.dateLabel || '')}, ${escapeHTML(String(entry.age || ''))} лет</p></div>`;
-        html += `<h2 style="color:var(--accent);">🕯️ Эпилог</h2>${renderMarkdown(god.epilogue || '')}`;
+        html += `<hr><div class="game-over-banner"><h2>${uiIcon('skull')} GAME OVER</h2><p>${escapeHTML(entry.dateLabel || '')}, ${escapeHTML(String(entry.age || ''))} лет</p></div>`;
+        html += `<h2 style="color:var(--accent);">${uiIcon('sparkle')} Эпилог</h2>${renderMarkdown(god.epilogue || '')}`;
         html += `<div class="game-over-reasons"><strong>Что привело:</strong><ul>${(god.reasons || []).map((r) => `<li>${escapeHTML(r)}</li>`).join('')}</ul></div>`;
         html += renderMarkdown(`> "${god.epitaph || ''}"`);
     }
@@ -969,7 +975,7 @@ function setLoading(value, message = 'Пожалуйста, подождите. 
             loadingOverlay.innerHTML = `
                 <div class="retro-loader-card">
                     <div class="retro-loader-spinner"></div>
-                    <div class="retro-loader-title">📟 ХРОНИКА ВРЕМЕНИ...</div>
+                    <div class="retro-loader-title">${uiIcon('film')} ХРОНИКА ВРЕМЕНИ...</div>
                     <div class="retro-loader-sub" id="retro-loader-message">${message}</div>
                 </div>
             `;
@@ -1070,7 +1076,7 @@ function updateApiKeyInput() {
     const provider = getActiveProvider();
     const cfg = getProviderConfig(provider);
     if (els.apiProviderTitle) {
-        els.apiProviderTitle.textContent = `🔑 API ключ — ${cfg.label}`;
+        els.apiProviderTitle.innerHTML = `${uiIcon('plug')} API ключ — ${escapeHTML(cfg.label)}`;
     }
     if (els.apiKeyHint) {
         if (provider === 'hybrid') {
@@ -1105,9 +1111,9 @@ function renderProviderSwitcher() {
     });
     document.querySelectorAll('[data-provider-models]').forEach((el) => {
         el.innerHTML = `
-            <div><strong>${cfg.icon} ${cfg.label}</strong></div>
-            <div>Первый ответ: <code>${cfg.models.main}</code> · ${mainExecCfg.icon} ${mainExecCfg.label}</div>
-            <div>Полировка: <code>${enhanceModel}</code> · ${enhanceExecCfg.icon} ${enhanceExecCfg.label}</div>
+            <div><strong>${uiIcon(cfg.icon)} ${cfg.label}</strong></div>
+            <div>Первый ответ: <code>${cfg.models.main}</code> · ${uiIcon(mainExecCfg.icon)} ${mainExecCfg.label}</div>
+            <div>Полировка: <code>${enhanceModel}</code> · ${uiIcon(enhanceExecCfg.icon)} ${enhanceExecCfg.label}</div>
         `;
     });
 }
@@ -1279,7 +1285,7 @@ function getLocationInfo() {
             name: city.name,
             icon: city.icon,
             region: REGIONS[city.region],
-            fullName: `${city.icon} ${city.name}`,
+            fullName: city.name,
             desc: detail.desc,
             legacyLocation: 'capital'
         };
@@ -1292,8 +1298,9 @@ function getLocationInfo() {
         type: state.locationType,
         typeName: type.name,
         typeIcon: type.icon,
+        icon: type.icon,
         region,
-        fullName: `${type.icon} ${type.name}, ${region.icon} ${region.name}`,
+        fullName: `${type.name}, ${region.name}`,
         desc: detail ? detail.desc : `${type.name} в ${region.name}`,
         legacyLocation: state.locationType
     };
@@ -1412,7 +1419,7 @@ function renderStartPreview() {
     els.preview.innerHTML = `
         <div class="preview-head">
             <div><h4>Старт героя</h4></div>
-            <button class="reroll-btn" id="reroll-btn" type="button">🎲 Перебросить</button>
+            <button class="reroll-btn" id="reroll-btn" type="button">${uiIcon('refresh')} Перебросить</button>
         </div>
         <div class="preview-location">
             <div class="preview-location__label">Локация</div>
@@ -1441,7 +1448,7 @@ function initGame() {
     els.setup.classList.add('hidden');
     els.game.classList.remove('hidden');
     const locInfo = getLocationInfo();
-    els.locationDisplay.textContent = locInfo.fullName;
+    els.locationDisplay.innerHTML = `${uiIcon(locInfo.icon || 'pin')} ${escapeHTML(locInfo.fullName)}`;
     renderUI();
     if (state.history.length === 0 && !state.gameOver) {
         turn('Начало игры. Опиши обстановку и представь героя.');
@@ -2939,13 +2946,13 @@ function renderUI() {
     const shownDate = archiveEntry?.dateLabel || getDateLabel();
     const shownAge = archiveEntry?.age ?? state.age;
     els.dateText.innerText = `${shownDate} | ${shownAge} лет`;
-    els.locationDisplay.textContent = locInfo.fullName;
+    els.locationDisplay.innerHTML = `${uiIcon(locInfo.icon || 'pin')} ${escapeHTML(locInfo.fullName)}`;
 
     let modeHTML = '';
     if (archiveMode) {
-        modeHTML += `<span class="summary-badge">📖 Архив</span>`;
+        modeHTML += `<span class="summary-badge">${uiIcon('book')} Архив</span>`;
     } else if (state.lifeSummary) {
-        modeHTML += `<span class="summary-badge">📝 Сводка: ход ${state.lastSummaryTurn}</span>`;
+        modeHTML += `<span class="summary-badge">${uiIcon('clipboard')} Сводка: ход ${state.lastSummaryTurn}</span>`;
     }
     els.modeDisplay.innerHTML = modeHTML;
 
@@ -3006,7 +3013,7 @@ function renderUI() {
             <div class="stat-card ${toneClass}">
                 <div class="stat-card__top">
                     <div class="stat-card__label">
-                        <span class="stat-card__icon">${visual.icon}</span>
+                        <span class="stat-card__icon">${uiIcon(visual.icon)}</span>
                         <div>
                             <div class="stat-card__name">${escapeHTML(STATS_INFO[key].name)}</div>
                             <div class="stat-card__desc">${escapeHTML(visual.short)}</div>
@@ -3115,7 +3122,7 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
         let historyText = '';
         if (state.archiveEntries?.length) {
             historyText = state.archiveEntries.map((entry) => {
-                let block = `📖 ${entry.dateLabel || `Ход ${entry.turn}`}`;
+                let block = `${entry.dateLabel || `Ход ${entry.turn}`}`;
                 if (entry.age) block += ` · ${entry.age} лет`;
                 block += `\n\n${entry.storyEnhanced || entry.storyOriginal || ''}`;
                 if (entry.miracleStory) block += `\n\n[Чудесное спасение]\n${entry.miracleStory}`;
@@ -3123,7 +3130,7 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
                 return block;
             }).join('\n\n---\n\n');
         } else if (state.enhancedHistory.length) {
-            historyText = state.enhancedHistory.map((text, i) => `📖 Ход ${i + 1}:\n${text}`).join('\n\n---\n\n');
+            historyText = state.enhancedHistory.map((text, i) => `Ход ${i + 1}:\n${text}`).join('\n\n---\n\n');
         } else {
             historyText = 'История пока пуста.';
         }
@@ -3770,7 +3777,7 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
             setTimeout(() => { copyBtn.textContent = orig; }, 1800);
         } catch {
             copyBtn.textContent = '❌ Ошибка';
-            setTimeout(() => { copyBtn.textContent = '📋 Копировать'; }, 1800);
+            setTimeout(() => { copyBtn.textContent = 'Копировать'; }, 1800);
         }
     });
 })();
