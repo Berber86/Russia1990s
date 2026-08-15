@@ -8,6 +8,10 @@ import {
 
     LLM_PROVIDERS,
 
+    ENHANCE_MODEL_OPTIONS,
+
+    ILLUSTRATIONS_ENABLED,
+
     SEASONS,
 
     HISTORY_LIMIT,
@@ -89,6 +93,7 @@ function createDefaultState() {
         lastChoices: null,
         lastStatDeltas: null,
         verbosity: 'normal',
+        enhanceModel: ENHANCE_MODEL_OPTIONS[1],
         lastMiracle: null,
         gameOverData: null
     };
@@ -638,7 +643,7 @@ function buildArchiveStoryMarkup(entry) {
         }
     }
 
-    if (entry) {
+    if (ILLUSTRATIONS_ENABLED && entry) {
         if (entry.illustrationStatus === 'loading') {
             html += `
                 <div class="illustration-box illustration-box--loading">
@@ -831,6 +836,7 @@ function renderSetupWizard() {
 function openSettingsModal() {
     if (!els.settingsModal) return;
     syncSettingsVerbosityBtns();
+    syncSettingsEnhanceModelBtns();
     els.settingsModal.classList.remove('hidden');
     els.settingsModal.setAttribute('aria-hidden', 'false');
 }
@@ -857,6 +863,12 @@ function syncSettingsVerbosityBtns() {
     }
 }
 
+function syncSettingsEnhanceModelBtns() {
+    // Синхронизирует переключатель модели полировки в модалке настроек
+    const btns = document.querySelectorAll('#settings-enhance-model-btns .option-btn');
+    btns.forEach(b => b.classList.toggle('selected', b.dataset.value === state.enhanceModel));
+}
+
 function setupSettingsModal() {
     els.setupSettingsBtn?.addEventListener('click', openSettingsModal);
     els.gameSettingsBtn?.addEventListener('click', openSettingsModal);
@@ -881,6 +893,16 @@ function setupSettingsModal() {
             document.querySelectorAll('#verbosity-btns .option-btn').forEach(b =>
                 b.classList.toggle('selected', b.dataset.value === state.verbosity));
             updateVerbosityInfo(state.verbosity);
+            if (hasActiveRun()) save();
+        });
+    });
+
+    // ── Переключатель модели полировки в модалке настроек ──
+    document.querySelectorAll('#settings-enhance-model-btns .option-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            state.enhanceModel = btn.dataset.value;
+            syncSettingsEnhanceModelBtns();
+            renderProviderSwitcher();
             if (hasActiveRun()) save();
         });
     });
@@ -989,6 +1011,7 @@ function getProviderConfig(provider = getActiveProvider()) {
 
 function getProviderModel(kind = 'main', provider = getActiveProvider()) {
     const cfg = getProviderConfig(provider);
+    if (kind === 'enhance') return state.enhanceModel || cfg.models.enhance || MODEL;
     return cfg.models?.[kind] || cfg.models.main || MODEL;
 }
 
@@ -1003,7 +1026,7 @@ function syncCurrentApiKey() {
 
 function loadStoredApiKeys() {
     userApiKeys.hydra = localStorage.getItem(LLM_PROVIDERS.hydra.storageKey) || localStorage.getItem(LEGACY_KEY_STORAGE) || '';
-    userApiKeys.openrouter = localStorage.getItem(LLM_PROVIDERS.openrouter.storageKey) || '';
+    userApiKeys.openrouter = localStorage.getItem(LLM_PROVIDERS.openrouter?.storageKey) || '';
 }
 
 function saveApiKey(provider, key) {
@@ -1053,6 +1076,7 @@ function renderProviderSwitcher() {
     const enhanceExec = resolveExecutionProvider('enhance', provider);
     const mainExecCfg = getProviderConfig(mainExec);
     const enhanceExecCfg = getProviderConfig(enhanceExec);
+    const enhanceModel = getProviderModel('enhance', provider);
     document.querySelectorAll('.provider-btn').forEach((btn) => {
         btn.classList.toggle('selected', btn.dataset.provider === provider);
     });
@@ -1060,7 +1084,7 @@ function renderProviderSwitcher() {
         el.innerHTML = `
             <div><strong>${cfg.icon} ${cfg.label}</strong></div>
             <div>Первый ответ: <code>${cfg.models.main}</code> · ${mainExecCfg.icon} ${mainExecCfg.label}</div>
-            <div>Полировка: <code>${cfg.models.enhance}</code> · ${enhanceExecCfg.icon} ${enhanceExecCfg.label}</div>
+            <div>Полировка: <code>${enhanceModel}</code> · ${enhanceExecCfg.icon} ${enhanceExecCfg.label}</div>
         `;
     });
 }
@@ -1414,6 +1438,7 @@ function applyStartSettings() {
         pace: state.pace,
         difficulty: state.difficulty,
         verbosity: state.verbosity,
+        enhanceModel: state.enhanceModel,
         startAge: state.startAge
     };
     state.age = state.startAge;
@@ -1786,7 +1811,7 @@ async function callLLM({
             // OpenRouter всегда гоним через серверный маршрут.
             if (executionProvider === 'openrouter') {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 120000);
+                const timeoutId = setTimeout(() => controller.abort(), 280000);
                 const response = await fetch(cfg.serverPath, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1806,7 +1831,7 @@ async function callLLM({
             // Hydra можно вызывать напрямую пользовательским ключом.
             if (executionProvider === 'hydra' && providerApiKey) {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 120000);
+                const timeoutId = setTimeout(() => controller.abort(), 280000);
                 const response = await fetch(cfg.directUrl, {
                     method: 'POST',
                     headers: {
@@ -1833,7 +1858,7 @@ async function callLLM({
                 throw new Error(`Для локальной разработки необходимо ввести API ключ ${cfg.label}.`);
             }
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 120000);
+            const timeoutId = setTimeout(() => controller.abort(), 280000);
             const response = await fetch(cfg.serverPath, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2989,6 +3014,8 @@ function tryLoadSavedGame() {
             state.city = 'moscow';
         }
         if (!state.provider) state.provider = getStoredProvider();
+        // Доступен только Hydra — старые сохранения с hybrid/openrouter сбрасываем
+        if (!LLM_PROVIDERS[state.provider]) state.provider = DEFAULT_PROVIDER;
         if (state.difficulty === undefined) state.difficulty = 'normal';
         if (state.miracleUsed === undefined) state.miracleUsed = false;
         if (state.miracleAvailable === undefined) state.miracleAvailable = state.difficulty === 'normal';
@@ -3003,6 +3030,7 @@ function tryLoadSavedGame() {
         if (!state.lastCompressTurn) state.lastCompressTurn = 0;
         if (!state.dialogArchive) state.dialogArchive = '';
         if (!state.verbosity) state.verbosity = 'normal';
+        if (!state.enhanceModel) state.enhanceModel = ENHANCE_MODEL_OPTIONS[1];
         if (!state.lastDialogCompress) state.lastDialogCompress = 0;
         if (!state.archiveEntries) state.archiveEntries = [];
         if (state.archiveViewIndex === undefined) state.archiveViewIndex = null;
@@ -3178,7 +3206,7 @@ async function callOpenRouterImageGeneration(promptText) {
 
     let response;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 минуты тайм-аут
+    const timeoutId = setTimeout(() => controller.abort(), 280000); // 280 секунд тайм-аут
 
     try {
         response = await fetch('/api/openrouter', {
@@ -3414,6 +3442,7 @@ ${archiveForEnhance}${canonBlock}`;
 };
 
 window.startGenImg = function(turnStr, style) {
+    if (!ILLUSTRATIONS_ENABLED) return; // иллюстрации временно отключены
     const turnNum = parseInt(turnStr, 10);
     const entry = state.archiveEntries.find(e => e.turn === turnNum);
     if (!entry) return;
@@ -3441,6 +3470,7 @@ window.startGenImg = function(turnStr, style) {
 };
 
 window.retryGenImg = function(turnStr) {
+    if (!ILLUSTRATIONS_ENABLED) return; // иллюстрации временно отключены
     const turnNum = parseInt(turnStr, 10);
     const entry = state.archiveEntries.find(e => e.turn === turnNum);
     if (!entry) return;
