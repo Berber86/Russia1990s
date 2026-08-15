@@ -2827,3 +2827,123 @@ button:disabled {
 
     .settings-tabs::-webkit-scrollbar { display: none; }
 }
+
+/* ============================================================
+   STAGE 7/9 — НАСТРОЙКИ И PRODUCTION POLISH
+   ============================================================ */
+
+.is-hidden { display: none !important; }
+
+.settings-block-gap { margin-top: 16px; }
+.settings-label--spaced { margin-bottom: 12px; }
+.settings-info--spaced { margin-top: 14px; }
+.settings-tip--spaced { margin-top: 14px; }
+
+.settings-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.settings-tab-btn {
+    white-space: nowrap;
+}
+
+.settings-advanced--first {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.developer-note {
+    margin-top: 18px;
+    padding: 13px 15px;
+    border-left: 2px solid var(--amber);
+    background: var(--amber-soft);
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-size: 0.94rem;
+    line-height: 1.55;
+}
+
+.confirm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+}
+
+.confirm-sheet {
+    position: relative;
+    z-index: 1;
+    width: min(460px, calc(100% - 28px));
+    margin: max(80px, 15vh) auto 0;
+    padding: 26px;
+    border: 1px solid color-mix(in srgb, var(--rust) 42%, var(--line));
+    border-radius: var(--radius-xl);
+    background: var(--paper-1);
+    box-shadow: var(--shadow-deep);
+    animation: stepIn 0.25s ease;
+}
+
+.confirm-sheet__eyebrow {
+    color: var(--rust);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.confirm-sheet h3 {
+    margin: 0 0 10px;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 1.55rem;
+    font-weight: 500;
+    line-height: 1.15;
+}
+
+.confirm-sheet p {
+    margin: 0;
+    color: var(--ink-soft);
+    line-height: 1.6;
+}
+
+.confirm-sheet__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    margin-top: 22px;
+}
+
+.confirm-sheet__actions .control-btn {
+    width: 100%;
+    min-height: 46px;
+}
+
+.control-btn--danger {
+    border-color: color-mix(in srgb, var(--rust) 55%, var(--line-strong));
+}
+
+.loading-message {
+    margin-top: 0.5rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85em;
+}
+
+/* Служебная разметка не должна протекать в пользовательский визуальный слой. */
+.retro-loader-title .ui-icon,
+.illustration-text .ui-icon,
+.illustration-btn .ui-icon {
+    margin-right: 0.28em;
+}
+
+@media (max-width: 480px) {
+    .confirm-sheet { padding: 22px 18px; }
+    .confirm-sheet__actions { grid-template-columns: 1fr; }
+}
+
+.loading-container { display: block; }
+.loading-container.is-hidden { display: none !important; }

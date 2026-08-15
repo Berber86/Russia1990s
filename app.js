@@ -225,6 +225,10 @@ const els = {
     settingsModal: document.getElementById('settings-modal'),
     settingsBackdrop: document.getElementById('settings-backdrop'),
     settingsCloseBtn: document.getElementById('settings-close-btn'),
+    resetConfirmModal: document.getElementById('reset-confirm-modal'),
+    resetConfirmBackdrop: document.getElementById('reset-confirm-backdrop'),
+    resetCancelBtn: document.getElementById('reset-cancel-btn'),
+    resetConfirmBtn: document.getElementById('reset-confirm-btn'),
     setupProgressFill: document.getElementById('setup-progress-fill'),
     archiveStrip: document.getElementById('archive-strip'),
     archivePrevBtn: document.getElementById('archive-prev-btn'),
@@ -1028,6 +1032,30 @@ window.resetGame = () => {
     localStorage.removeItem(STATE_STORAGE_KEY);
     location.reload();
 };
+
+function closeResetConfirmation() {
+    els.resetConfirmModal?.classList.add('hidden');
+    els.resetConfirmModal?.setAttribute('aria-hidden', 'true');
+}
+
+window.requestResetGame = () => {
+    if (!els.resetConfirmModal) {
+        if (window.confirm('Сбросить текущую историю? Это действие нельзя отменить.')) window.resetGame();
+        return;
+    }
+    els.resetConfirmModal.classList.remove('hidden');
+    els.resetConfirmModal.setAttribute('aria-hidden', 'false');
+    els.resetConfirmBtn?.focus();
+};
+
+function setupResetConfirmation() {
+    els.resetCancelBtn?.addEventListener('click', closeResetConfirmation);
+    els.resetConfirmBackdrop?.addEventListener('click', closeResetConfirmation);
+    els.resetConfirmBtn?.addEventListener('click', () => window.resetGame());
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !els.resetConfirmModal?.classList.contains('hidden')) closeResetConfirmation();
+    });
+}
 
 function isLocalEnvironment() {
     return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -2983,7 +3011,7 @@ function renderUI() {
                 </span>
                 <span class="choice-btn__arrow" aria-hidden="true">↺</span>
             `;
-            btn.onclick = resetGame;
+            btn.onclick = window.requestResetGame;
             els.choices.appendChild(btn);
         } else if (state.lastChoices) {
             // Плашка финальных сдвигов статов (после фильтров вязкости)
@@ -3157,6 +3185,7 @@ loadStoredApiKeys();
 syncCurrentApiKey();
 setupProviderSwitcher();
 setupSettingsModal();
+setupResetConfirmation();
 setupArchiveControls();
 setupLorePanels();
 renderProviderSwitcher();

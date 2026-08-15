@@ -206,7 +206,7 @@
                     <section class="setup-step" data-step="3" data-wizard-group="2">
                         <div class="setup-section location-section">
                             <h3>Где именно</h3>
-                            <div class="setup-row" id="region-select-row" style="display:none;">
+                            <div class="setup-row" id="region-select-row" class="is-hidden">
                                 <label>Регион:</label>
                                 <select id="region-select" class="region-select">
                                     <option value="central">Центральная Россия</option>
@@ -343,6 +343,7 @@
             <div class="settings-tabs">
                 <button type="button" class="settings-tab-btn selected" data-stab="connection">Соединение</button>
                 <button type="button" class="settings-tab-btn" data-stab="narration">Повествование</button>
+                <button type="button" class="settings-tab-btn" data-stab="developer">Разработчик</button>
             </div>
 
             <!-- Вкладка: Соединение -->
@@ -353,7 +354,7 @@
                         <button type="button" class="provider-btn" data-provider="hydra">Hydra</button>
                     </div>
                     <div class="provider-models" data-provider-models></div>
-                    <div class="enhance-model-block" style="margin-top:16px;">
+                    <div class="enhance-model-block settings-block-gap">
                         <div class="provider-switch-title">Модель полировки текста</div>
                         <div class="option-buttons" id="settings-enhance-model-btns">
                             <button type="button" class="option-btn" data-value="gemini-3.1-pro">Gemini 3.1 Pro</button>
@@ -368,8 +369,29 @@
                         Можно оставить пустым, если на сервере настроен ключ для выбранного провайдера.
                     </div>
                 </div>
-                <div class="settings-advanced">
-                    <div class="settings-label">Для разработчика</div>
+            </div>
+
+            <!-- Вкладка: Повествование -->
+            <div class="settings-tab-panel hidden" id="stab-narration">
+                <div class="settings-label settings-label--spaced">Стиль и объём текста</div>
+                <div class="option-buttons" id="settings-verbosity-btns">
+                    <button class="option-btn" data-value="concise">Лаконично</button>
+                    <button class="option-btn selected" data-value="normal">Обычно</button>
+                    <button class="option-btn" data-value="detailed">Подробно</button>
+                </div>
+                <div class="verbosity-info settings-info--spaced" id="settings-verbosity-info">
+                    <strong>Обычно:</strong> сбалансированный объём текста, живые детали без излишеств. Лимит — 5 000 токенов.
+                </div>
+                <div class="setup-tip settings-tip--spaced">
+                    <strong>Подсказка:</strong>
+                    смена стиля применяется со следующего хода. Не влияет на уже написанную историю.
+                </div>
+            </div>
+
+            <!-- Вкладка: Разработчик -->
+            <div class="settings-tab-panel hidden" id="stab-developer">
+                <div class="settings-advanced settings-advanced--first">
+                    <div class="settings-label">Служебные инструменты</div>
                     <label class="settings-switch">
                         <input type="checkbox" id="admin-tools-toggle">
                         <span class="settings-switch__track" aria-hidden="true"><span></span></span>
@@ -379,23 +401,21 @@
                         </span>
                     </label>
                 </div>
+                <p class="developer-note">Эти инструменты нужны для диагностики запросов и проверки промптов. Они не влияют на ход игры.</p>
             </div>
+        </div>
+    </div>
 
-            <!-- Вкладка: Повествование -->
-            <div class="settings-tab-panel hidden" id="stab-narration">
-                <div class="settings-label" style="margin-bottom:12px;">Стиль и объём текста</div>
-                <div class="option-buttons" id="settings-verbosity-btns">
-                    <button class="option-btn" data-value="concise">Лаконично</button>
-                    <button class="option-btn selected" data-value="normal">Обычно</button>
-                    <button class="option-btn" data-value="detailed">Подробно</button>
-                </div>
-                <div class="verbosity-info" id="settings-verbosity-info" style="margin-top:14px;">
-                    <strong>Обычно:</strong> сбалансированный объём текста, живые детали без излишеств. Лимит — 5 000 токенов.
-                </div>
-                <div class="setup-tip" style="margin-top:14px;">
-                    <strong>Подсказка:</strong>
-                    смена стиля применяется со следующего хода. Не влияет на уже написанную историю.
-                </div>
+    <!-- Confirm reset -->
+    <div class="confirm-modal hidden" id="reset-confirm-modal" aria-hidden="true">
+        <div class="settings-backdrop" id="reset-confirm-backdrop"></div>
+        <div class="confirm-sheet" role="dialog" aria-modal="true" aria-labelledby="reset-confirm-title">
+            <div class="confirm-sheet__eyebrow">Начать заново</div>
+            <h3 id="reset-confirm-title">Сбросить текущую историю?</h3>
+            <p>Прогресс героя и накопленные события будут удалены. Это действие нельзя отменить.</p>
+            <div class="confirm-sheet__actions">
+                <button type="button" class="control-btn control-btn--ghost" id="reset-cancel-btn">Оставить историю</button>
+                <button type="button" class="control-btn control-btn--danger" id="reset-confirm-btn">Сбросить игру</button>
             </div>
         </div>
     </div>
@@ -425,7 +445,7 @@
                 <div class="story-shell">
                     <div id="story-display" class="story-content" aria-live="polite" aria-atomic="false"></div>
                 </div>
-                <div class="loading-container" id="loader" role="status" aria-live="polite" style="display:none;"><div class="loading-bar"></div><div class="loading-message" id="loader-message" style="text-align:center; font-size:0.85em; color:var(--muted); margin-top:0.5rem;"></div></div>
+                <div class="loading-container is-hidden" id="loader" role="status" aria-live="polite"><div class="loading-bar"></div><div class="loading-message" id="loader-message"></div></div>
                 <div class="choices-wrap choices-wrap--minimal" id="choices-wrap">
                     <div class="choices" id="choices-display" aria-live="polite"></div>
                 </div>
@@ -470,7 +490,7 @@
                 <div class="controls-row controls-row--stack">
                     <button onclick="copyCurrentPeriodToClipboard()" class="control-btn"><svg class="ui-icon"><use href="#icon-copy"></use></svg> Период</button>
                     <button onclick="copyHistoryToClipboard()" class="control-btn"><svg class="ui-icon"><use href="#icon-clipboard"></use></svg> Вся история</button>
-                    <button onclick="resetGame()" class="control-btn control-btn--danger"><svg class="ui-icon"><use href="#icon-refresh"></use></svg> Сброс</button>
+                    <button onclick="requestResetGame()" class="control-btn control-btn--danger"><svg class="ui-icon"><use href="#icon-refresh"></use></svg> Сброс</button>
                 </div>
 
                 <div class="support-card support-card--sidebar">
