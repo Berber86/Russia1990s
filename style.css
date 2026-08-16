@@ -4397,3 +4397,274 @@ body[data-screen="game"] .story-shell::after {
         display: none;
     }
 }
+
+/* ---------- CYCLE 4: RECORD ORIENTATION ---------- */
+/* A quiet editorial passport keeps time and place with the prose without
+   imitating a historical source or introducing any fictional facts. */
+.story-record-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 7px 11px;
+    margin: 0 0 clamp(22px, 3vw, 30px);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-family: var(--mono);
+    font-size: 0.61rem;
+    letter-spacing: 0.095em;
+    line-height: 1.5;
+    text-transform: uppercase;
+}
+
+.story-record-header__kind {
+    color: var(--amber);
+}
+
+.story-record-header__number {
+    padding-left: 11px;
+    border-left: 1px solid var(--line-strong);
+    color: var(--ink-soft);
+}
+
+.story-record-header__context {
+    color: var(--ink-dim);
+    font-style: normal;
+    text-transform: none;
+}
+
+@media (max-width: 700px) {
+    .story-record-header {
+        gap: 6px 9px;
+        margin-bottom: 22px;
+        padding-bottom: 10px;
+        font-size: 0.56rem;
+        letter-spacing: 0.07em;
+    }
+
+    .story-record-header__context {
+        flex-basis: 100%;
+    }
+}
+
+/* ---------- CYCLE 4: CHRONICLE ORIENTATION ---------- */
+/* The archive stays a reading aid: position and span are named in text,
+   while its controls remain compact enough not to compete with the story. */
+.archive-strip {
+    gap: 9px;
+    padding: 9px 12px;
+}
+
+.archive-context {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    gap: 3px;
+    text-align: center;
+}
+
+.archive-label {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ink-soft);
+    font-size: 0.66rem;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.archive-range {
+    overflow: hidden;
+    color: var(--ink-dim);
+    font-family: var(--serif);
+    font-size: 0.76rem;
+    font-style: italic;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.archive-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.archive-btn--current {
+    width: auto;
+    min-width: 32px;
+    gap: 5px;
+    padding: 0 8px;
+    font-family: var(--mono);
+    font-size: 0.56rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.archive-btn--current .ui-icon {
+    width: 13px;
+    height: 13px;
+}
+
+@media (max-width: 560px) {
+    .archive-strip {
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .archive-btn--current {
+        width: 32px;
+        padding: 0;
+    }
+
+    .archive-btn--current span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .archive-label { font-size: 0.59rem; }
+    .archive-range { font-size: 0.7rem; }
+}
+
+/* ---------- CYCLE 4: READING MODES ---------- */
+.settings-reading-block {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+}
+
+.reading-mode-info {
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    background: var(--paper-0);
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-size: 0.94rem;
+    line-height: 1.6;
+}
+
+/* Settings are local to the reader. The story and game data stay untouched. */
+body[data-reading-mode="calm"] .story-content {
+    font-size: clamp(1.12rem, 1.45vw, 1.28rem);
+    line-height: 2.04;
+}
+
+body[data-reading-mode="calm"] .story-shell {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+body[data-reading-mode="calm"] .story-shell::before,
+body[data-reading-mode="calm"] .story-shell::after {
+    display: none;
+}
+
+body[data-reading-mode="high-contrast"] .story-shell {
+    border-color: var(--ink-soft);
+    background: var(--paper-0);
+    box-shadow: none;
+}
+
+body[data-reading-mode="high-contrast"] .story-content {
+    font-size: clamp(1.12rem, 1.45vw, 1.28rem);
+    line-height: 2.08;
+    color: var(--ink);
+}
+
+body[data-reading-mode="high-contrast"] .story-record-header,
+body[data-reading-mode="high-contrast"] .choices-wrap {
+    border-color: var(--ink-soft);
+}
+
+body[data-reading-mode="high-contrast"] .story-shell::before,
+body[data-reading-mode="high-contrast"] .story-shell::after {
+    display: none;
+}
+
+body[data-reading-mode="high-contrast"] .story-content > p:first-of-type::first-letter {
+    color: var(--ink);
+}
+
+@media (max-width: 700px) {
+    body[data-reading-mode="calm"] .story-content,
+    body[data-reading-mode="high-contrast"] .story-content {
+        font-size: 1.08rem;
+        line-height: 1.95;
+    }
+}
+
+/* ---------- CYCLE 4: OPTIONAL READING BOOKMARK ---------- */
+/* It never scrolls on load. The reader explicitly chooses to return. */
+.continue-reading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    align-items: center;
+    width: min(62ch, 100%);
+    margin: 0 auto 2px;
+    padding: 11px 14px;
+    border: 1px solid var(--line-warm);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--amber-soft) 48%, var(--paper-2));
+    color: var(--ink-soft);
+    text-align: left;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.continue-reading:hover {
+    border-color: var(--amber);
+    background: var(--amber-soft);
+}
+
+.continue-reading__eyebrow {
+    grid-column: 1;
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 0.54rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.continue-reading__copy {
+    grid-column: 1;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.continue-reading__hint {
+    grid-column: 1;
+    color: var(--ink-dim);
+    font-family: var(--serif);
+    font-size: 0.79rem;
+    font-style: italic;
+}
+
+.continue-reading__arrow {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    color: var(--amber);
+    font-family: var(--mono);
+}
+
+@media (max-width: 700px) {
+    .continue-reading {
+        width: 100%;
+        margin-bottom: 0;
+    }
+}

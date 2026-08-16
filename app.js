@@ -42,6 +42,9 @@ const STATE_STORAGE_KEY = 'rpg90_state';
 const LEGACY_KEY_STORAGE = 'rpg90_key';
 const PROVIDER_STORAGE_KEY = 'rpg90_provider';
 const ADMIN_TOOLS_STORAGE_KEY = 'rpg90_admin_tools';
+const READING_MODE_STORAGE_KEY = 'rpg90_reading_mode';
+const READING_BOOKMARK_STORAGE_KEY = 'rpg90_reading_bookmark';
+const READING_MODES = new Set(['standard', 'calm', 'high-contrast']);
 
 function getStoredProvider() {
     try {
@@ -57,6 +60,98 @@ function persistProviderChoice(provider) {
     } catch (e) {
         console.warn('Не удалось сохранить provider:', e);
     }
+}
+
+function getStoredReadingMode() {
+    try {
+        const mode = localStorage.getItem(READING_MODE_STORAGE_KEY);
+        return READING_MODES.has(mode) ? mode : 'standard';
+    } catch {
+        return 'standard';
+    }
+}
+
+function syncReadingModeControls(mode = getStoredReadingMode()) {
+    document.querySelectorAll('#settings-reading-mode-btns .option-btn').forEach((button) => {
+        const selected = button.dataset.readingMode === mode;
+        setToggleSelected(button, selected);
+    });
+
+    const info = document.getElementById('settings-reading-mode-info');
+    if (!info) return;
+    const descriptions = {
+        standard: 'Обычный: исходная типографика и архивные детали страницы.',
+        calm: 'Спокойное чтение: больше воздуха между строками и менее заметные детали страницы.',
+        'high-contrast': 'Высокая читаемость: более контрастная страница, увеличенный интерлиньяж и минимум декора.'
+    };
+    info.textContent = descriptions[mode] || descriptions.standard;
+}
+
+function applyReadingMode(mode) {
+    const nextMode = READING_MODES.has(mode) ? mode : 'standard';
+    document.body.dataset.readingMode = nextMode;
+    try {
+        localStorage.setItem(READING_MODE_STORAGE_KEY, nextMode);
+    } catch {}
+    syncReadingModeControls(nextMode);
+}
+
+function getCurrentReadingBookmarkKey() {
+    const currentEntry = getSelectedArchiveEntry();
+    if (isArchiveMode() || !currentEntry?.turn) return '';
+    return `turn:${currentEntry.turn}`;
+}
+
+function getReadingBookmark() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(READING_BOOKMARK_STORAGE_KEY) || 'null');
+        if (!saved || typeof saved.key !== 'string' || !Number.isFinite(saved.progress)) return null;
+        return saved;
+    } catch {
+        return null;
+    }
+}
+
+function persistReadingBookmark(progress) {
+    const key = getCurrentReadingBookmarkKey();
+    if (!key || progress < 0.06 || progress > 0.97) return;
+    try {
+        localStorage.setItem(READING_BOOKMARK_STORAGE_KEY, JSON.stringify({ key, progress }));
+    } catch {}
+}
+
+function updateContinueReadingButton() {
+    const button = els.continueReadingBtn;
+    if (!button) return;
+    const bookmark = getReadingBookmark();
+    const available = Boolean(bookmark && bookmark.key === getCurrentReadingBookmarkKey() && !isArchiveMode());
+    button.classList.toggle('hidden', !available);
+    button.setAttribute('aria-hidden', String(!available));
+}
+
+function continueReadingFromBookmark() {
+    const bookmark = getReadingBookmark();
+    const storyShell = document.querySelector('.story-shell');
+    if (!bookmark || bookmark.key !== getCurrentReadingBookmarkKey() || !storyShell) return;
+
+    const shellTop = window.scrollY + storyShell.getBoundingClientRect().top;
+    const target = Math.max(0, shellTop + (storyShell.offsetHeight * bookmark.progress) - (window.innerHeight * 0.2));
+    window.scrollTo({ top: target, behavior: 'smooth' });
+    showToast('Продолжаем чтение');
+}
+
+let readingBookmarkFrame = null;
+function trackReadingPosition() {
+    if (readingBookmarkFrame || document.body.dataset.screen !== 'game' || isArchiveMode()) return;
+    readingBookmarkFrame = window.requestAnimationFrame(() => {
+        readingBookmarkFrame = null;
+        const storyShell = document.querySelector('.story-shell');
+        const storyText = els.story?.textContent?.trim();
+        if (!storyShell || !storyText || !getCurrentReadingBookmarkKey()) return;
+        const shellTop = window.scrollY + storyShell.getBoundingClientRect().top;
+        const progress = (window.scrollY - shellTop + (window.innerHeight * 0.2)) / Math.max(storyShell.offsetHeight, 1);
+        persistReadingBookmark(Math.max(0, Math.min(progress, 1)));
+    });
 }
 
 function createDefaultState() {
@@ -205,6 +300,7 @@ const els = {
     locationDisplay: document.getElementById('location-display'),
     story: document.getElementById('story-display'),
     storyErrorSlot: document.getElementById('story-error-slot'),
+    continueReadingBtn: document.getElementById('continue-reading-btn'),
     choices: document.getElementById('choices-display'),
     stats: document.getElementById('stats-display'),
     npcs: document.getElementById('npcs-display'),
@@ -242,6 +338,7 @@ const els = {
     archiveCurrentBtn: document.getElementById('archive-current-btn'),
     archiveCopyBtn: document.getElementById('archive-copy-btn'),
     archiveLabel: document.getElementById('archive-label'),
+    archiveRange: document.getElementById('archive-range'),
     // lore panels
     npcsPanel: document.getElementById('npcs-panel'),
     npcsBackdrop: document.getElementById('npcs-backdrop'),
@@ -989,15 +1086,26 @@ function pushArchiveEntry(entry) {
 
 function renderArchiveStrip() {
     if (!els.archiveStrip) return;
-    const hasArchive = !!state.archiveEntries?.length;
+    const entries = state.archiveEntries || [];
+    const hasArchive = entries.length > 0;
     els.archiveStrip.style.display = hasArchive ? 'flex' : 'none';
     if (!hasArchive) return;
+
     const entry = getSelectedArchiveEntry();
     const isArchive = isArchiveMode();
-    const currentIndex = isArchive ? state.archiveViewIndex : state.archiveEntries.length - 1;
-    els.archiveLabel.textContent = entry
-        ? `${entry.dateLabel || ''}${entry.age ? ` · ${entry.age} лет` : ''}${isArchive ? '' : ' · сейчас'}`
-        : 'Текущий период';
+    const currentIndex = isArchive ? state.archiveViewIndex : entries.length - 1;
+    const position = currentIndex + 1;
+    const firstEntry = entries[0];
+    const lastEntry = entries[entries.length - 1];
+    const firstDate = firstEntry?.dateLabel || '';
+    const lastDate = lastEntry?.dateLabel || '';
+
+    els.archiveLabel.textContent = `Запись ${position} из ${entries.length} · ${isArchive ? 'архив' : 'сейчас'}`;
+    els.archiveRange.textContent = firstDate && lastDate
+        ? `Хроника: ${firstDate}${firstDate !== lastDate ? ` — ${lastDate}` : ''}`
+        : 'Личная хроника';
+    els.archiveLabel.title = els.archiveLabel.textContent;
+    els.archiveRange.title = els.archiveRange.textContent;
     els.archivePrevBtn.disabled = currentIndex <= 0;
     els.archiveNextBtn.disabled = !isArchive;
     els.archiveCurrentBtn.disabled = !isArchive;
@@ -1110,6 +1218,7 @@ function openSettingsModal() {
     if (!els.settingsModal) return;
     syncSettingsVerbosityBtns();
     syncSettingsEnhanceModelBtns();
+    syncReadingModeControls();
     openOverlay(els.settingsModal, els.settingsCloseBtn);
 }
 
@@ -1200,6 +1309,11 @@ function setupSettingsModal() {
         });
     });
     activateSettingsTab(settingsTabs.find((button) => button.classList.contains('selected'))?.dataset.stab || 'connection');
+
+    // ── Локальные режимы чтения: не входят в игровое сохранение. ──
+    document.querySelectorAll('#settings-reading-mode-btns .option-btn').forEach((button) => {
+        button.addEventListener('click', () => applyReadingMode(button.dataset.readingMode));
+    });
 
     // ── Кнопки verbosity в модалке настроек ──
     document.querySelectorAll('#settings-verbosity-btns .option-btn').forEach(btn => {
@@ -3378,7 +3492,23 @@ function renderUI() {
     els.modeDisplay.innerHTML = modeHTML;
     renderStatusGraphic();
 
-    els.story.innerHTML = buildArchiveStoryMarkup(archiveEntry);
+    const storyMarkup = buildArchiveStoryMarkup(archiveEntry);
+    const recordTurn = archiveEntry?.turn ?? state.turnCount;
+    const hasStory = Boolean((archiveEntry?.storyEnhanced || archiveEntry?.storyOriginal || archiveEntry?.story || state.lastStory || '').trim());
+    const recordKind = archiveMode ? 'Архивная запись' : 'Текущая запись';
+    const recordNumber = Number.isFinite(Number(recordTurn)) && Number(recordTurn) > 0
+        ? `Ход ${String(recordTurn).padStart(2, '0')}`
+        : 'Первый ход';
+    const recordMeta = `${shownAge} лет · ${locInfo.fullName}`;
+    const recordHeader = hasStory ? `
+        <header class="story-record-header" aria-label="Сведения о записи">
+            <span class="story-record-header__kind">${recordKind}</span>
+            <span class="story-record-header__number">${recordNumber}</span>
+            <time class="story-record-header__context">${escapeHTML(shownDate)} · ${escapeHTML(recordMeta)}</time>
+        </header>
+    ` : '';
+    els.story.innerHTML = recordHeader + storyMarkup;
+    updateContinueReadingButton();
 
     els.choices.innerHTML = '';
     if (els.choicesWrap) {
@@ -3580,12 +3710,15 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
 };
 
 loadStoredApiKeys();
+applyReadingMode(getStoredReadingMode());
 syncCurrentApiKey();
 setupDialogFocusManagement();
 setupProviderSwitcher();
 setupSettingsModal();
 setupResetConfirmation();
 setupArchiveControls();
+els.continueReadingBtn?.addEventListener('click', continueReadingFromBookmark);
+window.addEventListener('scroll', trackReadingPosition, { passive: true });
 setupLorePanels();
 setupSidebarDrawer();
 setupLoaderCancel();
