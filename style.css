@@ -4532,3 +4532,70 @@ body[data-screen="game"] .story-shell::after {
     .archive-label { font-size: 0.59rem; }
     .archive-range { font-size: 0.7rem; }
 }
+
+/* ---------- CYCLE 4: READING MODES ---------- */
+.settings-reading-block {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+}
+
+.reading-mode-info {
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    background: var(--paper-0);
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-size: 0.94rem;
+    line-height: 1.6;
+}
+
+/* Settings are local to the reader. The story and game data stay untouched. */
+body[data-reading-mode="calm"] .story-content {
+    font-size: clamp(1.12rem, 1.45vw, 1.28rem);
+    line-height: 2.04;
+}
+
+body[data-reading-mode="calm"] .story-shell {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+body[data-reading-mode="calm"] .story-shell::before,
+body[data-reading-mode="calm"] .story-shell::after {
+    display: none;
+}
+
+body[data-reading-mode="high-contrast"] .story-shell {
+    border-color: var(--ink-soft);
+    background: var(--paper-0);
+    box-shadow: none;
+}
+
+body[data-reading-mode="high-contrast"] .story-content {
+    font-size: clamp(1.12rem, 1.45vw, 1.28rem);
+    line-height: 2.08;
+    color: var(--ink);
+}
+
+body[data-reading-mode="high-contrast"] .story-record-header,
+body[data-reading-mode="high-contrast"] .choices-wrap {
+    border-color: var(--ink-soft);
+}
+
+body[data-reading-mode="high-contrast"] .story-shell::before,
+body[data-reading-mode="high-contrast"] .story-shell::after {
+    display: none;
+}
+
+body[data-reading-mode="high-contrast"] .story-content > p:first-of-type::first-letter {
+    color: var(--ink);
+}
+
+@media (max-width: 700px) {
+    body[data-reading-mode="calm"] .story-content,
+    body[data-reading-mode="high-contrast"] .story-content {
+        font-size: 1.08rem;
+        line-height: 1.95;
+    }
+}

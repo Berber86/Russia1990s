@@ -42,6 +42,8 @@ const STATE_STORAGE_KEY = 'rpg90_state';
 const LEGACY_KEY_STORAGE = 'rpg90_key';
 const PROVIDER_STORAGE_KEY = 'rpg90_provider';
 const ADMIN_TOOLS_STORAGE_KEY = 'rpg90_admin_tools';
+const READING_MODE_STORAGE_KEY = 'rpg90_reading_mode';
+const READING_MODES = new Set(['standard', 'calm', 'high-contrast']);
 
 function getStoredProvider() {
     try {
@@ -57,6 +59,40 @@ function persistProviderChoice(provider) {
     } catch (e) {
         console.warn('Не удалось сохранить provider:', e);
     }
+}
+
+function getStoredReadingMode() {
+    try {
+        const mode = localStorage.getItem(READING_MODE_STORAGE_KEY);
+        return READING_MODES.has(mode) ? mode : 'standard';
+    } catch {
+        return 'standard';
+    }
+}
+
+function syncReadingModeControls(mode = getStoredReadingMode()) {
+    document.querySelectorAll('#settings-reading-mode-btns .option-btn').forEach((button) => {
+        const selected = button.dataset.readingMode === mode;
+        setToggleSelected(button, selected);
+    });
+
+    const info = document.getElementById('settings-reading-mode-info');
+    if (!info) return;
+    const descriptions = {
+        standard: 'Обычный: исходная типографика и архивные детали страницы.',
+        calm: 'Спокойное чтение: больше воздуха между строками и менее заметные детали страницы.',
+        'high-contrast': 'Высокая читаемость: более контрастная страница, увеличенный интерлиньяж и минимум декора.'
+    };
+    info.textContent = descriptions[mode] || descriptions.standard;
+}
+
+function applyReadingMode(mode) {
+    const nextMode = READING_MODES.has(mode) ? mode : 'standard';
+    document.body.dataset.readingMode = nextMode;
+    try {
+        localStorage.setItem(READING_MODE_STORAGE_KEY, nextMode);
+    } catch {}
+    syncReadingModeControls(nextMode);
 }
 
 function createDefaultState() {
@@ -1122,6 +1158,7 @@ function openSettingsModal() {
     if (!els.settingsModal) return;
     syncSettingsVerbosityBtns();
     syncSettingsEnhanceModelBtns();
+    syncReadingModeControls();
     openOverlay(els.settingsModal, els.settingsCloseBtn);
 }
 
@@ -1212,6 +1249,11 @@ function setupSettingsModal() {
         });
     });
     activateSettingsTab(settingsTabs.find((button) => button.classList.contains('selected'))?.dataset.stab || 'connection');
+
+    // ── Локальные режимы чтения: не входят в игровое сохранение. ──
+    document.querySelectorAll('#settings-reading-mode-btns .option-btn').forEach((button) => {
+        button.addEventListener('click', () => applyReadingMode(button.dataset.readingMode));
+    });
 
     // ── Кнопки verbosity в модалке настроек ──
     document.querySelectorAll('#settings-verbosity-btns .option-btn').forEach(btn => {
@@ -3607,6 +3649,7 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
 };
 
 loadStoredApiKeys();
+applyReadingMode(getStoredReadingMode());
 syncCurrentApiKey();
 setupDialogFocusManagement();
 setupProviderSwitcher();

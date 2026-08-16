@@ -24,6 +24,8 @@ assert.match(html, /<nav class="archive-strip" id="archive-strip" aria-label="Н
 assert.match(html, /id="archive-label" role="status" aria-live="polite"/, 'Archive position must be announced as text');
 assert.match(html, /id="archive-range"/, 'Archive must expose its chronological span');
 assert.match(html, /id="archive-current-btn" aria-label="К текущей записи"/, 'Archive must offer an explicit way back to the current entry');
+assert.match(html, /id="settings-reading-mode-btns" role="group"/, 'Reading preferences must be a named control group');
+assert.match(html, /data-reading-mode="high-contrast"/, 'Reading preferences must offer a high-readability option');
 
 assert.match(js, /const recordKind = archiveMode \? 'Архивная запись' : 'Текущая запись'/, 'Story record must clearly distinguish archive and current modes');
 assert.match(js, /const recordHeader = hasStory \?/, 'Record passport must not render before a story exists');
@@ -31,6 +33,9 @@ assert.match(js, /class="story-record-header" aria-label="Сведения о з
 assert.match(js, /<time class="story-record-header__context">/, 'Record date and location must be exposed as time context');
 assert.match(js, /Запись \$\{position\} из \$\{entries\.length\} · \$\{isArchive \? 'архив' : 'сейчас'\}/, 'Archive must name its current position and mode');
 assert.match(js, /Хроника: \$\{firstDate\}/, 'Archive span must be derived from saved entries');
+assert.match(js, /const READING_MODE_STORAGE_KEY = 'rpg90_reading_mode'/, 'Reading preference must stay outside game state');
+assert.match(js, /function applyReadingMode\(mode\)/, 'Reading mode must apply immediately');
+assert.match(js, /localStorage\.setItem\(READING_MODE_STORAGE_KEY, nextMode\)/, 'Reading mode must persist locally');
 
 assert.doesNotMatch(js, /\balert\s*\(/, 'Blocking alert() calls are not allowed');
 assert.match(js, /openOverlay\(els\.resetConfirmModal, els\.resetCancelBtn\)/, 'Reset confirmation must focus the safe action first');
@@ -47,5 +52,7 @@ assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.game-status-btn\s*\{[\s\
 assert.match(css, /\.confirm-modal\s*\{\s*z-index:\s*1900/s, 'Reset confirmation must sit above the mobile dossier');
 assert.match(css, /\.story-record-header\s*\{[\s\S]*?flex-wrap:\s*wrap/s, 'Record passport must wrap instead of truncating on narrow screens');
 assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.story-record-header__context\s*\{[\s\S]*?flex-basis:\s*100%/s, 'Mobile record context must remain readable on its own line');
+assert.match(css, /body\[data-reading-mode="high-contrast"\] \.story-shell/, 'High-readability mode must alter the reading surface');
+assert.match(css, /body\[data-reading-mode="calm"\] \.story-content/, 'Calm mode must alter reading rhythm');
 
 console.log('UI contract checks passed');
