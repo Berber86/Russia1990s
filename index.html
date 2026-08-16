@@ -72,6 +72,21 @@
         <symbol id="icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></symbol>
         <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M19.1 4.9l-2.2 2.2M7.1 16.9l-2.2 2.2"/></symbol>
         <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z"/></symbol>
+        <symbol id="icon-person" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+        <symbol id="icon-girl" viewBox="0 0 24 24"><circle cx="12" cy="7" r="3.5"/><path d="M8.5 7c0-3 1.4-5 3.5-5s3.5 2 3.5 5M9 11l-4 10h14l-4-10M12 14v7"/></symbol>
+        <symbol id="icon-paw" viewBox="0 0 24 24"><ellipse cx="12" cy="15.5" rx="5" ry="4"/><circle cx="6" cy="10" r="2"/><circle cx="10" cy="6.5" r="2"/><circle cx="14" cy="6.5" r="2"/><circle cx="18" cy="10" r="2"/></symbol>
+        <symbol id="icon-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16 7l2 2M13 10l2 2"/></symbol>
+        <symbol id="icon-camera" viewBox="0 0 24 24"><path d="M4 7h4l2-3h4l2 3h4v13H4V7Z"/><circle cx="12" cy="13" r="4"/></symbol>
+        <symbol id="icon-radio" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="m7 7 10-4M7 11h10M8 15h.01M12 15h5M8 18h.01M12 18h5"/></symbol>
+        <symbol id="icon-gamepad" viewBox="0 0 24 24"><path d="M7 9h10a5 5 0 0 1 4.5 7.2l-1 2a2 2 0 0 1-3.2.5L15 17H9l-2.3 1.7a2 2 0 0 1-3.2-.5l-1-2A5 5 0 0 1 7 9Z"/><path d="M7 12v4M5 14h4M16 13h.01M19 15h.01"/></symbol>
+        <symbol id="icon-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 4 4 4 4-4M3 11l5 1 2 8M21 11l-5 1-2 8"/></symbol>
+        <symbol id="icon-bike" viewBox="0 0 24 24"><circle cx="6" cy="17" r="4"/><circle cx="18" cy="17" r="4"/><path d="m6 17 5-8 3 8M9 12h7l2 5M9 7h4"/></symbol>
+        <symbol id="icon-tools" viewBox="0 0 24 24"><path d="M14 6a5 5 0 0 0 6 6l-9 9-4-4 9-9a5 5 0 0 0-2-6v4Z"/><path d="m4 4 6 6"/></symbol>
+        <symbol id="icon-shirt" viewBox="0 0 24 24"><path d="m8 4-5 3 3 5 2-1v10h8V11l2 1 3-5-5-3a4 4 0 0 1-8 0Z"/></symbol>
+        <symbol id="icon-food" viewBox="0 0 24 24"><path d="M5 10h14l-1 9H6l-1-9ZM8 10c0-3 1-5 4-7 3 2 4 4 4 7M4 21h16"/></symbol>
+        <symbol id="icon-gem" viewBox="0 0 24 24"><path d="m4 8 4-5h8l4 5-8 13L4 8Z"/><path d="M4 8h16M8 3l4 5 4-5M8 8l4 13 4-13"/></symbol>
+        <symbol id="icon-medal" viewBox="0 0 24 24"><circle cx="12" cy="15" r="5"/><path d="m9 10-3-7h5l1 4 1-4h5l-3 7M12 12v6"/></symbol>
+        <symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5M12 18h.01"/></symbol>
     </svg>
     <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Переключить тему" title="Переключить тему">
         <svg class="ui-icon theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true"><use href="#icon-sun"></use></svg>
@@ -124,8 +139,8 @@
                             <div class="setup-row setup-row-stack-mobile">
                                 <label>Пол:</label>
                                 <div class="option-buttons" id="gender-btns">
-                                    <button class="option-btn selected" data-value="male">♂ Мальчик</button>
-                                    <button class="option-btn" data-value="female">♀ Девочка</button>
+                                    <button class="option-btn selected" data-value="male"><svg class="ui-icon" aria-hidden="true"><use href="#icon-child"></use></svg> Мальчик</button>
+                                    <button class="option-btn" data-value="female"><svg class="ui-icon" aria-hidden="true"><use href="#icon-girl"></use></svg> Девочка</button>
                                 </div>
                             </div>
                             <div class="setup-row">
@@ -524,10 +539,10 @@
             </div>
         </div>
     </div>
-    <button class="dev-tool-fab" id="debug-log-fab" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--border); border-radius: 50%; width: 48px; height: 48px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--ink);">🐞</button>
+    <button class="dev-tool-fab" id="debug-log-fab" aria-label="Системный лог" title="Системный лог" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: var(--paper-2); border: 1px solid var(--line-strong); border-radius: 50%; width: 48px; height: 48px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--ink);"><svg class="ui-icon" aria-hidden="true"><use href="#icon-bug"></use></svg></button>
 
     <!-- Prompt Inspector Button -->
-    <button class="dev-tool-fab" id="prompt-fab" title="Инспектор промпта" style="position: fixed; bottom: 20px; right: 76px; z-index: 9999; background: var(--surface-2); border: 2px solid var(--line-warm, #c98a3a); border-radius: 50%; width: 48px; height: 48px; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--amber, #e8b061);">🔬</button>
+    <button class="dev-tool-fab" id="prompt-fab" aria-label="Инспектор промпта" title="Инспектор промпта" style="position: fixed; bottom: 20px; right: 76px; z-index: 9999; background: var(--paper-2); border: 1px solid var(--line-warm, #c98a3a); border-radius: 50%; width: 48px; height: 48px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); color: var(--amber, #e8b061);"><svg class="ui-icon" aria-hidden="true"><use href="#icon-flask"></use></svg></button>
 
     <!-- Prompt Inspector Modal -->
     <div class="settings-modal hidden" id="prompt-modal" aria-hidden="true" style="z-index: 10001;">
@@ -548,7 +563,7 @@
                 <button class="prompt-tab-btn" data-tab="enhance" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:var(--paper-2,#26201a); color:var(--ink-soft); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Шаг 3: Полировка (ручная)</button>
                 <div style="flex:1;"></div>
                 <button id="prompt-refresh-btn" title="Пересчитать промпт" style="padding:6px 12px; border-radius:6px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-dim); font-family:var(--mono); font-size:0.75rem; cursor:pointer;">↺ Обновить</button>
-                <button id="prompt-copy-btn" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-dim); font-family:var(--mono); font-size:0.75rem; cursor:pointer;">📋 Копировать</button>
+                <button id="prompt-copy-btn" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-dim); font-family:var(--mono); font-size:0.75rem; cursor:pointer;"><svg class="ui-icon" aria-hidden="true"><use href="#icon-copy"></use></svg> Копировать</button>
             </div>
 
             <!-- Meta info bar -->

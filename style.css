@@ -3256,3 +3256,28 @@ body[data-screen="game"] .story-content hr::before {
         box-shadow: none;
     }
 }
+
+/* Единый монохромный язык пиктограмм вместо разноцветных системных эмодзи. */
+.option-btn .ui-icon {
+    width: 1.1em;
+    height: 1.1em;
+    margin-right: 0.4em;
+    vertical-align: -0.16em;
+}
+
+.npc-card__portrait .ui-icon,
+.item-card__icon .ui-icon {
+    width: 23px;
+    height: 23px;
+    stroke-width: 1.55;
+}
+
+.dev-tool-fab .ui-icon {
+    width: 21px;
+    height: 21px;
+}
+
+.prompt-tab-btn .ui-icon,
+#prompt-copy-btn .ui-icon {
+    margin-right: 0.35em;
+}
