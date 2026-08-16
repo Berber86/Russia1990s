@@ -3923,3 +3923,57 @@ body[data-screen="game"] .story-content hr::before {
         clip-path: inset(50%);
     }
 }
+
+/* ============================================================
+   UX/UI CYCLE 2 — keyboard-safe dialogs and semantic controls
+   ============================================================ */
+
+body.dialog-open {
+    overflow: hidden !important;
+}
+
+/* Контент диалога сам управляет фокусом; рамка нужна только интерактивным
+   элементам внутри, а не всему листу после программного открытия. */
+[role="dialog"][tabindex="-1"]:focus {
+    outline: none;
+}
+
+.settings-tab-btn {
+    min-height: 44px;
+}
+
+.settings-tab-panel:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 5px;
+    border-radius: var(--radius-sm);
+}
+
+/* Подтверждение может быть вызвано из mobile dossier (z-index: 1700),
+   поэтому опасное действие обязано открываться поверх него. */
+.confirm-modal {
+    z-index: 1900;
+}
+
+.settings-backdrop,
+.lore-panel__backdrop,
+.illustration-modal__backdrop {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Длинная ошибка полировки может занять две строки — toast остаётся
+   читаемым и не превращается в чрезмерно вытянутую капсулу. */
+.app-toast {
+    border-radius: var(--radius-md);
+    line-height: 1.45;
+    text-align: center;
+}
+
+@media (max-width: 700px) {
+    .settings-tab-btn {
+        min-height: 42px;
+    }
+
+    .settings-tab-panel {
+        scroll-margin-top: 16px;
+    }
+}

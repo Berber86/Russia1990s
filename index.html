@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Эпоха Перемен</title>
-    <link rel="stylesheet" href="style.css?v=20260816-2">
-    <script type="module" src="app.js?v=20260816-2"></script>
+    <link rel="stylesheet" href="style.css?v=20260816-3">
+    <script type="module" src="app.js?v=20260816-3"></script>
     <link rel="preload" href="fonts/EBGaramond-400-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/EBGaramond-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/JetBrainsMono-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
@@ -322,8 +322,8 @@
 
     <!-- Settings Modal -->
     <div class="settings-modal hidden" id="settings-modal" aria-hidden="true">
-        <div class="settings-backdrop" id="settings-backdrop"></div>
-        <div class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div class="settings-backdrop" id="settings-backdrop" aria-hidden="true"></div>
+        <div class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1">
             <div class="settings-sheet__head">
                 <div>
                     <div class="setup-eyebrow">Настройки игры</div>
@@ -333,14 +333,14 @@
             </div>
 
             <!-- Табы -->
-            <div class="settings-tabs">
-                <button type="button" class="settings-tab-btn selected" data-stab="connection">Соединение</button>
-                <button type="button" class="settings-tab-btn" data-stab="narration">Повествование</button>
-                <button type="button" class="settings-tab-btn" data-stab="developer">Разработчик</button>
+            <div class="settings-tabs" role="tablist" aria-label="Разделы настроек">
+                <button type="button" class="settings-tab-btn selected" id="settings-tab-connection" data-stab="connection" role="tab" aria-selected="true" aria-controls="stab-connection" tabindex="0">Соединение</button>
+                <button type="button" class="settings-tab-btn" id="settings-tab-narration" data-stab="narration" role="tab" aria-selected="false" aria-controls="stab-narration" tabindex="-1">Повествование</button>
+                <button type="button" class="settings-tab-btn" id="settings-tab-developer" data-stab="developer" role="tab" aria-selected="false" aria-controls="stab-developer" tabindex="-1">Разработчик</button>
             </div>
 
             <!-- Вкладка: Соединение -->
-            <div class="settings-tab-panel" id="stab-connection">
+            <div class="settings-tab-panel" id="stab-connection" role="tabpanel" aria-labelledby="settings-tab-connection" tabindex="0">
                 <div class="provider-switch">
                     <div class="provider-switch-title">Провайдер</div>
                     <div class="provider-buttons">
@@ -365,7 +365,7 @@
             </div>
 
             <!-- Вкладка: Повествование -->
-            <div class="settings-tab-panel hidden" id="stab-narration">
+            <div class="settings-tab-panel hidden" id="stab-narration" role="tabpanel" aria-labelledby="settings-tab-narration" tabindex="0">
                 <div class="settings-label settings-label--spaced">Стиль и объём текста</div>
                 <div class="option-buttons" id="settings-verbosity-btns">
                     <button class="option-btn" data-value="concise">Лаконично</button>
@@ -382,7 +382,7 @@
             </div>
 
             <!-- Вкладка: Разработчик -->
-            <div class="settings-tab-panel hidden" id="stab-developer">
+            <div class="settings-tab-panel hidden" id="stab-developer" role="tabpanel" aria-labelledby="settings-tab-developer" tabindex="0">
                 <div class="settings-advanced settings-advanced--first">
                     <div class="settings-label">Служебные инструменты</div>
                     <label class="settings-switch">
@@ -409,11 +409,11 @@
 
     <!-- Confirm reset -->
     <div class="confirm-modal hidden" id="reset-confirm-modal" aria-hidden="true">
-        <div class="settings-backdrop" id="reset-confirm-backdrop"></div>
-        <div class="confirm-sheet" role="dialog" aria-modal="true" aria-labelledby="reset-confirm-title">
+        <div class="settings-backdrop" id="reset-confirm-backdrop" aria-hidden="true"></div>
+        <div class="confirm-sheet" role="dialog" aria-modal="true" aria-labelledby="reset-confirm-title" aria-describedby="reset-confirm-description" tabindex="-1">
             <div class="confirm-sheet__eyebrow">Начать заново</div>
             <h3 id="reset-confirm-title">Сбросить текущую историю?</h3>
-            <p>Прогресс героя и накопленные события будут удалены. Это действие нельзя отменить.</p>
+            <p id="reset-confirm-description">Прогресс героя и накопленные события будут удалены. Это действие нельзя отменить.</p>
             <div class="confirm-sheet__actions">
                 <button type="button" class="control-btn control-btn--ghost" id="reset-cancel-btn">Оставить историю</button>
                 <button type="button" class="control-btn control-btn--danger" id="reset-confirm-btn">Сбросить игру</button>
@@ -537,14 +537,14 @@
 
     <!-- NPC Panel — Альбом памяти -->
     <div class="lore-panel hidden" id="npcs-panel" aria-hidden="true">
-        <div class="lore-panel__backdrop" id="npcs-backdrop"></div>
-        <div class="lore-panel__sheet">
+        <div class="lore-panel__backdrop" id="npcs-backdrop" aria-hidden="true"></div>
+        <div class="lore-panel__sheet" role="dialog" aria-modal="true" aria-labelledby="npcs-panel-title" tabindex="-1">
             <div class="lore-panel__topbar">
                 <div class="lore-panel__eyebrow">Альбом памяти</div>
                 <button type="button" class="lore-panel__close" id="npcs-close" aria-label="Закрыть альбом"><svg class="ui-icon"><use href="#icon-close"></use></svg></button>
             </div>
             <div class="lore-panel__header">
-                <h2 class="lore-panel__title"><svg class="ui-icon"><use href="#icon-users"></use></svg> Близкие люди</h2>
+                <h2 class="lore-panel__title" id="npcs-panel-title"><svg class="ui-icon"><use href="#icon-users"></use></svg> Близкие люди</h2>
                 <p class="lore-panel__subtitle">Те, кто рядом. Те, кто был. Те, кто остался в памяти навсегда.</p>
             </div>
             <div class="lore-panel__grid" id="npcs-grid"></div>
@@ -554,14 +554,14 @@
 
     <!-- Items Panel — Сундук памяти -->
     <div class="lore-panel hidden" id="items-panel" aria-hidden="true">
-        <div class="lore-panel__backdrop" id="items-backdrop"></div>
-        <div class="lore-panel__sheet lore-panel__sheet--items">
+        <div class="lore-panel__backdrop" id="items-backdrop" aria-hidden="true"></div>
+        <div class="lore-panel__sheet lore-panel__sheet--items" role="dialog" aria-modal="true" aria-labelledby="items-panel-title" tabindex="-1">
             <div class="lore-panel__topbar">
                 <div class="lore-panel__eyebrow">Сундук памяти</div>
                 <button type="button" class="lore-panel__close" id="items-close" aria-label="Закрыть сундук"><svg class="ui-icon"><use href="#icon-close"></use></svg></button>
             </div>
             <div class="lore-panel__header">
-                <h2 class="lore-panel__title"><svg class="ui-icon"><use href="#icon-bag"></use></svg> Вещи и память</h2>
+                <h2 class="lore-panel__title" id="items-panel-title"><svg class="ui-icon"><use href="#icon-bag"></use></svg> Вещи и память</h2>
                 <p class="lore-panel__subtitle">Предметы, что попали в руки героя. У каждого — своя история.</p>
             </div>
             <div class="lore-panel__grid" id="items-grid"></div>
@@ -571,12 +571,12 @@
 
     <!-- Debug Log Modal -->
     <div class="settings-modal hidden" id="debug-modal" aria-hidden="true" style="z-index: 10000;">
-        <div class="settings-backdrop" id="debug-backdrop"></div>
-        <div class="settings-sheet" role="dialog" aria-modal="true" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+        <div class="settings-backdrop" id="debug-backdrop" aria-hidden="true"></div>
+        <div class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="debug-modal-title" tabindex="-1" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
             <div class="settings-sheet__head">
                 <div>
                     <div class="setup-eyebrow">Для отладки нейросетей</div>
-                    <h2 class="settings-title">Системный лог</h2>
+                    <h2 class="settings-title" id="debug-modal-title">Системный лог</h2>
                 </div>
                 <button type="button" class="icon-btn" id="debug-close-btn" aria-label="Закрыть"><svg class="ui-icon"><use href="#icon-close"></use></svg></button>
             </div>
@@ -597,21 +597,21 @@
 
     <!-- Prompt Inspector Modal -->
     <div class="settings-modal hidden" id="prompt-modal" aria-hidden="true" style="z-index: 10001;">
-        <div class="settings-backdrop" id="prompt-backdrop"></div>
-        <div class="settings-sheet" role="dialog" aria-modal="true" style="max-width: 900px; max-height: 92vh; display: flex; flex-direction: column;">
+        <div class="settings-backdrop" id="prompt-backdrop" aria-hidden="true"></div>
+        <div class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="prompt-modal-title" tabindex="-1" style="max-width: 900px; max-height: 92vh; display: flex; flex-direction: column;">
             <div class="settings-sheet__head">
                 <div>
                     <div class="setup-eyebrow">Промпт-инжиниринг</div>
-                    <h2 class="settings-title" style="font-size:1.4rem;">Инспектор промпта</h2>
+                    <h2 class="settings-title" id="prompt-modal-title" style="font-size:1.4rem;">Инспектор промпта</h2>
                 </div>
                 <button type="button" class="icon-btn" id="prompt-close-btn" aria-label="Закрыть"><svg class="ui-icon"><use href="#icon-close"></use></svg></button>
             </div>
 
             <!-- Tabs -->
-            <div style="display:flex; gap:6px; padding: 0 1rem 0.75rem; border-bottom: 1px solid var(--line);">
-                <button class="prompt-tab-btn selected" data-tab="main" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-warm,#c98a3a); background:var(--amber,#e8b061); color:var(--paper-0,#0c0a08); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Шаг 1: Сюжет</button>
-                <button class="prompt-tab-btn" data-tab="structure" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:var(--paper-2,#26201a); color:var(--ink-soft); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Шаг 2: Анализ/Выборы</button>
-                <button class="prompt-tab-btn" data-tab="enhance" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:var(--paper-2,#26201a); color:var(--ink-soft); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Шаг 3: Полировка (ручная)</button>
+            <div role="tablist" aria-label="Этапы промпта" style="display:flex; gap:6px; padding: 0 1rem 0.75rem; border-bottom: 1px solid var(--line);">
+                <button class="prompt-tab-btn selected" id="prompt-tab-main" data-tab="main" role="tab" aria-selected="true" aria-controls="prompt-content" tabindex="0" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-warm,#c98a3a); background:var(--amber,#e8b061); color:var(--paper-0,#0c0a08); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Шаг 1: Сюжет</button>
+                <button class="prompt-tab-btn" id="prompt-tab-structure" data-tab="structure" role="tab" aria-selected="false" aria-controls="prompt-content" tabindex="-1" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:var(--paper-2,#26201a); color:var(--ink-soft); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Шаг 2: Анализ/Выборы</button>
+                <button class="prompt-tab-btn" id="prompt-tab-enhance" data-tab="enhance" role="tab" aria-selected="false" aria-controls="prompt-content" tabindex="-1" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:var(--paper-2,#26201a); color:var(--ink-soft); font-family:var(--mono); font-size:0.75rem; cursor:pointer; letter-spacing:0.08em;">Шаг 3: Полировка (ручная)</button>
                 <div style="flex:1;"></div>
                 <button id="prompt-refresh-btn" title="Пересчитать промпт" style="padding:6px 12px; border-radius:6px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-dim); font-family:var(--mono); font-size:0.75rem; cursor:pointer;">↺ Обновить</button>
                 <button id="prompt-copy-btn" style="padding:6px 14px; border-radius:6px; border:1px solid var(--line-strong); background:transparent; color:var(--ink-dim); font-family:var(--mono); font-size:0.75rem; cursor:pointer;"><svg class="ui-icon" aria-hidden="true"><use href="#icon-copy"></use></svg> Копировать</button>
@@ -627,7 +627,7 @@
 
             <!-- Content -->
             <div class="settings-sheet__body" style="overflow-y:auto; flex:1; padding:0;">
-                <div id="prompt-content" style="
+                <div id="prompt-content" role="tabpanel" aria-labelledby="prompt-tab-main" tabindex="0" style="
                     white-space: pre-wrap;
                     font-family: var(--mono, monospace);
                     font-size: 0.78rem;

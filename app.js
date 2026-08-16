@@ -164,22 +164,29 @@ function initDebugUI() {
     const modal = document.getElementById('debug-modal');
     const closeBtn = document.getElementById('debug-close-btn');
     const clearBtn = document.getElementById('debug-clear-btn');
-    
+    const backdrop = document.getElementById('debug-backdrop');
+
     if (fab && modal) {
+        const closeDebug = () => closeOverlay(modal);
         fab.addEventListener('click', () => {
-            modal.classList.remove('hidden');
-            modal.setAttribute('aria-hidden', 'false');
             renderDebugLogs();
+            openOverlay(modal, closeBtn);
         });
-        
-        closeBtn.addEventListener('click', () => {
-            modal.classList.add('hidden');
-            modal.setAttribute('aria-hidden', 'true');
-        });
-        
-        clearBtn.addEventListener('click', () => {
+
+        closeBtn?.addEventListener('click', closeDebug);
+        backdrop?.addEventListener('click', closeDebug);
+
+        clearBtn?.addEventListener('click', () => {
             window.appSystemLogs = [];
             renderDebugLogs();
+            showToast('Системный лог очищен');
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !event.defaultPrevented && getTopDialogRoot() === modal) {
+                event.preventDefault();
+                closeDebug();
+            }
         });
     }
 }
@@ -256,6 +263,96 @@ const els = {
     sidebarDrawerBackdrop: document.getElementById('sidebar-drawer-backdrop'),
     appToast: document.getElementById('app-toast')
 };
+
+// ========== ЕДИНАЯ МОДЕЛЬ МОДАЛЬНЫХ СЛОЁВ ==========
+// Все диалоги используют один стек: он удерживает фокус внутри верхнего слоя,
+// возвращает его на кнопку-источник и не даёт фону прокручиваться.
+const overlayReturnFocus = new WeakMap();
+const openOverlayStack = [];
+const FOCUSABLE_SELECTOR = [
+    'a[href]', 'button:not([disabled])', 'input:not([disabled])',
+    'select:not([disabled])', 'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])'
+].join(',');
+
+function syncBodyInteractionLock() {
+    document.body.classList.toggle('dialog-open', openOverlayStack.length > 0);
+}
+
+function openOverlay(root, preferredFocus = null) {
+    if (!root) return;
+    if (!openOverlayStack.includes(root)) {
+        overlayReturnFocus.set(root, document.activeElement);
+        openOverlayStack.push(root);
+    }
+    root.classList.remove('hidden');
+    root.setAttribute('aria-hidden', 'false');
+    syncBodyInteractionLock();
+    requestAnimationFrame(() => {
+        const dialog = root.querySelector('[role="dialog"]') || root;
+        (preferredFocus || dialog.querySelector(FOCUSABLE_SELECTOR) || dialog).focus?.();
+    });
+}
+
+function releaseOverlay(root, { restoreFocus = true } = {}) {
+    if (!root) return;
+    const index = openOverlayStack.lastIndexOf(root);
+    if (index !== -1) openOverlayStack.splice(index, 1);
+    syncBodyInteractionLock();
+    if (restoreFocus) overlayReturnFocus.get(root)?.focus?.();
+    overlayReturnFocus.delete(root);
+}
+
+function closeOverlay(root, options = {}) {
+    if (!root) return;
+    root.classList.add('hidden');
+    root.setAttribute('aria-hidden', 'true');
+    releaseOverlay(root, options);
+}
+
+function getTopDialogRoot() {
+    const stacked = openOverlayStack[openOverlayStack.length - 1];
+    if (stacked) return stacked;
+    if (document.body.classList.contains('sidebar-drawer-open')) return els.gameSidebar;
+    return null;
+}
+
+function getVisibleFocusable(root) {
+    return [...root.querySelectorAll(FOCUSABLE_SELECTOR)].filter((element) =>
+        !element.closest('.hidden') && element.getClientRects().length > 0
+    );
+}
+
+function setupDialogFocusManagement() {
+    document.addEventListener('keydown', (event) => {
+        const root = getTopDialogRoot();
+        if (event.key === 'Escape' && root?.id === 'illustration-zoom-modal') {
+            event.preventDefault();
+            window.closeIllustrationModal?.();
+            return;
+        }
+        if (event.key !== 'Tab' || !root) return;
+        const focusable = getVisibleFocusable(root);
+        if (!focusable.length) {
+            event.preventDefault();
+            (root.querySelector('[role="dialog"]') || root).focus?.();
+            return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement;
+        if (!root.contains(active)) {
+            event.preventDefault();
+            first.focus();
+        } else if (event.shiftKey && active === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+}
 
 // ========== УТИЛИТЫ ==========
 function pick(arr) {
@@ -574,6 +671,11 @@ function showToast(message, kind = 'success') {
     toastTimer = window.setTimeout(() => {
         els.appToast.classList.remove('is-visible');
     }, 2600);
+}
+
+function setToggleSelected(button, selected) {
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
 }
 
 function uiIcon(name, label = '') {
@@ -923,29 +1025,19 @@ function renderSetupWizard() {
 
 function openSettingsModal() {
     if (!els.settingsModal) return;
-    settingsReturnFocus = document.activeElement;
     syncSettingsVerbosityBtns();
     syncSettingsEnhanceModelBtns();
-    els.settingsModal.classList.remove('hidden');
-    els.settingsModal.setAttribute('aria-hidden', 'false');
-    // Фокус должен оказаться внутри диалога, а не под ним.
-    els.settingsCloseBtn?.focus();
+    openOverlay(els.settingsModal, els.settingsCloseBtn);
 }
 
-let settingsReturnFocus = null;
-
 function closeSettingsModal() {
-    if (!els.settingsModal) return;
-    els.settingsModal.classList.add('hidden');
-    els.settingsModal.setAttribute('aria-hidden', 'true');
-    settingsReturnFocus?.focus?.();
-    settingsReturnFocus = null;
+    closeOverlay(els.settingsModal);
 }
 
 function syncSettingsVerbosityBtns() {
     // Синхронизирует кнопки verbosity в модалке настроек с текущим state.verbosity
     const btns = document.querySelectorAll('#settings-verbosity-btns .option-btn');
-    btns.forEach(b => b.classList.toggle('selected', b.dataset.value === state.verbosity));
+    btns.forEach((button) => setToggleSelected(button, button.dataset.value === state.verbosity));
     // Обновляем info-блок
     const info = document.getElementById('settings-verbosity-info');
     if (info) {
@@ -961,7 +1053,7 @@ function syncSettingsVerbosityBtns() {
 function syncSettingsEnhanceModelBtns() {
     // Синхронизирует переключатель модели полировки в модалке настроек
     const btns = document.querySelectorAll('#settings-enhance-model-btns .option-btn');
-    btns.forEach(b => b.classList.toggle('selected', b.dataset.value === state.enhanceModel));
+    btns.forEach((button) => setToggleSelected(button, button.dataset.value === state.enhanceModel));
 }
 
 function areAdminToolsEnabled() {
@@ -983,7 +1075,10 @@ function setupSettingsModal() {
     els.settingsCloseBtn?.addEventListener('click', closeSettingsModal);
     els.settingsBackdrop?.addEventListener('click', closeSettingsModal);
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && !els.settingsModal?.classList.contains('hidden')) closeSettingsModal();
+        if (event.key === 'Escape' && !event.defaultPrevented && getTopDialogRoot() === els.settingsModal) {
+            event.preventDefault();
+            closeSettingsModal();
+        }
     });
 
     setAdminToolsEnabled(areAdminToolsEnabled());
@@ -992,13 +1087,36 @@ function setupSettingsModal() {
     });
 
     // ── Табы внутри модалки настроек ──
-    document.querySelectorAll('.settings-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const target = btn.dataset.stab;
-            document.querySelectorAll('.settings-tab-btn').forEach(b => b.classList.toggle('selected', b.dataset.stab === target));
-            document.querySelectorAll('.settings-tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== 'stab-' + target));
+    const settingsTabs = [...document.querySelectorAll('.settings-tab-btn')];
+    const activateSettingsTab = (target, moveFocus = false) => {
+        settingsTabs.forEach((button) => {
+            const selected = button.dataset.stab === target;
+            button.classList.toggle('selected', selected);
+            button.setAttribute('aria-selected', String(selected));
+            button.tabIndex = selected ? 0 : -1;
+            if (selected && moveFocus) button.focus();
+        });
+        document.querySelectorAll('.settings-tab-panel').forEach((panel) => {
+            const selected = panel.id === 'stab-' + target;
+            panel.classList.toggle('hidden', !selected);
+            panel.setAttribute('aria-hidden', String(!selected));
+        });
+    };
+
+    settingsTabs.forEach((button, index) => {
+        button.addEventListener('click', () => activateSettingsTab(button.dataset.stab));
+        button.addEventListener('keydown', (event) => {
+            let nextIndex = null;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % settingsTabs.length;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + settingsTabs.length) % settingsTabs.length;
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = settingsTabs.length - 1;
+            if (nextIndex === null) return;
+            event.preventDefault();
+            activateSettingsTab(settingsTabs[nextIndex].dataset.stab, true);
         });
     });
+    activateSettingsTab(settingsTabs.find((button) => button.classList.contains('selected'))?.dataset.stab || 'connection');
 
     // ── Кнопки verbosity в модалке настроек ──
     document.querySelectorAll('#settings-verbosity-btns .option-btn').forEach(btn => {
@@ -1006,8 +1124,8 @@ function setupSettingsModal() {
             state.verbosity = btn.dataset.value;
             syncSettingsVerbosityBtns();
             // Синхронизируем кнопки в визарде (если открыт)
-            document.querySelectorAll('#verbosity-btns .option-btn').forEach(b =>
-                b.classList.toggle('selected', b.dataset.value === state.verbosity));
+            document.querySelectorAll('#verbosity-btns .option-btn').forEach((button) =>
+                setToggleSelected(button, button.dataset.value === state.verbosity));
             updateVerbosityInfo(state.verbosity);
             if (hasActiveRun()) save();
         });
@@ -1098,8 +1216,7 @@ window.resetGame = () => {
 };
 
 function closeResetConfirmation() {
-    els.resetConfirmModal?.classList.add('hidden');
-    els.resetConfirmModal?.setAttribute('aria-hidden', 'true');
+    closeOverlay(els.resetConfirmModal);
 }
 
 window.requestResetGame = () => {
@@ -1107,9 +1224,7 @@ window.requestResetGame = () => {
         if (window.confirm('Сбросить текущую историю? Это действие нельзя отменить.')) window.resetGame();
         return;
     }
-    els.resetConfirmModal.classList.remove('hidden');
-    els.resetConfirmModal.setAttribute('aria-hidden', 'false');
-    els.resetConfirmBtn?.focus();
+    openOverlay(els.resetConfirmModal, els.resetCancelBtn);
 };
 
 function setupResetConfirmation() {
@@ -1117,7 +1232,10 @@ function setupResetConfirmation() {
     els.resetConfirmBackdrop?.addEventListener('click', closeResetConfirmation);
     els.resetConfirmBtn?.addEventListener('click', () => window.resetGame());
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && !els.resetConfirmModal?.classList.contains('hidden')) closeResetConfirmation();
+        if (event.key === 'Escape' && !event.defaultPrevented && getTopDialogRoot() === els.resetConfirmModal) {
+            event.preventDefault();
+            closeResetConfirmation();
+        }
     });
 }
 
@@ -1206,8 +1324,8 @@ function renderProviderSwitcher() {
     const mainExecCfg = getProviderConfig(mainExec);
     const enhanceExecCfg = getProviderConfig(enhanceExec);
     const enhanceModel = getProviderModel('enhance', provider);
-    document.querySelectorAll('.provider-btn').forEach((btn) => {
-        btn.classList.toggle('selected', btn.dataset.provider === provider);
+    document.querySelectorAll('.provider-btn').forEach((button) => {
+        setToggleSelected(button, button.dataset.provider === provider);
     });
     document.querySelectorAll('[data-provider-models]').forEach((el) => {
         el.innerHTML = `
@@ -1424,10 +1542,10 @@ function setupOptionButtons(containerId, stateKey, callback) {
     const container = document.getElementById(containerId);
     if (!container) return;
     const buttons = container.querySelectorAll('.option-btn');
+    buttons.forEach((button) => setToggleSelected(button, button.classList.contains('selected')));
     buttons.forEach((btn) => {
         btn.onclick = () => {
-            buttons.forEach((b) => b.classList.remove('selected'));
-            btn.classList.add('selected');
+            buttons.forEach((button) => setToggleSelected(button, button === btn));
             state[stateKey] = btn.dataset.value;
             if (callback) callback(btn.dataset.value);
             if (stateKey === 'pace') updatePaceInfo(btn.dataset.value);
@@ -2998,16 +3116,10 @@ function applyUpdates(u) {
 // ========== АТМОСФЕРНЫЕ ПАНЕЛИ (NPC / Items) ==========
 function openLorePanel(panel) {
     if (!panel) return;
-    panel.classList.remove('hidden');
-    panel.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    panel.querySelector('.lore-panel__close')?.focus();
+    openOverlay(panel, panel.querySelector('.lore-panel__close'));
 }
 function closeLorePanel(panel) {
-    if (!panel) return;
-    panel.classList.add('hidden');
-    panel.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    closeOverlay(panel);
 }
 function setupLorePanels() {
     els.npcsTrigger?.addEventListener('click', () => { renderNpcPanel(); openLorePanel(els.npcsPanel); });
@@ -3016,10 +3128,15 @@ function setupLorePanels() {
     els.itemsBackdrop?.addEventListener('click', () => closeLorePanel(els.itemsPanel));
     els.npcsClose?.addEventListener('click', () => closeLorePanel(els.npcsPanel));
     els.itemsClose?.addEventListener('click', () => closeLorePanel(els.itemsPanel));
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (els.npcsPanel && !els.npcsPanel.classList.contains('hidden')) closeLorePanel(els.npcsPanel);
-            if (els.itemsPanel && !els.itemsPanel.classList.contains('hidden')) closeLorePanel(els.itemsPanel);
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || event.defaultPrevented) return;
+        const topRoot = getTopDialogRoot();
+        if (topRoot === els.npcsPanel) {
+            event.preventDefault();
+            closeLorePanel(els.npcsPanel);
+        } else if (topRoot === els.itemsPanel) {
+            event.preventDefault();
+            closeLorePanel(els.itemsPanel);
         }
     });
 }
@@ -3037,6 +3154,13 @@ function setupSidebarDrawer() {
         els.gameStatusBtn.setAttribute('aria-expanded', String(isOpen));
         els.gameSidebar.setAttribute('aria-hidden', String(isCompact && !isOpen));
         els.gameSidebar.inert = isCompact && !isOpen;
+        if (isCompact) {
+            els.gameSidebar.setAttribute('role', 'dialog');
+            els.gameSidebar.setAttribute('aria-modal', 'true');
+        } else {
+            els.gameSidebar.removeAttribute('role');
+            els.gameSidebar.removeAttribute('aria-modal');
+        }
         if (!isCompact && isOpen) closeDrawer(false);
     };
 
@@ -3061,7 +3185,8 @@ function setupSidebarDrawer() {
     if (compactViewport.addEventListener) compactViewport.addEventListener('change', syncA11y);
     else compactViewport.addListener?.(syncA11y);
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && document.body.classList.contains('sidebar-drawer-open')) {
+        if (event.key === 'Escape' && !event.defaultPrevented && openOverlayStack.length === 0 && document.body.classList.contains('sidebar-drawer-open')) {
+            event.preventDefault();
             closeDrawer();
         }
     });
@@ -3372,6 +3497,7 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
 
 loadStoredApiKeys();
 syncCurrentApiKey();
+setupDialogFocusManagement();
 setupProviderSwitcher();
 setupSettingsModal();
 setupResetConfirmation();
@@ -3614,8 +3740,8 @@ window.openIllustrationModal = function(base64Url) {
     modal.id = 'illustration-zoom-modal';
     modal.className = 'illustration-modal';
     modal.innerHTML = `
-        <div class="illustration-modal__backdrop"></div>
-        <div class="illustration-modal__content">
+        <div class="illustration-modal__backdrop" aria-hidden="true"></div>
+        <div class="illustration-modal__content" role="dialog" aria-modal="true" aria-label="Иллюстрация воспоминания" tabindex="-1">
             <button type="button" class="illustration-modal__close" aria-label="Закрыть">${uiIcon('close')}</button>
             <div class="illustration-modal__body">
                 <img src="${base64Url}" class="illustration-modal__img" alt="Увеличенное изображение" />
@@ -3628,17 +3754,15 @@ window.openIllustrationModal = function(base64Url) {
     modal.querySelector('.illustration-modal__img').onclick = window.closeIllustrationModal;
 
     document.body.appendChild(modal);
-    document.body.style.overflow = 'hidden';
+    openOverlay(modal, modal.querySelector('.illustration-modal__close'));
 };
 
 window.closeIllustrationModal = function() {
     const modal = document.getElementById('illustration-zoom-modal');
     if (modal) {
+        releaseOverlay(modal);
         modal.classList.add('illustration-modal--closing');
-        setTimeout(() => {
-            modal.remove();
-            document.body.style.overflow = '';
-        }, 200);
+        setTimeout(() => modal.remove(), 200);
     }
 };
 
@@ -3740,7 +3864,7 @@ ${archiveForEnhance}${canonBlock}`;
         }
     } catch(e) {
         console.error(e);
-        alert('Не удалось отполировать: ' + e.message);
+        showToast(`Не удалось отполировать: ${e.message}`, 'error');
     } finally {
         setLoading(false);
         save();
@@ -3790,8 +3914,7 @@ window.selectImgStyle = function(turnStr, style, btnElem) {
     const group = document.getElementById('img-style-group-' + turnStr);
     if (group) {
         const buttons = group.querySelectorAll('button');
-        buttons.forEach(b => b.classList.remove('selected'));
-        btnElem.classList.add('selected');
+        buttons.forEach((button) => setToggleSelected(button, button === btnElem));
     }
     const valInput = document.getElementById('img-style-val-' + turnStr);
     if (valInput) valInput.value = style;
@@ -3981,40 +4104,58 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
     }
 
     // ---------- Tab switching ----------
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            currentTab = btn.dataset.tab;
-            tabBtns.forEach(b => {
-                const isActive = b.dataset.tab === currentTab;
-                b.style.background  = isActive ? 'var(--amber,#e8b061)' : 'var(--paper-2,#26201a)';
-                b.style.color       = isActive ? 'var(--paper-0,#0c0a08)' : 'var(--ink-soft)';
-                b.style.borderColor = isActive ? 'var(--line-warm,#c98a3a)' : 'var(--line-strong)';
-                b.classList.toggle('selected', isActive);
-            });
-            renderPromptInspector();
+    const promptTabs = [...tabBtns];
+    function activatePromptTab(tab, moveFocus = false) {
+        currentTab = tab;
+        promptTabs.forEach((button) => {
+            const isActive = button.dataset.tab === currentTab;
+            button.style.background  = isActive ? 'var(--amber,#e8b061)' : 'var(--paper-2,#26201a)';
+            button.style.color       = isActive ? 'var(--paper-0,#0c0a08)' : 'var(--ink-soft)';
+            button.style.borderColor = isActive ? 'var(--line-warm,#c98a3a)' : 'var(--line-strong)';
+            button.classList.toggle('selected', isActive);
+            button.setAttribute('aria-selected', String(isActive));
+            button.tabIndex = isActive ? 0 : -1;
+            if (isActive) {
+                content.setAttribute('aria-labelledby', button.id);
+                if (moveFocus) button.focus();
+            }
+        });
+        renderPromptInspector();
+    }
+
+    promptTabs.forEach((button, index) => {
+        button.addEventListener('click', () => activatePromptTab(button.dataset.tab));
+        button.addEventListener('keydown', (event) => {
+            let nextIndex = null;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % promptTabs.length;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + promptTabs.length) % promptTabs.length;
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = promptTabs.length - 1;
+            if (nextIndex === null) return;
+            event.preventDefault();
+            activatePromptTab(promptTabs[nextIndex].dataset.tab, true);
         });
     });
 
     // ---------- Open / Close ----------
     function openModal() {
         renderPromptInspector();
-        modal.classList.remove('hidden');
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
+        openOverlay(modal, closeBtn);
     }
     function closeModal() {
-        modal.classList.add('hidden');
-        modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
+        closeOverlay(modal);
     }
 
-        fab?.addEventListener('click', openModal);
+    fab?.addEventListener('click', openModal);
     closeBtn?.addEventListener('click', closeModal);
     backdrop?.addEventListener('click', closeModal);
     refreshBtn?.addEventListener('click', renderPromptInspector);
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !event.defaultPrevented && getTopDialogRoot() === modal) {
+            event.preventDefault();
+            closeModal();
+        }
     });
 
     // ---------- Copy ----------
