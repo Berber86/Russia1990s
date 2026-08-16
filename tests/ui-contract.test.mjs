@@ -20,11 +20,17 @@ assert.match(html, /id="game-status-btn"[\s\S]*?Состояние героя/, 
 assert.match(html, /id="status-mini-ring"/, 'Status control must expose a graphical state preview');
 assert.match(html, /class="dossier-summary"/, 'Dossier must contain a graphical summary');
 assert.match(html, /aria-describedby="reset-confirm-description"/, 'Destructive confirmation must expose its consequence');
+assert.match(html, /<nav class="archive-strip" id="archive-strip" aria-label="Навигация по личной хронике">/, 'Archive must expose named navigation');
+assert.match(html, /id="archive-label" role="status" aria-live="polite"/, 'Archive position must be announced as text');
+assert.match(html, /id="archive-range"/, 'Archive must expose its chronological span');
+assert.match(html, /id="archive-current-btn" aria-label="К текущей записи"/, 'Archive must offer an explicit way back to the current entry');
 
 assert.match(js, /const recordKind = archiveMode \? 'Архивная запись' : 'Текущая запись'/, 'Story record must clearly distinguish archive and current modes');
 assert.match(js, /const recordHeader = hasStory \?/, 'Record passport must not render before a story exists');
 assert.match(js, /class="story-record-header" aria-label="Сведения о записи"/, 'Story record passport must have a semantic label');
 assert.match(js, /<time class="story-record-header__context">/, 'Record date and location must be exposed as time context');
+assert.match(js, /Запись \$\{position\} из \$\{entries\.length\} · \$\{isArchive \? 'архив' : 'сейчас'\}/, 'Archive must name its current position and mode');
+assert.match(js, /Хроника: \$\{firstDate\}/, 'Archive span must be derived from saved entries');
 
 assert.doesNotMatch(js, /\balert\s*\(/, 'Blocking alert() calls are not allowed');
 assert.match(js, /openOverlay\(els\.resetConfirmModal, els\.resetCancelBtn\)/, 'Reset confirmation must focus the safe action first');

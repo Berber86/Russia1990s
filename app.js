@@ -242,6 +242,7 @@ const els = {
     archiveCurrentBtn: document.getElementById('archive-current-btn'),
     archiveCopyBtn: document.getElementById('archive-copy-btn'),
     archiveLabel: document.getElementById('archive-label'),
+    archiveRange: document.getElementById('archive-range'),
     // lore panels
     npcsPanel: document.getElementById('npcs-panel'),
     npcsBackdrop: document.getElementById('npcs-backdrop'),
@@ -989,15 +990,26 @@ function pushArchiveEntry(entry) {
 
 function renderArchiveStrip() {
     if (!els.archiveStrip) return;
-    const hasArchive = !!state.archiveEntries?.length;
+    const entries = state.archiveEntries || [];
+    const hasArchive = entries.length > 0;
     els.archiveStrip.style.display = hasArchive ? 'flex' : 'none';
     if (!hasArchive) return;
+
     const entry = getSelectedArchiveEntry();
     const isArchive = isArchiveMode();
-    const currentIndex = isArchive ? state.archiveViewIndex : state.archiveEntries.length - 1;
-    els.archiveLabel.textContent = entry
-        ? `${entry.dateLabel || ''}${entry.age ? ` · ${entry.age} лет` : ''}${isArchive ? '' : ' · сейчас'}`
-        : 'Текущий период';
+    const currentIndex = isArchive ? state.archiveViewIndex : entries.length - 1;
+    const position = currentIndex + 1;
+    const firstEntry = entries[0];
+    const lastEntry = entries[entries.length - 1];
+    const firstDate = firstEntry?.dateLabel || '';
+    const lastDate = lastEntry?.dateLabel || '';
+
+    els.archiveLabel.textContent = `Запись ${position} из ${entries.length} · ${isArchive ? 'архив' : 'сейчас'}`;
+    els.archiveRange.textContent = firstDate && lastDate
+        ? `Хроника: ${firstDate}${firstDate !== lastDate ? ` — ${lastDate}` : ''}`
+        : 'Личная хроника';
+    els.archiveLabel.title = els.archiveLabel.textContent;
+    els.archiveRange.title = els.archiveRange.textContent;
     els.archivePrevBtn.disabled = currentIndex <= 0;
     els.archiveNextBtn.disabled = !isArchive;
     els.archiveCurrentBtn.disabled = !isArchive;

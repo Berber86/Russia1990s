@@ -455,13 +455,16 @@
                 </div>
             </div>
 
-            <div class="archive-strip" id="archive-strip">
-                <button type="button" class="archive-btn" id="archive-prev-btn" aria-label="Предыдущий период" title="Предыдущий период"><svg class="ui-icon"><use href="#icon-arrow-left"></use></svg></button>
-                <div class="archive-label" id="archive-label">Текущий период</div>
-                <button type="button" class="archive-btn" id="archive-current-btn" aria-label="Вернуться к текущему периоду" title="К текущему периоду"><svg class="ui-icon"><use href="#icon-target"></use></svg></button>
-                <button type="button" class="archive-btn" id="archive-copy-btn" aria-label="Скопировать текущий период" title="Скопировать период"><svg class="ui-icon"><use href="#icon-copy"></use></svg></button>
-                <button type="button" class="archive-btn" id="archive-next-btn" aria-label="Следующий период" title="Следующий период"><svg class="ui-icon"><use href="#icon-arrow-right"></use></svg></button>
-            </div>
+            <nav class="archive-strip" id="archive-strip" aria-label="Навигация по личной хронике">
+                <button type="button" class="archive-btn" id="archive-prev-btn" aria-label="Предыдущая запись" title="Предыдущая запись"><svg class="ui-icon"><use href="#icon-arrow-left"></use></svg></button>
+                <div class="archive-context">
+                    <div class="archive-label" id="archive-label" role="status" aria-live="polite">Текущая запись</div>
+                    <div class="archive-range" id="archive-range">Хроника ещё собирается</div>
+                </div>
+                <button type="button" class="archive-btn archive-btn--current" id="archive-current-btn" aria-label="К текущей записи" title="К текущей записи"><svg class="ui-icon" aria-hidden="true"><use href="#icon-target"></use></svg><span>К текущей</span></button>
+                <button type="button" class="archive-btn" id="archive-copy-btn" aria-label="Скопировать запись" title="Скопировать запись"><svg class="ui-icon"><use href="#icon-copy"></use></svg></button>
+                <button type="button" class="archive-btn" id="archive-next-btn" aria-label="Следующая запись" title="Следующая запись"><svg class="ui-icon"><use href="#icon-arrow-right"></use></svg></button>
+            </nav>
 
             <div class="story-stage">
                 <div id="onboarding-slot"></div>
