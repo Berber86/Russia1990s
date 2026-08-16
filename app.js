@@ -199,6 +199,7 @@ const els = {
     dateText: document.getElementById('date-text'),
     locationDisplay: document.getElementById('location-display'),
     story: document.getElementById('story-display'),
+    storyErrorSlot: document.getElementById('story-error-slot'),
     choices: document.getElementById('choices-display'),
     stats: document.getElementById('stats-display'),
     npcs: document.getElementById('npcs-display'),
@@ -821,6 +822,51 @@ async function copyArchiveEntryToClipboard(entry) {
     await navigator.clipboard.writeText(text);
 }
 
+// ========== СВОДКА ВЫБОРОВ НА ФИНАЛЬНОМ ШАГЕ ==========
+function renderStartSummary() {
+    const el = document.getElementById('start-summary');
+    if (!el) return;
+    const locInfo = getLocationInfo();
+    const gender = GENDER_INFO[state.gender]?.name || state.gender;
+    const pace = state.pace === 'year' ? 'темп: по годам' : 'темп: по сезонам';
+    const diff = state.difficulty === 'hardcore' ? 'сложность: хардкор' : 'сложность: норма';
+    const chips = [
+        { icon: 'child', text: gender },
+        { icon: 'book', text: `${state.startAge} лет` },
+        { icon: locInfo.icon || 'pin', text: locInfo.fullName },
+        { icon: 'film', text: pace },
+        { icon: 'theatre', text: diff }
+    ];
+    el.innerHTML = chips
+        .map((c) => `<span class="start-summary__chip">${uiIcon(c.icon)} ${escapeHTML(c.text)}</span>`)
+        .join('');
+}
+
+// ========== ОНБОРДИНГ ПЕРВОГО ХОДА ==========
+const ONBOARDING_KEY = 'rpg90_onboarded';
+function maybeShowOnboarding() {
+    const slot = document.getElementById('onboarding-slot');
+    if (!slot || slot.childElementCount > 0) return;
+    try {
+        if (localStorage.getItem(ONBOARDING_KEY)) return;
+    } catch { /* ignore */ }
+    slot.innerHTML = `
+        <div class="onboarding-card">
+            <div class="onboarding-card__title">${uiIcon('sparkle')} Как читать эту историю</div>
+            <p>В панели «Состояние героя» восемь шкал от 0 до 10: 5 — условная норма, а любая крайность имеет свою цену. После каждого хода выбирай один из вариантов — они и сдвигают шкалы. Полоса над историей хранит архив прошедших периодов.</p>
+            <button type="button" class="control-btn onboarding-card__close">Понятно, начинаем</button>
+        </div>
+    `;
+    slot.querySelector('.onboarding-card__close')?.addEventListener('click', () => {
+        slot.innerHTML = '';
+        try { localStorage.setItem(ONBOARDING_KEY, 'true'); } catch { /* ignore */ }
+    });
+}
+
+function setupLoaderCancel() {
+    document.getElementById('loader-cancel-btn')?.addEventListener('click', cancelCurrentTurn);
+}
+
 function renderSetupWizard() {
     const steps = document.querySelectorAll('.setup-step');
     const lastIndex = SETUP_STEPS.length - 1;
@@ -846,6 +892,7 @@ function renderSetupWizard() {
     if (els.startBtn) {
         els.startBtn.style.display = safeIndex === lastIndex ? 'inline-flex' : 'none';
     }
+    renderStartSummary();
 }
 
 function openSettingsModal() {
@@ -855,6 +902,8 @@ function openSettingsModal() {
     syncSettingsEnhanceModelBtns();
     els.settingsModal.classList.remove('hidden');
     els.settingsModal.setAttribute('aria-hidden', 'false');
+    // Фокус должен оказаться внутри диалога, а не под ним.
+    els.settingsCloseBtn?.focus();
 }
 
 let settingsReturnFocus = null;
@@ -973,35 +1022,22 @@ function setupArchiveControls() {
 }
 
 function setLoading(value, message = 'Пожалуйста, подождите. Ветер перемен наполняет паруса истории...') {
-    els.loader.style.display = value ? 'block' : 'none';
+    // Инлайн-лоадер под историей: текст хода остаётся на экране и читаемым,
+    // полноэкранный оверлей больше не блокирует интерфейс.
+    if (els.loader) {
+        els.loader.classList.toggle('is-hidden', !value);
+    }
+    if (els.loaderMessage && value) {
+        els.loaderMessage.textContent = message;
+    }
     document.querySelectorAll('.choice-btn').forEach((btn) => {
         btn.disabled = value;
     });
+    document.body.classList.toggle('is-loading', value);
+}
 
-    if (value) {
-        let loadingOverlay = document.getElementById('retro-game-loader');
-        if (!loadingOverlay) {
-            loadingOverlay = document.createElement('div');
-            loadingOverlay.id = 'retro-game-loader';
-            loadingOverlay.className = 'retro-loader-overlay';
-            loadingOverlay.innerHTML = `
-                <div class="retro-loader-card">
-                    <div class="retro-loader-spinner"></div>
-                    <div class="retro-loader-title">${uiIcon('film')} ХРОНИКА ВРЕМЕНИ...</div>
-                    <div class="retro-loader-sub" id="retro-loader-message">${message}</div>
-                </div>
-            `;
-            document.body.appendChild(loadingOverlay);
-        } else {
-            const msgEl = document.getElementById('retro-loader-message');
-            if (msgEl) msgEl.textContent = message;
-        }
-    } else {
-        const loadingOverlay = document.getElementById('retro-game-loader');
-        if (loadingOverlay) {
-            loadingOverlay.remove();
-        }
-    }
+function isLoading() {
+    return els.loader ? !els.loader.classList.contains('is-hidden') : false;
 }
 
 function save() {
@@ -1157,7 +1193,7 @@ function renderProviderSwitcher() {
 function switchProvider(nextProvider) {
     if (!LLM_PROVIDERS[nextProvider]) return;
     if (nextProvider === state.provider) return;
-    if (els.loader && els.loader.style.display === 'block') return;
+    if (isLoading()) return;
     state.provider = nextProvider;
     persistProviderChoice(nextProvider);
     syncCurrentApiKey();
@@ -1346,11 +1382,11 @@ function updateLocationDescription() {
     const info = getLocationInfo();
     els.locationDesc.innerHTML = `<strong>${info.fullName}</strong><br>${info.desc}`;
     if (state.locationType === 'capital') {
-        els.regionRow.style.display = 'none';
-        els.cityRow.style.display = 'flex';
+        els.regionRow.classList.add('is-hidden');
+        els.cityRow.classList.remove('is-hidden');
     } else {
-        els.regionRow.style.display = 'flex';
-        els.cityRow.style.display = 'none';
+        els.regionRow.classList.remove('is-hidden');
+        els.cityRow.classList.add('is-hidden');
     }
     applyVisualMood(els.game.classList.contains('hidden') ? 'setup' : 'game');
 }
@@ -1674,7 +1710,7 @@ ${verbosity === 'concise'
     ? 'Целевой объём story: ~4000 токенов (примерно 2800–3200 слов). Пиши подробно.'
     : 'Целевой объём story: ~3000 токенов (примерно 2000–2400 слов).'}
 
-РОВНО ${choicesCount} варианта выбора! КАЖДЫЙ вариант — развёрнутое описание (1-2 предложения, минимум 6 слов). пытайся придумать варианты, которые не только сюжетно уместны и вариативны, но и чаще задейсивуют самые высокие и самые низкие атрибуты героя(но как в сторону увеличения так и уменьшения - не смотря на то аысокий стат или низкий.
+РОВНО ${choicesCount} варианта выбора! КАЖДЫЙ вариант — развёрнутое описание (1-2 предложения, минимум 6 слов). Пытайся придумать варианты, которые не только сюжетно уместны и вариативны, но и чаще задействуют самые высокие и самые низкие атрибуты героя (как в сторону увеличения, так и уменьшения — независимо от того, высокий стат или низкий).
 
 НЕ ПИШИ короткие варианты типа «Помочь маме». ПИШИ умеренно подробно.
 
@@ -1870,7 +1906,8 @@ async function callLLM({
     provider = getActiveProvider(),
     temperature = 0.6,
     max_tokens = 10000,
-    response_format
+    response_format,
+    signal
 }, retries = 3) {
     const logicalCfg = getProviderConfig(provider);
     const executionProvider = resolveExecutionProvider(modelKind, provider);
@@ -1885,6 +1922,23 @@ async function callLLM({
         console.log(String(msg.content).substring(0, 500) + (String(msg.content).length > 500 ? '...' : ''));
     });
     window.lastPrompt = messages;
+    // Свяжем внешний сигнал отмены (кнопка «Отмена» во время хода) с таймаутом запроса.
+    const beginFetch = () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 280000);
+        const onExternalAbort = () => controller.abort();
+        if (signal) {
+            if (signal.aborted) controller.abort();
+            else signal.addEventListener('abort', onExternalAbort, { once: true });
+        }
+        return {
+            controller,
+            finish: () => {
+                clearTimeout(timeoutId);
+                if (signal) signal.removeEventListener('abort', onExternalAbort);
+            }
+        };
+    };
     const makeRequest = async (attempt) => {
         try {
             const requestBody = {
@@ -1896,8 +1950,7 @@ async function callLLM({
             };
             // OpenRouter всегда гоним через серверный маршрут.
             if (executionProvider === 'openrouter') {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 280000);
+                const { controller, finish } = beginFetch();
                 const response = await fetch(cfg.serverPath, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1907,7 +1960,7 @@ async function callLLM({
                     }),
                     signal: controller.signal
                 });
-                clearTimeout(timeoutId);
+                finish();
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${extractApiError(data, 'нет данных от сервера')}`);
@@ -1916,8 +1969,7 @@ async function callLLM({
             }
             // Hydra можно вызывать напрямую пользовательским ключом.
             if (executionProvider === 'hydra' && providerApiKey) {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 280000);
+                const { controller, finish } = beginFetch();
                 const response = await fetch(cfg.directUrl, {
                     method: 'POST',
                     headers: {
@@ -1933,7 +1985,7 @@ async function callLLM({
                     }),
                     signal: controller.signal
                 });
-                clearTimeout(timeoutId);
+                finish();
                 if (!response.ok) {
                     const errText = await response.text();
                     let parsed = null;
@@ -1945,21 +1997,22 @@ async function callLLM({
             if (isLocal) {
                 throw new Error(`Для локальной разработки необходимо ввести API ключ ${cfg.label}.`);
             }
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 280000);
+            const { controller, finish } = beginFetch();
             const response = await fetch(cfg.serverPath, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
                 signal: controller.signal
             });
-            clearTimeout(timeoutId);
+            finish();
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${extractApiError(data, 'нет данных от сервера')}`);
             }
             return data;
         } catch (err) {
+            // Отмена пользователем — не сетевой сбой, повторять запрос не нужно.
+            if (signal?.aborted) throw err;
             console.error(`Ошибка вызова ${cfg.label}:`, err);
             let errText;
             if (err && err.message) errText = err.message;
@@ -2369,8 +2422,50 @@ function isTruncated(completion) {
 }
 
 // ========== ОСНОВНОЙ ХОД ==========
+let turnAbortController = null;
+
+function isAbortError(error) {
+    return Boolean(error && (error.name === 'AbortError' || turnAbortController?.signal.aborted));
+}
+
+function clearTurnNotice() {
+    if (els.storyErrorSlot) {
+        els.storyErrorSlot.innerHTML = '';
+        els.storyErrorSlot.hidden = true;
+    }
+}
+
+// Ошибка/отмена показывается баннером над историей и НЕ стирает написанный текст.
+function showTurnNotice(title, message, action, kind = 'error') {
+    const slot = els.storyErrorSlot;
+    if (slot) {
+        const iconName = kind === 'error' ? 'bug' : 'film';
+        slot.hidden = false;
+        slot.innerHTML = `
+            <div class="story-notice ${kind === 'error' ? 'story-notice--error' : ''}" role="alert">
+                <span class="story-notice__icon">${uiIcon(iconName)}</span>
+                <div class="story-notice__body">
+                    <strong>${escapeHTML(title)}</strong>
+                    <p>${escapeHTML(message)}</p>
+                </div>
+            </div>
+        `;
+    }
+    showRetryButton(action);
+}
+
+function cancelCurrentTurn() {
+    if (turnAbortController && !turnAbortController.signal.aborted) {
+        turnAbortController.abort();
+    }
+}
+
 async function turn(action) {
     if (state.gameOver) return;
+    if (isLoading()) return;
+    clearTurnNotice();
+    turnAbortController = new AbortController();
+    const turnSignal = turnAbortController.signal;
     setLoading(true, "Листаю страницы судьбы... Рождается черновик истории...");
     state.turnCount++;
     try {
@@ -2403,8 +2498,10 @@ async function turn(action) {
             ],
             modelKind: 'main',
             temperature: 0.6,
-            max_tokens: 10000
+            max_tokens: 10000,
+            signal: turnSignal
         });
+        if (turnSignal.aborted) throw new DOMException('Ход отменён', 'AbortError');
 
         let originalStory = completion1?.choices?.[0]?.message?.content || '';
 
@@ -2441,9 +2538,11 @@ async function turn(action) {
                     modelKind: 'main',
                     temperature: attempt === 1 ? 0.3 : 0.1,
                     max_tokens: 4000,
-                    response_format: { type: 'json_object' }
+                    response_format: { type: 'json_object' },
+                    signal: turnSignal
                 });
 
+                if (turnSignal.aborted) throw new DOMException('Ход отменён', 'AbortError');
                 structureRaw = completion2?.choices?.[0]?.message?.content || '';
                 data = parseJSON(structureRaw, 'Структура хода');
 
@@ -2452,6 +2551,7 @@ async function turn(action) {
                     break;
                 }
             } catch (err) {
+                if (turnSignal.aborted) throw err; // отмена не должна уйти в повтор попытки
                 console.warn(`Попытка ${attempt} разбора структуры провалилась:`, err);
             }
 
@@ -2462,8 +2562,12 @@ async function turn(action) {
 
         if (!data?.choices || !Array.isArray(data.choices)) {
             console.error('Invalid JSON structure:', structureRaw);
-            els.story.innerHTML = renderMarkdown('**Ошибка:** не удалось сгенерировать варианты выбора.\n\nПовторите ход.');
-            showRetryButton(action);
+            showTurnNotice(
+                'Не удалось сформировать варианты выбора',
+                'Нейросеть вернула нечитаемую структуру хода. Сама история не пострадала — повторите ход.',
+                action,
+                'error'
+            );
             return;
         }
 
@@ -2538,10 +2642,24 @@ async function turn(action) {
     } catch (error) {
         console.error('Turn error:', error);
         state.turnCount = Math.max(0, state.turnCount - 1);
-        els.story.innerHTML = renderMarkdown(`**Ошибка запроса:** ${error.message || 'не удалось выполнить ход.'}\n\nПопробуйте ещё раз.`);
-        showRetryButton(action);
+        if (isAbortError(error)) {
+            showTurnNotice(
+                'Ход отменён',
+                'История не пострадала. Можно продолжить с того же места или выбрать другой вариант.',
+                action,
+                'notice'
+            );
+        } else {
+            showTurnNotice(
+                'Ошибка запроса',
+                `${error?.message || 'Не удалось выполнить ход.'} Написанный текст сохранён — попробуйте ещё раз.`,
+                action,
+                'error'
+            );
+        }
     } finally {
         setLoading(false);
+        turnAbortController = null;
     }
 }
 
@@ -2549,8 +2667,7 @@ function showRetryButton(action) {
     els.choices.innerHTML = '';
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'choice-btn';
-    btn.style.borderColor = 'var(--warning)';
+    btn.className = 'choice-btn choice-btn--warn';
     btn.innerHTML = `
         <span class="choice-btn__body choice-btn__body--single">
             <span class="choice-btn__title">Повторить ход</span>
@@ -2856,6 +2973,7 @@ function openLorePanel(panel) {
     panel.classList.remove('hidden');
     panel.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    panel.querySelector('.lore-panel__close')?.focus();
 }
 function closeLorePanel(panel) {
     if (!panel) return;
@@ -2978,6 +3096,7 @@ function renderUI() {
     applyVisualMood('game');
     renderProviderSwitcher();
     renderArchiveStrip();
+    clearTurnNotice();
 
     const shownDate = archiveEntry?.dateLabel || getDateLabel();
     const shownAge = archiveEntry?.age ?? state.age;
@@ -3003,8 +3122,7 @@ function renderUI() {
         if (state.gameOver) {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'choice-btn';
-            btn.style.borderColor = 'var(--danger)';
+            btn.className = 'choice-btn choice-btn--danger';
             btn.innerHTML = `
                 <span class="choice-btn__body choice-btn__body--single">
                     <span class="choice-btn__title">Начать новую жизнь</span>
@@ -3014,6 +3132,12 @@ function renderUI() {
             btn.onclick = window.requestResetGame;
             els.choices.appendChild(btn);
         } else if (state.lastChoices) {
+            // Ярлык показываем только когда игрок действительно выбирает действие.
+            const choicesLabel = document.createElement('div');
+            choicesLabel.className = 'choices-label';
+            choicesLabel.textContent = 'Что ты сделаешь?';
+            els.choices.appendChild(choicesLabel);
+
             // Плашка финальных сдвигов статов (после фильтров вязкости)
             if (state.lastStatDeltas && Object.keys(state.lastStatDeltas).length > 0) {
                 const deltaBar = document.createElement('div');
@@ -3029,6 +3153,7 @@ function renderUI() {
                 deltaBar.innerHTML = chips;
                 els.choices.appendChild(deltaBar);
             }
+
             state.lastChoices.forEach((choice, index) => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -3071,6 +3196,8 @@ function renderUI() {
     // refresh open panels
     if (els.npcsPanel && !els.npcsPanel.classList.contains('hidden')) renderNpcPanel();
     if (els.itemsPanel && !els.itemsPanel.classList.contains('hidden')) renderItemsPanel();
+
+    maybeShowOnboarding();
 }
 
 function renderLoreList(container, items) {
@@ -3188,6 +3315,7 @@ setupSettingsModal();
 setupResetConfirmation();
 setupArchiveControls();
 setupLorePanels();
+setupLoaderCancel();
 renderProviderSwitcher();
 updateApiKeyInput();
 applyVisualMood('setup');
@@ -3265,7 +3393,7 @@ els.startBtn.onclick = () => {
     const setTheme = (t) => {
         document.body.dataset.theme = t;
         try { localStorage.setItem(THEME_KEY, t); } catch {}
-        btn.textContent = t === 'paper' ? '◑' : '◐';
+        // Иконка (солнце/месяц) переключается через CSS по body[data-theme].
         btn.setAttribute('aria-label', t === 'paper' ? 'Включить тёмную тему' : 'Включить светлую тему');
     };
     setTheme(getTheme());
