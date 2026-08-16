@@ -4599,3 +4599,72 @@ body[data-reading-mode="high-contrast"] .story-content > p:first-of-type::first-
         line-height: 1.95;
     }
 }
+
+/* ---------- CYCLE 4: OPTIONAL READING BOOKMARK ---------- */
+/* It never scrolls on load. The reader explicitly chooses to return. */
+.continue-reading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    align-items: center;
+    width: min(62ch, 100%);
+    margin: 0 auto 2px;
+    padding: 11px 14px;
+    border: 1px solid var(--line-warm);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--amber-soft) 48%, var(--paper-2));
+    color: var(--ink-soft);
+    text-align: left;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.continue-reading:hover {
+    border-color: var(--amber);
+    background: var(--amber-soft);
+}
+
+.continue-reading__eyebrow {
+    grid-column: 1;
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 0.54rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.continue-reading__copy {
+    grid-column: 1;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.continue-reading__hint {
+    grid-column: 1;
+    color: var(--ink-dim);
+    font-family: var(--serif);
+    font-size: 0.79rem;
+    font-style: italic;
+}
+
+.continue-reading__arrow {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    color: var(--amber);
+    font-family: var(--mono);
+}
+
+@media (max-width: 700px) {
+    .continue-reading {
+        width: 100%;
+        margin-bottom: 0;
+    }
+}

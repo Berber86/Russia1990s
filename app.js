@@ -43,6 +43,7 @@ const LEGACY_KEY_STORAGE = 'rpg90_key';
 const PROVIDER_STORAGE_KEY = 'rpg90_provider';
 const ADMIN_TOOLS_STORAGE_KEY = 'rpg90_admin_tools';
 const READING_MODE_STORAGE_KEY = 'rpg90_reading_mode';
+const READING_BOOKMARK_STORAGE_KEY = 'rpg90_reading_bookmark';
 const READING_MODES = new Set(['standard', 'calm', 'high-contrast']);
 
 function getStoredProvider() {
@@ -93,6 +94,64 @@ function applyReadingMode(mode) {
         localStorage.setItem(READING_MODE_STORAGE_KEY, nextMode);
     } catch {}
     syncReadingModeControls(nextMode);
+}
+
+function getCurrentReadingBookmarkKey() {
+    const currentEntry = getSelectedArchiveEntry();
+    if (isArchiveMode() || !currentEntry?.turn) return '';
+    return `turn:${currentEntry.turn}`;
+}
+
+function getReadingBookmark() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(READING_BOOKMARK_STORAGE_KEY) || 'null');
+        if (!saved || typeof saved.key !== 'string' || !Number.isFinite(saved.progress)) return null;
+        return saved;
+    } catch {
+        return null;
+    }
+}
+
+function persistReadingBookmark(progress) {
+    const key = getCurrentReadingBookmarkKey();
+    if (!key || progress < 0.06 || progress > 0.97) return;
+    try {
+        localStorage.setItem(READING_BOOKMARK_STORAGE_KEY, JSON.stringify({ key, progress }));
+    } catch {}
+}
+
+function updateContinueReadingButton() {
+    const button = els.continueReadingBtn;
+    if (!button) return;
+    const bookmark = getReadingBookmark();
+    const available = Boolean(bookmark && bookmark.key === getCurrentReadingBookmarkKey() && !isArchiveMode());
+    button.classList.toggle('hidden', !available);
+    button.setAttribute('aria-hidden', String(!available));
+}
+
+function continueReadingFromBookmark() {
+    const bookmark = getReadingBookmark();
+    const storyShell = document.querySelector('.story-shell');
+    if (!bookmark || bookmark.key !== getCurrentReadingBookmarkKey() || !storyShell) return;
+
+    const shellTop = window.scrollY + storyShell.getBoundingClientRect().top;
+    const target = Math.max(0, shellTop + (storyShell.offsetHeight * bookmark.progress) - (window.innerHeight * 0.2));
+    window.scrollTo({ top: target, behavior: 'smooth' });
+    showToast('Продолжаем чтение');
+}
+
+let readingBookmarkFrame = null;
+function trackReadingPosition() {
+    if (readingBookmarkFrame || document.body.dataset.screen !== 'game' || isArchiveMode()) return;
+    readingBookmarkFrame = window.requestAnimationFrame(() => {
+        readingBookmarkFrame = null;
+        const storyShell = document.querySelector('.story-shell');
+        const storyText = els.story?.textContent?.trim();
+        if (!storyShell || !storyText || !getCurrentReadingBookmarkKey()) return;
+        const shellTop = window.scrollY + storyShell.getBoundingClientRect().top;
+        const progress = (window.scrollY - shellTop + (window.innerHeight * 0.2)) / Math.max(storyShell.offsetHeight, 1);
+        persistReadingBookmark(Math.max(0, Math.min(progress, 1)));
+    });
 }
 
 function createDefaultState() {
@@ -241,6 +300,7 @@ const els = {
     locationDisplay: document.getElementById('location-display'),
     story: document.getElementById('story-display'),
     storyErrorSlot: document.getElementById('story-error-slot'),
+    continueReadingBtn: document.getElementById('continue-reading-btn'),
     choices: document.getElementById('choices-display'),
     stats: document.getElementById('stats-display'),
     npcs: document.getElementById('npcs-display'),
@@ -3448,6 +3508,7 @@ function renderUI() {
         </header>
     ` : '';
     els.story.innerHTML = recordHeader + storyMarkup;
+    updateContinueReadingButton();
 
     els.choices.innerHTML = '';
     if (els.choicesWrap) {
@@ -3656,6 +3717,8 @@ setupProviderSwitcher();
 setupSettingsModal();
 setupResetConfirmation();
 setupArchiveControls();
+els.continueReadingBtn?.addEventListener('click', continueReadingFromBookmark);
+window.addEventListener('scroll', trackReadingPosition, { passive: true });
 setupLorePanels();
 setupSidebarDrawer();
 setupLoaderCancel();

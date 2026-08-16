@@ -26,6 +26,8 @@ assert.match(html, /id="archive-range"/, 'Archive must expose its chronological 
 assert.match(html, /id="archive-current-btn" aria-label="К текущей записи"/, 'Archive must offer an explicit way back to the current entry');
 assert.match(html, /id="settings-reading-mode-btns" role="group"/, 'Reading preferences must be a named control group');
 assert.match(html, /data-reading-mode="high-contrast"/, 'Reading preferences must offer a high-readability option');
+assert.match(html, /id="continue-reading-btn"/, 'Story stage must expose an explicit continue-reading action');
+assert.match(html, /Личная закладка/, 'Continue-reading action must explain its purpose');
 
 assert.match(js, /const recordKind = archiveMode \? 'Архивная запись' : 'Текущая запись'/, 'Story record must clearly distinguish archive and current modes');
 assert.match(js, /const recordHeader = hasStory \?/, 'Record passport must not render before a story exists');
@@ -36,6 +38,10 @@ assert.match(js, /Хроника: \$\{firstDate\}/, 'Archive span must be derive
 assert.match(js, /const READING_MODE_STORAGE_KEY = 'rpg90_reading_mode'/, 'Reading preference must stay outside game state');
 assert.match(js, /function applyReadingMode\(mode\)/, 'Reading mode must apply immediately');
 assert.match(js, /localStorage\.setItem\(READING_MODE_STORAGE_KEY, nextMode\)/, 'Reading mode must persist locally');
+assert.match(js, /const READING_BOOKMARK_STORAGE_KEY = 'rpg90_reading_bookmark'/, 'Reading bookmark must stay outside game state');
+assert.match(js, /function continueReadingFromBookmark\(\)/, 'Bookmark restoration must require an explicit action');
+assert.match(js, /window\.scrollTo\(\{ top: target, behavior: 'smooth' \}\)/, 'Bookmark should scroll only after the explicit action');
+assert.match(js, /if \(readingBookmarkFrame \|\| document\.body\.dataset\.screen !== 'game' \|\| isArchiveMode\(\)\) return/, 'Archive browsing must not create reading bookmarks');
 
 assert.doesNotMatch(js, /\balert\s*\(/, 'Blocking alert() calls are not allowed');
 assert.match(js, /openOverlay\(els\.resetConfirmModal, els\.resetCancelBtn\)/, 'Reset confirmation must focus the safe action first');
@@ -54,5 +60,6 @@ assert.match(css, /\.story-record-header\s*\{[\s\S]*?flex-wrap:\s*wrap/s, 'Recor
 assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.story-record-header__context\s*\{[\s\S]*?flex-basis:\s*100%/s, 'Mobile record context must remain readable on its own line');
 assert.match(css, /body\[data-reading-mode="high-contrast"\] \.story-shell/, 'High-readability mode must alter the reading surface');
 assert.match(css, /body\[data-reading-mode="calm"\] \.story-content/, 'Calm mode must alter reading rhythm');
+assert.match(css, /\.continue-reading\s*\{/, 'Continue-reading action needs dedicated visible styling');
 
 console.log('UI contract checks passed');
