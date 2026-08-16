@@ -21,6 +21,11 @@ assert.match(html, /id="status-mini-ring"/, 'Status control must expose a graphi
 assert.match(html, /class="dossier-summary"/, 'Dossier must contain a graphical summary');
 assert.match(html, /aria-describedby="reset-confirm-description"/, 'Destructive confirmation must expose its consequence');
 
+assert.match(js, /const recordKind = archiveMode \? 'Архивная запись' : 'Текущая запись'/, 'Story record must clearly distinguish archive and current modes');
+assert.match(js, /const recordHeader = hasStory \?/, 'Record passport must not render before a story exists');
+assert.match(js, /class="story-record-header" aria-label="Сведения о записи"/, 'Story record passport must have a semantic label');
+assert.match(js, /<time class="story-record-header__context">/, 'Record date and location must be exposed as time context');
+
 assert.doesNotMatch(js, /\balert\s*\(/, 'Blocking alert() calls are not allowed');
 assert.match(js, /openOverlay\(els\.resetConfirmModal, els\.resetCancelBtn\)/, 'Reset confirmation must focus the safe action first');
 assert.match(js, /function openOverlay\(/, 'Shared overlay opening is required');
@@ -34,5 +39,7 @@ assert.match(js, /buildStatusRingGradient\(state\.stats\)/, 'State ring must vis
 assert.match(css, /body\.dialog-open\s*\{[^}]*overflow:\s*hidden/s, 'Open dialogs must lock page scrolling');
 assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.game-status-btn\s*\{[\s\S]*?position:\s*fixed/s, 'Status control must stay reachable beside long mobile stories');
 assert.match(css, /\.confirm-modal\s*\{\s*z-index:\s*1900/s, 'Reset confirmation must sit above the mobile dossier');
+assert.match(css, /\.story-record-header\s*\{[\s\S]*?flex-wrap:\s*wrap/s, 'Record passport must wrap instead of truncating on narrow screens');
+assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.story-record-header__context\s*\{[\s\S]*?flex-basis:\s*100%/s, 'Mobile record context must remain readable on its own line');
 
 console.log('UI contract checks passed');

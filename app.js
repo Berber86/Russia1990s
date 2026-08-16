@@ -3378,7 +3378,22 @@ function renderUI() {
     els.modeDisplay.innerHTML = modeHTML;
     renderStatusGraphic();
 
-    els.story.innerHTML = buildArchiveStoryMarkup(archiveEntry);
+    const storyMarkup = buildArchiveStoryMarkup(archiveEntry);
+    const recordTurn = archiveEntry?.turn ?? state.turnCount;
+    const hasStory = Boolean((archiveEntry?.storyEnhanced || archiveEntry?.storyOriginal || archiveEntry?.story || state.lastStory || '').trim());
+    const recordKind = archiveMode ? 'Архивная запись' : 'Текущая запись';
+    const recordNumber = Number.isFinite(Number(recordTurn)) && Number(recordTurn) > 0
+        ? `Ход ${String(recordTurn).padStart(2, '0')}`
+        : 'Первый ход';
+    const recordMeta = `${shownAge} лет · ${locInfo.fullName}`;
+    const recordHeader = hasStory ? `
+        <header class="story-record-header" aria-label="Сведения о записи">
+            <span class="story-record-header__kind">${recordKind}</span>
+            <span class="story-record-header__number">${recordNumber}</span>
+            <time class="story-record-header__context">${escapeHTML(shownDate)} · ${escapeHTML(recordMeta)}</time>
+        </header>
+    ` : '';
+    els.story.innerHTML = recordHeader + storyMarkup;
 
     els.choices.innerHTML = '';
     if (els.choicesWrap) {

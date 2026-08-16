@@ -4397,3 +4397,52 @@ body[data-screen="game"] .story-shell::after {
         display: none;
     }
 }
+
+/* ---------- CYCLE 4: RECORD ORIENTATION ---------- */
+/* A quiet editorial passport keeps time and place with the prose without
+   imitating a historical source or introducing any fictional facts. */
+.story-record-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 7px 11px;
+    margin: 0 0 clamp(22px, 3vw, 30px);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-family: var(--mono);
+    font-size: 0.61rem;
+    letter-spacing: 0.095em;
+    line-height: 1.5;
+    text-transform: uppercase;
+}
+
+.story-record-header__kind {
+    color: var(--amber);
+}
+
+.story-record-header__number {
+    padding-left: 11px;
+    border-left: 1px solid var(--line-strong);
+    color: var(--ink-soft);
+}
+
+.story-record-header__context {
+    color: var(--ink-dim);
+    font-style: normal;
+    text-transform: none;
+}
+
+@media (max-width: 700px) {
+    .story-record-header {
+        gap: 6px 9px;
+        margin-bottom: 22px;
+        padding-bottom: 10px;
+        font-size: 0.56rem;
+        letter-spacing: 0.07em;
+    }
+
+    .story-record-header__context {
+        flex-basis: 100%;
+    }
+}
