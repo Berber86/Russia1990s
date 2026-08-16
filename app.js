@@ -109,16 +109,14 @@ let userApiKeys = {
 };
 let setupStepIndex = 0;
 
-// Пользовательский сценарий создания героя состоит из пяти коротких этапов.
-// Несколько связанных секций могут отображаться внутри одного этапа — так мы
-// сохраняем существующую логику выбора, но не заставляем игрока проходить
-// семь почти одинаковых экранов.
+// Три коротких этапа создания героя и отдельный, не считающийся шагом,
+// экран подтверждения. Входная обложка живёт отдельно от мастера.
+const SETUP_STEP_COUNT = 3;
 const SETUP_STEPS = [
-    { title: 'Пролог', caption: 'Вступление', badge: 'Начнём спокойно, шаг за шагом.' },
-    { title: 'Кто ты', caption: 'Герой', badge: 'Возраст и характер задают интонацию всей жизни.' },
+    { title: 'Кто ты', caption: 'Герой', badge: 'Возраст задаёт интонацию всей истории.' },
     { title: 'Где ты живёшь', caption: 'Место', badge: 'Город, село или регион — это часть судьбы героя.' },
-    { title: 'Как прожить историю', caption: 'Ритм', badge: 'Выбери темп и количество деталей. Остальное можно изменить позже.' },
-    { title: 'Первый день', caption: 'Старт', badge: 'Последний взгляд перед тем, как история начнётся по-настоящему.' }
+    { title: 'Как прожить историю', caption: 'Ритм', badge: 'Выбери темп, сложность и количество деталей.' },
+    { title: 'Первый день', caption: 'Всё готово', badge: 'Последний взгляд перед началом истории.' }
 ];
 
 // ========== ЭЛЕМЕНТЫ DOM ==========
@@ -632,7 +630,7 @@ function buildArchiveStoryMarkup(entry) {
         // Полировка сорвалась — показываем предупреждение сверху
         html = `
             <div style="background: rgba(220,50,50,0.1); border: 1px dashed var(--danger); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                <strong style="color: var(--danger);">⚠️ Полировка текста сорвалась</strong>
+                <strong style="color: var(--danger);">${uiIcon('alert')} Полировка текста сорвалась</strong>
                 <span style="font-size:0.9em;">Отображается черновой вариант. Вы можете повторить попытку (например, после смены провайдера в настройках).</span>
                 <button class="btn" style="align-self: flex-start; border-color: var(--danger); color: var(--danger);" onclick="window.retryPolish('${entry.turn}')">Отполировать заново</button>
             </div>
@@ -709,7 +707,7 @@ function buildArchiveStoryMarkup(entry) {
     }
 
     if (entry.miracleStory) {
-        html += `<hr><div class="miracle-banner"><h2>✨ ЧУДЕСНОЕ СПАСЕНИЕ</h2><p>Судьба смилостивилась...</p></div>`;
+        html += `<hr><div class="miracle-banner"><h2>${uiIcon('sparkle')} ЧУДЕСНОЕ СПАСЕНИЕ</h2><p>Судьба смилостивилась...</p></div>`;
         html += renderMarkdown(entry.miracleStory);
     }
     if (entry.gameOverData) {
@@ -881,13 +879,18 @@ function renderSetupWizard() {
     const meta = SETUP_STEPS[safeIndex];
     if (els.setupStepTitle) els.setupStepTitle.textContent = meta.title;
     if (els.setupStepCaption) els.setupStepCaption.textContent = meta.caption;
-    if (els.setupStepCounter) els.setupStepCounter.textContent = `Шаг ${safeIndex + 1} из ${SETUP_STEPS.length}`;
+    const isReview = safeIndex === lastIndex;
+    if (els.setupStepCounter) {
+        els.setupStepCounter.textContent = isReview ? 'Настройка завершена' : `Шаг ${safeIndex + 1} из ${SETUP_STEP_COUNT}`;
+    }
     if (els.setupStepHintBadge) els.setupStepHintBadge.textContent = meta.badge;
-    if (els.setupProgressFill) els.setupProgressFill.style.width = `${((safeIndex + 1) / SETUP_STEPS.length) * 100}%`;
+    if (els.setupProgressFill) {
+        els.setupProgressFill.style.width = `${(Math.min(safeIndex + 1, SETUP_STEP_COUNT) / SETUP_STEP_COUNT) * 100}%`;
+    }
     if (els.setupPrevBtn) els.setupPrevBtn.disabled = safeIndex === 0;
     if (els.setupNextBtn) {
-        els.setupNextBtn.style.display = safeIndex === lastIndex ? 'none' : 'inline-flex';
-        els.setupNextBtn.textContent = safeIndex === 0 ? 'Начать' : 'Дальше';
+        els.setupNextBtn.style.display = isReview ? 'none' : 'inline-flex';
+        els.setupNextBtn.textContent = safeIndex === SETUP_STEP_COUNT - 1 ? 'Проверить героя' : 'Дальше';
     }
     if (els.startBtn) {
         els.startBtn.style.display = safeIndex === lastIndex ? 'inline-flex' : 'none';
@@ -1013,10 +1016,10 @@ function setupArchiveControls() {
     els.archiveCopyBtn?.addEventListener('click', async () => {
         try {
             await copyArchiveEntryToClipboard(getSelectedArchiveEntry());
-            alert('✅ Период скопирован!');
+            alert('Период скопирован!');
         } catch (e) {
             console.error('Archive copy error:', e);
-            alert('❌ Не удалось скопировать период.');
+            alert('Не удалось скопировать период.');
         }
     });
 }
@@ -2857,7 +2860,7 @@ function extractFirstStatDeltas(u) {
         if (Math.abs(val) > 2) {
             const current = state.stats[key] ?? 5;
             const impliedDelta = val - current;
-            console.warn(`⚠️ updates.${key}=${val} выглядит как абсолютное значение (текущее=${current}), конвертируем в дельту ${impliedDelta > 0 ? '+' : ''}${impliedDelta}`);
+            console.warn(`updates.${key}=${val} выглядит как абсолютное значение (текущее=${current}), конвертируем в дельту ${impliedDelta > 0 ? '+' : ''}${impliedDelta}`);
             val = impliedDelta;
         }
         result[key] = val;
@@ -2909,7 +2912,7 @@ function applyUpdates(u) {
         let apply = true;
         if (state.turnCount === 1) {
             apply = false;
-            console.log(`🚫 Первый ход: изменение ${STATS_INFO[key]?.name || key} заблокировано (${current} → ${current + delta})`);
+            console.log(`Первый ход: изменение ${STATS_INFO[key]?.name || key} заблокировано (${current} → ${current + delta})`);
         } else {
             // ── ВЯЗКОСТЬ СТАТОВ ──
             // Блокируется только движение ОТ центра (5) — всё дальше к краям.
@@ -2933,7 +2936,7 @@ function applyUpdates(u) {
                 const floor = 0.10; // минимум 10% — дотянуться до края всегда возможно
                 const chance = Math.max(Math.pow(decay, dist), floor);
                 apply = Math.random() < chance;
-                if (!apply) console.log(`🛡️ Вязкость [${state.difficulty}/${state.pace}]: ${STATS_INFO[key]?.name || key} (${current}→${current + delta}) dist=${dist} шанс=${(chance*100).toFixed(0)}%`);
+                if (!apply) console.log(`Вязкость [${state.difficulty}/${state.pace}]: ${STATS_INFO[key]?.name || key} (${current}→${current + delta}) dist=${dist} шанс=${(chance*100).toFixed(0)}%`);
             }
             // Движение к центру: никогда не блокируется
         }
@@ -2995,62 +2998,47 @@ function setupLorePanels() {
         }
     });
 }
-const NPC_EMOJI_MAP = {
-    'Мама': '\uD83D\uDC69\u200D\uD83D\uDC67', 'Папа': '\uD83D\uDC68\u200D\uD83D\uDC67',
-    'Бабушка': '\uD83D\uDC75', 'Дедушка': '\uD83D\uDC74',
-    'Брат': '\uD83D\uDC66', 'Сестра': '\uD83D\uDC67',
-    'Дядя': '\uD83E\uDDD4', 'Тётя': '\uD83D\uDC69'
+const NPC_ICON_MAP = {
+    'Мама': 'person', 'Папа': 'person', 'Бабушка': 'person', 'Дедушка': 'person',
+    'Брат': 'child', 'Сестра': 'girl', 'Дядя': 'person', 'Тётя': 'person'
 };
-const ITEM_EMOJI_POOL = ['\uD83D\uDCE6','\uD83C\uDF81','\uD83D\uDCFF','\uD83D\uDD2E','\uD83D\uDC8E','\uD83E\uDEB6','\uD83D\uDCDC','\uD83D\uDDDD\uFE0F','\uD83D\uDD6F\uFE0F','\uD83D\uDCF7','\uD83E\uDDF8','\uD83E\uDE86','\uD83C\uDFB8','\uD83D\uDCFB','\uD83D\uDCFA','\uD83D\uDCBF','\uD83D\uDCFC','\uD83C\uDFAE','\uD83E\uDE99','\uD83D\uDD14'];
-function getNpcEmoji(name) {
-    for (const [key, emoji] of Object.entries(NPC_EMOJI_MAP)) {
-        if (name.includes(key)) return emoji;
+
+function getNpcIcon(name = '') {
+    for (const [key, icon] of Object.entries(NPC_ICON_MAP)) {
+        if (name.includes(key)) return icon;
     }
     const n = name.toLowerCase();
-    if (n.includes('кот') || n.includes('кош') || n.includes('мурк') || n.includes('кузя') || n.includes('барсик') || n.includes('маськ') || n.includes('рыжик') || n.includes('уголёк') || n.includes('малахит')) return '\uD83D\uDC31';
-    if (n.includes('собак') || n.includes('пёс') || n.includes('шарик') || n.includes('жучка') || n.includes('тузик') || n.includes('рекс') || n.includes('джек') || n.includes('тайга') || n.includes('вьюга') || n.includes('пурга') || n.includes('искра') || n.includes('яшма') || n.includes('барс') || n.includes('азамат') || n.includes('каспий') || n.includes('волчок')) return '\uD83D\uDC15';
-    if (n.includes('конь') || n.includes('лошад') || n.includes('орлик') || n.includes('буран')) return '\uD83D\uDC34';
-    if (n.includes('коров') || n.includes('бурёнк') || n.includes('зорьк')) return '\uD83D\uDC04';
-    if (n.includes('попугай') || n.includes('кеша')) return '\uD83E\uDD9C';
-    if (n.includes('хомяк')) return '\uD83D\uDC39';
-    if (n.includes('черепах')) return '\uD83D\uDC22';
-    if (n.includes('тюлень') || n.includes('нерпа') || n.includes('сивуч') || n.includes('пятнистый')) return '\uD83E\uDDAD';
-    if (n.includes('краб')) return '\uD83E\uDD80';
-    if (n.includes('чайка')) return '\uD83D\uDC26';
-    if (n.includes('олень') || n.includes('нарты')) return '\uD83E\uDD8C';
-    if (n.includes('белка')) return '\uD83D\uDC3F\uFE0F';
-    if (n.includes('голуб')) return '\uD83D\uDC26';
-    if (n.includes('дельфин')) return '\uD83D\uDC2C';
-    return '\uD83D\uDC64';
+    const animalWords = ['кот', 'кош', 'собак', 'пёс', 'шарик', 'жучка', 'тузик', 'рекс',
+        'конь', 'лошад', 'коров', 'попугай', 'хомяк', 'черепах', 'тюлень', 'нерпа',
+        'краб', 'чайка', 'олень', 'белка', 'голуб', 'дельфин'];
+    return animalWords.some((word) => n.includes(word)) ? 'paw' : 'person';
 }
-function getItemEmoji(name, index) {
+
+function getItemIcon(name = '') {
     const n = name.toLowerCase();
-    if (n.includes('книга') || n.includes('энциклоп') || n.includes('букварь') || n.includes('журнал') || n.includes('тетрадь') || n.includes('дневник') || n.includes('стих') || n.includes('подшивка')) return '\uD83D\uDCD6';
-    if (n.includes('нож') || n.includes('кинжал') || n.includes('шашка') || n.includes('лезвие')) return '\uD83D\uDDE1\uFE0F';
-    if (n.includes('мяч')) return '\u26BD';
-    if (n.includes('велосипед')) return '\uD83D\uDEB2';
-    if (n.includes('плеер') || n.includes('кассет') || n.includes('магнитофон')) return '\uD83D\uDCFC';
-    if (n.includes('телефон') || n.includes('пейджер')) return '\uD83D\uDCDF';
-    if (n.includes('ключ') && !n.includes('гаечн')) return '\uD83D\uDDDD\uFE0F';
-    if (n.includes('фото') || n.includes('альбом')) return '\uD83D\uDCF7';
-    if (n.includes('медаль') || n.includes('значок')) return '\uD83C\uDFC5';
-    if (n.includes('деньги') || n.includes('рубл') || n.includes('копилк') || n.includes('монет')) return '\uD83E\uDE99';
-    if (n.includes('игрушк') || n.includes('кукла') || n.includes('мишка') || n.includes('заяц') || n.includes('плюшевый')) return '\uD83E\uDDF8';
-    if (n.includes('очки')) return '\uD83D\uDC53';
-    if (n.includes('часы')) return '\u231A';
-    if (n.includes('кепка') || n.includes('шапка') || n.includes('папаха') || n.includes('панама')) return '\uD83E\uDDE2';
-    if (n.includes('куртка') || n.includes('платье') || n.includes('рубашка') || n.includes('свитер') || n.includes('штаны') || n.includes('колготки') || n.includes('кеды') || n.includes('кроссовки') || n.includes('обувь') || n.includes('сапог') || n.includes('валенки')) return '\uD83D\uDC55';
-    if (n.includes('варенье') || n.includes('мёд') || n.includes('конфет') || n.includes('хлеб') || n.includes('картошк') || n.includes('молоко') || n.includes('инжир') || n.includes('виноград') || n.includes('еда')) return '\uD83C\uDF5E';
-    if (n.includes('камень') || n.includes('малахит') || n.includes('кристалл') || n.includes('самоцвет') || n.includes('янтар') || n.includes('аметист') || n.includes('хрустал') || n.includes('руда')) return '\uD83D\uDC8E';
-    if (n.includes('пистолет') || n.includes('пугач') || n.includes('лук') || n.includes('рогатка') || n.includes('арбалет') || n.includes('оружие')) return '\uD83C\uDFF9';
-    if (n.includes('отвёртк') || n.includes('молоток') || n.includes('гаечн') || n.includes('сверл') || n.includes('инструмент')) return '\uD83D\uDD27';
-    if (n.includes('гитара') || n.includes('гармонь') || n.includes('барабан') || n.includes('баян') || n.includes('пианино')) return '\uD83C\uDFB8';
-    if (n.includes('машинка') || n.includes('трактор') || n.includes('модель') || n.includes('самолёт')) return '\uD83D\uDE97';
-    if (n.includes('шрам') || n.includes('синяк') || n.includes('ссадина') || n.includes('травма') || n.includes('болезнь') || n.includes('кашель') || n.includes('астма') || n.includes('заноза') || n.includes('ожог') || n.includes('укус') || n.includes('обморожен')) return '\uD83E\uDE79';
-    if (n.includes('заикание') || n.includes('кличка') || n.includes('обзывают') || n.includes('позор') || n.includes('ссора')) return '\uD83D\uDCAC';
-    if (n.includes('ракушк') || n.includes('звезда морск') || n.includes('коралл') || n.includes('галька')) return '\uD83D\uDC1A';
-    return ITEM_EMOJI_POOL[index % ITEM_EMOJI_POOL.length];
+    const has = (...words) => words.some((word) => n.includes(word));
+    if (has('книга', 'энциклоп', 'букварь', 'журнал', 'тетрадь', 'дневник', 'стих', 'подшивка')) return 'book';
+    if (has('нож', 'кинжал', 'шашка', 'лезвие', 'пистолет', 'пугач', 'лук', 'рогатка', 'арбалет', 'оружие')) return 'shield';
+    if (has('мяч')) return 'ball';
+    if (has('велосипед')) return 'bike';
+    if (has('плеер', 'кассет', 'магнитофон', 'радио', 'телевизор')) return 'radio';
+    if (has('телефон', 'пейджер', 'приставка', 'картридж', 'игра')) return 'gamepad';
+    if (has('ключ') && !has('гаечн')) return 'key';
+    if (has('фото', 'альбом', 'камера')) return 'camera';
+    if (has('медаль', 'значок', 'грамота')) return 'medal';
+    if (has('деньги', 'рубл', 'копилк', 'монет')) return 'money';
+    if (has('игрушк', 'кукла', 'мишка', 'заяц', 'плюшевый')) return 'sparkle';
+    if (has('кепка', 'шапка', 'папаха', 'панама', 'куртка', 'платье', 'рубашка', 'свитер', 'штаны', 'колготки', 'кеды', 'кроссовки', 'обувь', 'сапог', 'валенки')) return 'shirt';
+    if (has('варенье', 'мёд', 'конфет', 'хлеб', 'картошк', 'молоко', 'инжир', 'виноград', 'еда')) return 'food';
+    if (has('камень', 'малахит', 'кристалл', 'самоцвет', 'янтар', 'аметист', 'хрустал', 'руда', 'ракушк', 'коралл')) return 'gem';
+    if (has('отвёртк', 'молоток', 'гаечн', 'сверл', 'инструмент')) return 'tools';
+    if (has('гитара', 'гармонь', 'барабан', 'баян', 'пианино')) return 'theatre';
+    if (has('машинка', 'трактор', 'модель', 'самолёт')) return 'construction';
+    if (has('шрам', 'синяк', 'ссадина', 'травма', 'болезнь', 'кашель', 'астма', 'заноза', 'ожог', 'укус', 'обморожен')) return 'health';
+    if (has('письмо', 'записка', 'открытка')) return 'clipboard';
+    return 'bag';
 }
+
 function renderNpcPanel() {
     if (!els.npcsGrid || !els.npcsEmpty) return;
     const npcs = state.npcs;
@@ -3062,7 +3050,7 @@ function renderNpcPanel() {
     els.npcsEmpty.style.display = 'none';
     els.npcsGrid.innerHTML = npcs.map((npc, i) => `
         <div class="npc-card" style="animation: cardRise 0.45s ease forwards; animation-delay: ${i * 0.05}s;">
-            <div class="npc-card__portrait">${getNpcEmoji(npc.name)}</div>
+            <div class="npc-card__portrait">${uiIcon(getNpcIcon(npc.name), npc.name)}</div>
             <div class="npc-card__name">${escapeHTML(npc.name)}</div>
             <div class="npc-card__desc">${renderMarkdown(npc.desc || '')}</div>
         </div>
@@ -3079,7 +3067,7 @@ function renderItemsPanel() {
     els.itemsEmpty.style.display = 'none';
     els.itemsGrid.innerHTML = items.map((item, i) => `
         <div class="item-card" style="animation: cardRise 0.45s ease forwards; animation-delay: ${i * 0.05}s;">
-            <div class="item-card__icon">${getItemEmoji(item.name, i)}</div>
+            <div class="item-card__icon">${uiIcon(getItemIcon(item.name), item.name)}</div>
             <div class="item-card__name">${escapeHTML(item.name)}</div>
             <div class="item-card__desc">${renderMarkdown(item.desc || '')}</div>
         </div>
@@ -3273,10 +3261,10 @@ window.copyCurrentPeriodToClipboard = async function copyCurrentPeriodToClipboar
     try {
         const entry = getSelectedArchiveEntry();
         await copyArchiveEntryToClipboard(entry);
-        alert('✅ Период скопирован!');
+        alert('Период скопирован!');
     } catch (err) {
         console.error('Ошибка копирования периода:', err);
-        alert('❌ Не удалось скопировать период.');
+        alert('Не удалось скопировать период.');
     }
 };
 
@@ -3301,10 +3289,10 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
         const header = `=== ЭПОХА ПЕРЕМЕН: 1993 ===\nПерсонаж: ${GENDER_INFO[state.gender].name}, ${state.age} лет\nЛокация: ${locInfo.fullName}\nДата: ${getDateLabel()}\nПровайдер: ${getProviderConfig().label}\n\n`;
         const statsText = Object.entries(state.stats).map(([k, v]) => `${STATS_INFO[k].name}: ${v}`).join(', ');
         await navigator.clipboard.writeText(header + `Текущие параметры: ${statsText}\n\n=== ИСТОРИЯ ===\n${historyText}`);
-        alert('✅ История скопирована!');
+        alert('История скопирована!');
     } catch (err) {
         console.error('Ошибка копирования:', err);
-        alert('❌ Не удалось скопировать историю.');
+        alert('Не удалось скопировать историю.');
     }
 };
 
@@ -3325,6 +3313,18 @@ const savedGameLoaded = tryLoadSavedGame();
 if (!savedGameLoaded) {
     els.setup.classList.remove('hidden');
     els.game.classList.add('hidden');
+
+    const setupShell = document.getElementById('setup-shell');
+    const setupShowcase = setupShell?.querySelector('.setup-showcase');
+    const setupForm = document.getElementById('setup-form-wrap');
+    document.getElementById('setup-intro-btn')?.addEventListener('click', () => {
+        setupShell?.classList.add('setup-shell--started');
+        setupShowcase?.classList.add('hidden');
+        setupForm?.classList.remove('hidden');
+        setupForm?.querySelector('button, select, input')?.focus();
+        document.getElementById('setup-screen')?.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
     els.regionSelect.value = state.region;
     els.citySelect.value = state.city;
     els.startAge.value = String(state.startAge);
@@ -3532,7 +3532,7 @@ window.openIllustrationModal = function(base64Url) {
     modal.innerHTML = `
         <div class="illustration-modal__backdrop"></div>
         <div class="illustration-modal__content">
-            <button type="button" class="illustration-modal__close">✕</button>
+            <button type="button" class="illustration-modal__close" aria-label="Закрыть">${uiIcon('close')}</button>
             <div class="illustration-modal__body">
                 <img src="${base64Url}" class="illustration-modal__img" alt="Увеличенное изображение" />
             </div>
@@ -3938,10 +3938,10 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
         try {
             await navigator.clipboard.writeText(content.textContent);
             const orig = copyBtn.textContent;
-            copyBtn.textContent = '✅ Скопировано!';
+            copyBtn.textContent = 'Скопировано';
             setTimeout(() => { copyBtn.textContent = orig; }, 1800);
         } catch {
-            copyBtn.textContent = '❌ Ошибка';
+            copyBtn.textContent = 'Ошибка';
             setTimeout(() => { copyBtn.textContent = 'Копировать'; }, 1800);
         }
     });
