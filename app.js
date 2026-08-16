@@ -164,22 +164,29 @@ function initDebugUI() {
     const modal = document.getElementById('debug-modal');
     const closeBtn = document.getElementById('debug-close-btn');
     const clearBtn = document.getElementById('debug-clear-btn');
-    
+    const backdrop = document.getElementById('debug-backdrop');
+
     if (fab && modal) {
+        const closeDebug = () => closeOverlay(modal);
         fab.addEventListener('click', () => {
-            modal.classList.remove('hidden');
-            modal.setAttribute('aria-hidden', 'false');
             renderDebugLogs();
+            openOverlay(modal, closeBtn);
         });
-        
-        closeBtn.addEventListener('click', () => {
-            modal.classList.add('hidden');
-            modal.setAttribute('aria-hidden', 'true');
-        });
-        
-        clearBtn.addEventListener('click', () => {
+
+        closeBtn?.addEventListener('click', closeDebug);
+        backdrop?.addEventListener('click', closeDebug);
+
+        clearBtn?.addEventListener('click', () => {
             window.appSystemLogs = [];
             renderDebugLogs();
+            showToast('Системный лог очищен');
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !event.defaultPrevented && getTopDialogRoot() === modal) {
+                event.preventDefault();
+                closeDebug();
+            }
         });
     }
 }
@@ -249,8 +256,111 @@ const els = {
     npcsTrigger: document.getElementById('npcs-trigger'),
     itemsTrigger: document.getElementById('items-trigger'),
     npcsCount: document.getElementById('npcs-count'),
-    itemsCount: document.getElementById('items-count')
+    itemsCount: document.getElementById('items-count'),
+    gameSidebar: document.getElementById('game-sidebar'),
+    gameStatusBtn: document.getElementById('game-status-btn'),
+    gameSidebarClose: document.getElementById('game-sidebar-close'),
+    sidebarDrawerBackdrop: document.getElementById('sidebar-drawer-backdrop'),
+    statusMiniRing: document.getElementById('status-mini-ring'),
+    statusAvatarUse: document.getElementById('status-avatar-use'),
+    gameStatusBrief: document.getElementById('game-status-brief'),
+    dossierBalanceRing: document.getElementById('dossier-balance-ring'),
+    dossierAvatarUse: document.getElementById('dossier-avatar-use'),
+    dossierSummaryTitle: document.getElementById('dossier-summary-title'),
+    dossierSummaryText: document.getElementById('dossier-summary-text'),
+    dossierRiskCount: document.getElementById('dossier-risk-count'),
+    appToast: document.getElementById('app-toast')
 };
+
+// ========== ЕДИНАЯ МОДЕЛЬ МОДАЛЬНЫХ СЛОЁВ ==========
+// Все диалоги используют один стек: он удерживает фокус внутри верхнего слоя,
+// возвращает его на кнопку-источник и не даёт фону прокручиваться.
+const overlayReturnFocus = new WeakMap();
+const openOverlayStack = [];
+const FOCUSABLE_SELECTOR = [
+    'a[href]', 'button:not([disabled])', 'input:not([disabled])',
+    'select:not([disabled])', 'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])'
+].join(',');
+
+function syncBodyInteractionLock() {
+    document.body.classList.toggle('dialog-open', openOverlayStack.length > 0);
+}
+
+function openOverlay(root, preferredFocus = null) {
+    if (!root) return;
+    if (!openOverlayStack.includes(root)) {
+        overlayReturnFocus.set(root, document.activeElement);
+        openOverlayStack.push(root);
+    }
+    root.classList.remove('hidden');
+    root.setAttribute('aria-hidden', 'false');
+    syncBodyInteractionLock();
+    requestAnimationFrame(() => {
+        const dialog = root.querySelector('[role="dialog"]') || root;
+        (preferredFocus || dialog.querySelector(FOCUSABLE_SELECTOR) || dialog).focus?.();
+    });
+}
+
+function releaseOverlay(root, { restoreFocus = true } = {}) {
+    if (!root) return;
+    const index = openOverlayStack.lastIndexOf(root);
+    if (index !== -1) openOverlayStack.splice(index, 1);
+    syncBodyInteractionLock();
+    if (restoreFocus) overlayReturnFocus.get(root)?.focus?.();
+    overlayReturnFocus.delete(root);
+}
+
+function closeOverlay(root, options = {}) {
+    if (!root) return;
+    root.classList.add('hidden');
+    root.setAttribute('aria-hidden', 'true');
+    releaseOverlay(root, options);
+}
+
+function getTopDialogRoot() {
+    const stacked = openOverlayStack[openOverlayStack.length - 1];
+    if (stacked) return stacked;
+    if (document.body.classList.contains('sidebar-drawer-open')) return els.gameSidebar;
+    return null;
+}
+
+function getVisibleFocusable(root) {
+    return [...root.querySelectorAll(FOCUSABLE_SELECTOR)].filter((element) =>
+        !element.closest('.hidden') && element.getClientRects().length > 0
+    );
+}
+
+function setupDialogFocusManagement() {
+    document.addEventListener('keydown', (event) => {
+        const root = getTopDialogRoot();
+        if (event.key === 'Escape' && root?.id === 'illustration-zoom-modal') {
+            event.preventDefault();
+            window.closeIllustrationModal?.();
+            return;
+        }
+        if (event.key !== 'Tab' || !root) return;
+        const focusable = getVisibleFocusable(root);
+        if (!focusable.length) {
+            event.preventDefault();
+            (root.querySelector('[role="dialog"]') || root).focus?.();
+            return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement;
+        if (!root.contains(active)) {
+            event.preventDefault();
+            first.focus();
+        } else if (event.shiftKey && active === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+}
 
 // ========== УТИЛИТЫ ==========
 function pick(arr) {
@@ -559,6 +669,23 @@ function escapeHTML(value = '') {
         .replace(/'/g, '&#39;');
 }
 
+let toastTimer = null;
+function showToast(message, kind = 'success') {
+    if (!els.appToast) return;
+    window.clearTimeout(toastTimer);
+    els.appToast.textContent = message;
+    els.appToast.dataset.kind = kind;
+    els.appToast.classList.add('is-visible');
+    toastTimer = window.setTimeout(() => {
+        els.appToast.classList.remove('is-visible');
+    }, 2600);
+}
+
+function setToggleSelected(button, selected) {
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+}
+
 function uiIcon(name, label = '') {
     const safeName = String(name || 'pin').replace(/[^a-z0-9_-]/gi, '') || 'pin';
     const title = label ? ` aria-label="${escapeHTML(label)}" role="img"` : ' aria-hidden="true"';
@@ -595,9 +722,85 @@ function getStatDescriptor(value) {
     return 'почти катастрофа';
 }
 
+function pluralizeRu(number, forms) {
+    const mod10 = number % 10;
+    const mod100 = number % 100;
+    if (mod10 === 1 && mod100 !== 11) return forms[0];
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms[1];
+    return forms[2];
+}
+
+function getStatusRingColor(value) {
+    const distance = Math.abs(value - 5);
+    if (distance === 0) return 'var(--moss)';
+    if (distance === 1) return 'var(--amber)';
+    if (distance === 2) return 'var(--amber-deep)';
+    return 'var(--rust)';
+}
+
+function buildStatusRingGradient(stats) {
+    const keys = Object.keys(STAT_VISUALS);
+    const wedge = 360 / keys.length;
+    const gap = 2.2;
+    const stops = [];
+    keys.forEach((key, index) => {
+        const start = index * wedge;
+        const end = (index + 1) * wedge;
+        stops.push(`transparent ${start}deg ${start + gap}deg`);
+        stops.push(`${getStatusRingColor(stats[key] ?? 5)} ${start + gap}deg ${end - gap}deg`);
+        stops.push(`transparent ${end - gap}deg ${end}deg`);
+    });
+    return `conic-gradient(from -22.5deg, ${stops.join(', ')})`;
+}
+
+function renderStatusGraphic() {
+    const entries = Object.entries(state.stats)
+        .filter(([key]) => STATS_INFO[key])
+        .map(([key, value]) => ({ key, value, distance: Math.abs(value - 5) }))
+        .sort((a, b) => b.distance - a.distance);
+    if (!entries.length) return;
+
+    const maxDistance = entries[0].distance;
+    const attention = entries.filter((entry) => entry.distance >= 2);
+    const risks = entries.filter((entry) => entry.distance >= 3);
+    const tone = maxDistance >= 4 ? 'critical' : maxDistance >= 3 ? 'danger' : maxDistance >= 2 ? 'watch' : 'balanced';
+    const title = {
+        balanced: maxDistance === 0 ? 'Полный баланс' : 'Ровный период',
+        watch: 'Баланс смещён',
+        danger: 'Нужна осторожность',
+        critical: 'Критическая грань'
+    }[tone];
+    const brief = attention.length
+        ? `${attention.length} ${pluralizeRu(attention.length, ['отклонение', 'отклонения', 'отклонений'])}`
+        : 'всё близко к балансу';
+    const focusNames = attention.slice(0, 2).map((entry) => STATS_INFO[entry.key].name.toLowerCase());
+    const summary = focusNames.length
+        ? `${focusNames.join(' и ')} дальше всего от отметки 5.`
+        : 'Все восемь показателей находятся рядом с отметкой 5.';
+    const riskText = risks.length
+        ? `${risks.length} ${pluralizeRu(risks.length, ['зона риска', 'зоны риска', 'зон риска'])}`
+        : 'критических рисков нет';
+    const gradient = buildStatusRingGradient(state.stats);
+    const avatarHref = state.gender === 'female' ? '#icon-girl' : '#icon-child';
+
+    [els.statusMiniRing, els.dossierBalanceRing].forEach((ring) => {
+        ring?.style.setProperty('--status-ring', gradient);
+        ring?.setAttribute('data-tone', tone);
+    });
+    els.statusAvatarUse?.setAttribute('href', avatarHref);
+    els.dossierAvatarUse?.setAttribute('href', avatarHref);
+    els.gameStatusBtn?.setAttribute('data-tone', tone);
+    els.gameStatusBtn?.setAttribute('aria-label', `Открыть состояние героя. ${title}. ${brief}.`);
+    if (els.gameStatusBrief) els.gameStatusBrief.textContent = brief;
+    if (els.dossierSummaryTitle) els.dossierSummaryTitle.textContent = title;
+    if (els.dossierSummaryText) els.dossierSummaryText.textContent = summary;
+    if (els.dossierRiskCount) els.dossierRiskCount.textContent = riskText;
+}
+
 function buildChoiceMarkup(choice, index = 0) {
     const label = choice.text || choice.action || `Выбор ${index + 1}`;
     return `
+        <span class="choice-btn__index" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>
         <span class="choice-btn__body choice-btn__body--single">
             <span class="choice-btn__title">${escapeHTML(label)}</span>
         </span>
@@ -887,6 +1090,11 @@ function renderSetupWizard() {
     if (els.setupProgressFill) {
         els.setupProgressFill.style.width = `${(Math.min(safeIndex + 1, SETUP_STEP_COUNT) / SETUP_STEP_COUNT) * 100}%`;
     }
+    document.querySelectorAll('[data-progress-step]').forEach((step) => {
+        const index = Number(step.dataset.progressStep);
+        step.classList.toggle('is-current', index === safeIndex);
+        step.classList.toggle('is-complete', index < safeIndex);
+    });
     if (els.setupPrevBtn) els.setupPrevBtn.disabled = safeIndex === 0;
     if (els.setupNextBtn) {
         els.setupNextBtn.style.display = isReview ? 'none' : 'inline-flex';
@@ -900,29 +1108,19 @@ function renderSetupWizard() {
 
 function openSettingsModal() {
     if (!els.settingsModal) return;
-    settingsReturnFocus = document.activeElement;
     syncSettingsVerbosityBtns();
     syncSettingsEnhanceModelBtns();
-    els.settingsModal.classList.remove('hidden');
-    els.settingsModal.setAttribute('aria-hidden', 'false');
-    // Фокус должен оказаться внутри диалога, а не под ним.
-    els.settingsCloseBtn?.focus();
+    openOverlay(els.settingsModal, els.settingsCloseBtn);
 }
 
-let settingsReturnFocus = null;
-
 function closeSettingsModal() {
-    if (!els.settingsModal) return;
-    els.settingsModal.classList.add('hidden');
-    els.settingsModal.setAttribute('aria-hidden', 'true');
-    settingsReturnFocus?.focus?.();
-    settingsReturnFocus = null;
+    closeOverlay(els.settingsModal);
 }
 
 function syncSettingsVerbosityBtns() {
     // Синхронизирует кнопки verbosity в модалке настроек с текущим state.verbosity
     const btns = document.querySelectorAll('#settings-verbosity-btns .option-btn');
-    btns.forEach(b => b.classList.toggle('selected', b.dataset.value === state.verbosity));
+    btns.forEach((button) => setToggleSelected(button, button.dataset.value === state.verbosity));
     // Обновляем info-блок
     const info = document.getElementById('settings-verbosity-info');
     if (info) {
@@ -938,7 +1136,7 @@ function syncSettingsVerbosityBtns() {
 function syncSettingsEnhanceModelBtns() {
     // Синхронизирует переключатель модели полировки в модалке настроек
     const btns = document.querySelectorAll('#settings-enhance-model-btns .option-btn');
-    btns.forEach(b => b.classList.toggle('selected', b.dataset.value === state.enhanceModel));
+    btns.forEach((button) => setToggleSelected(button, button.dataset.value === state.enhanceModel));
 }
 
 function areAdminToolsEnabled() {
@@ -960,7 +1158,10 @@ function setupSettingsModal() {
     els.settingsCloseBtn?.addEventListener('click', closeSettingsModal);
     els.settingsBackdrop?.addEventListener('click', closeSettingsModal);
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && !els.settingsModal?.classList.contains('hidden')) closeSettingsModal();
+        if (event.key === 'Escape' && !event.defaultPrevented && getTopDialogRoot() === els.settingsModal) {
+            event.preventDefault();
+            closeSettingsModal();
+        }
     });
 
     setAdminToolsEnabled(areAdminToolsEnabled());
@@ -969,13 +1170,36 @@ function setupSettingsModal() {
     });
 
     // ── Табы внутри модалки настроек ──
-    document.querySelectorAll('.settings-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const target = btn.dataset.stab;
-            document.querySelectorAll('.settings-tab-btn').forEach(b => b.classList.toggle('selected', b.dataset.stab === target));
-            document.querySelectorAll('.settings-tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== 'stab-' + target));
+    const settingsTabs = [...document.querySelectorAll('.settings-tab-btn')];
+    const activateSettingsTab = (target, moveFocus = false) => {
+        settingsTabs.forEach((button) => {
+            const selected = button.dataset.stab === target;
+            button.classList.toggle('selected', selected);
+            button.setAttribute('aria-selected', String(selected));
+            button.tabIndex = selected ? 0 : -1;
+            if (selected && moveFocus) button.focus();
+        });
+        document.querySelectorAll('.settings-tab-panel').forEach((panel) => {
+            const selected = panel.id === 'stab-' + target;
+            panel.classList.toggle('hidden', !selected);
+            panel.setAttribute('aria-hidden', String(!selected));
+        });
+    };
+
+    settingsTabs.forEach((button, index) => {
+        button.addEventListener('click', () => activateSettingsTab(button.dataset.stab));
+        button.addEventListener('keydown', (event) => {
+            let nextIndex = null;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % settingsTabs.length;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + settingsTabs.length) % settingsTabs.length;
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = settingsTabs.length - 1;
+            if (nextIndex === null) return;
+            event.preventDefault();
+            activateSettingsTab(settingsTabs[nextIndex].dataset.stab, true);
         });
     });
+    activateSettingsTab(settingsTabs.find((button) => button.classList.contains('selected'))?.dataset.stab || 'connection');
 
     // ── Кнопки verbosity в модалке настроек ──
     document.querySelectorAll('#settings-verbosity-btns .option-btn').forEach(btn => {
@@ -983,8 +1207,8 @@ function setupSettingsModal() {
             state.verbosity = btn.dataset.value;
             syncSettingsVerbosityBtns();
             // Синхронизируем кнопки в визарде (если открыт)
-            document.querySelectorAll('#verbosity-btns .option-btn').forEach(b =>
-                b.classList.toggle('selected', b.dataset.value === state.verbosity));
+            document.querySelectorAll('#verbosity-btns .option-btn').forEach((button) =>
+                setToggleSelected(button, button.dataset.value === state.verbosity));
             updateVerbosityInfo(state.verbosity);
             if (hasActiveRun()) save();
         });
@@ -1004,7 +1228,9 @@ function setupSettingsModal() {
 function setupArchiveControls() {
     els.archivePrevBtn?.addEventListener('click', () => {
         if (!state.archiveEntries?.length) return;
-        if (!isArchiveMode()) setArchiveView(state.archiveEntries.length - 1);
+        // Из текущего периода сразу уходим на действительно предыдущий,
+        // а не открываем тот же самый ход под ярлыком «архив».
+        if (!isArchiveMode()) setArchiveView(Math.max(0, state.archiveEntries.length - 2));
         else if (state.archiveViewIndex > 0) setArchiveView(state.archiveViewIndex - 1);
     });
     els.archiveNextBtn?.addEventListener('click', () => {
@@ -1016,10 +1242,10 @@ function setupArchiveControls() {
     els.archiveCopyBtn?.addEventListener('click', async () => {
         try {
             await copyArchiveEntryToClipboard(getSelectedArchiveEntry());
-            alert('Период скопирован!');
+            showToast('Период скопирован');
         } catch (e) {
             console.error('Archive copy error:', e);
-            alert('Не удалось скопировать период.');
+            showToast('Не удалось скопировать период', 'error');
         }
     });
 }
@@ -1073,8 +1299,7 @@ window.resetGame = () => {
 };
 
 function closeResetConfirmation() {
-    els.resetConfirmModal?.classList.add('hidden');
-    els.resetConfirmModal?.setAttribute('aria-hidden', 'true');
+    closeOverlay(els.resetConfirmModal);
 }
 
 window.requestResetGame = () => {
@@ -1082,9 +1307,7 @@ window.requestResetGame = () => {
         if (window.confirm('Сбросить текущую историю? Это действие нельзя отменить.')) window.resetGame();
         return;
     }
-    els.resetConfirmModal.classList.remove('hidden');
-    els.resetConfirmModal.setAttribute('aria-hidden', 'false');
-    els.resetConfirmBtn?.focus();
+    openOverlay(els.resetConfirmModal, els.resetCancelBtn);
 };
 
 function setupResetConfirmation() {
@@ -1092,7 +1315,10 @@ function setupResetConfirmation() {
     els.resetConfirmBackdrop?.addEventListener('click', closeResetConfirmation);
     els.resetConfirmBtn?.addEventListener('click', () => window.resetGame());
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && !els.resetConfirmModal?.classList.contains('hidden')) closeResetConfirmation();
+        if (event.key === 'Escape' && !event.defaultPrevented && getTopDialogRoot() === els.resetConfirmModal) {
+            event.preventDefault();
+            closeResetConfirmation();
+        }
     });
 }
 
@@ -1181,8 +1407,8 @@ function renderProviderSwitcher() {
     const mainExecCfg = getProviderConfig(mainExec);
     const enhanceExecCfg = getProviderConfig(enhanceExec);
     const enhanceModel = getProviderModel('enhance', provider);
-    document.querySelectorAll('.provider-btn').forEach((btn) => {
-        btn.classList.toggle('selected', btn.dataset.provider === provider);
+    document.querySelectorAll('.provider-btn').forEach((button) => {
+        setToggleSelected(button, button.dataset.provider === provider);
     });
     document.querySelectorAll('[data-provider-models]').forEach((el) => {
         el.innerHTML = `
@@ -1399,10 +1625,10 @@ function setupOptionButtons(containerId, stateKey, callback) {
     const container = document.getElementById(containerId);
     if (!container) return;
     const buttons = container.querySelectorAll('.option-btn');
+    buttons.forEach((button) => setToggleSelected(button, button.classList.contains('selected')));
     buttons.forEach((btn) => {
         btn.onclick = () => {
-            buttons.forEach((b) => b.classList.remove('selected'));
-            btn.classList.add('selected');
+            buttons.forEach((button) => setToggleSelected(button, button === btn));
             state[stateKey] = btn.dataset.value;
             if (callback) callback(btn.dataset.value);
             if (stateKey === 'pace') updatePaceInfo(btn.dataset.value);
@@ -2973,16 +3199,10 @@ function applyUpdates(u) {
 // ========== АТМОСФЕРНЫЕ ПАНЕЛИ (NPC / Items) ==========
 function openLorePanel(panel) {
     if (!panel) return;
-    panel.classList.remove('hidden');
-    panel.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    panel.querySelector('.lore-panel__close')?.focus();
+    openOverlay(panel, panel.querySelector('.lore-panel__close'));
 }
 function closeLorePanel(panel) {
-    if (!panel) return;
-    panel.classList.add('hidden');
-    panel.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    closeOverlay(panel);
 }
 function setupLorePanels() {
     els.npcsTrigger?.addEventListener('click', () => { renderNpcPanel(); openLorePanel(els.npcsPanel); });
@@ -2991,13 +3211,71 @@ function setupLorePanels() {
     els.itemsBackdrop?.addEventListener('click', () => closeLorePanel(els.itemsPanel));
     els.npcsClose?.addEventListener('click', () => closeLorePanel(els.npcsPanel));
     els.itemsClose?.addEventListener('click', () => closeLorePanel(els.itemsPanel));
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (els.npcsPanel && !els.npcsPanel.classList.contains('hidden')) closeLorePanel(els.npcsPanel);
-            if (els.itemsPanel && !els.itemsPanel.classList.contains('hidden')) closeLorePanel(els.itemsPanel);
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || event.defaultPrevented) return;
+        const topRoot = getTopDialogRoot();
+        if (topRoot === els.npcsPanel) {
+            event.preventDefault();
+            closeLorePanel(els.npcsPanel);
+        } else if (topRoot === els.itemsPanel) {
+            event.preventDefault();
+            closeLorePanel(els.itemsPanel);
         }
     });
 }
+
+// На узких экранах досье открывается поверх длинной истории. Так игроку не
+// приходится прокручивать несколько экранов вниз, чтобы проверить состояние.
+function setupSidebarDrawer() {
+    if (!els.gameSidebar || !els.gameStatusBtn) return;
+    const compactViewport = window.matchMedia('(max-width: 1080px)');
+    let returnFocus = null;
+
+    const syncA11y = () => {
+        const isOpen = document.body.classList.contains('sidebar-drawer-open');
+        const isCompact = compactViewport.matches;
+        els.gameStatusBtn.setAttribute('aria-expanded', String(isOpen));
+        els.gameSidebar.setAttribute('aria-hidden', String(isCompact && !isOpen));
+        els.gameSidebar.inert = isCompact && !isOpen;
+        if (isCompact) {
+            els.gameSidebar.setAttribute('role', 'dialog');
+            els.gameSidebar.setAttribute('aria-modal', 'true');
+        } else {
+            els.gameSidebar.removeAttribute('role');
+            els.gameSidebar.removeAttribute('aria-modal');
+        }
+        if (!isCompact && isOpen) closeDrawer(false);
+    };
+
+    const openDrawer = () => {
+        if (!compactViewport.matches) return;
+        returnFocus = document.activeElement;
+        document.body.classList.add('sidebar-drawer-open');
+        syncA11y();
+        els.gameSidebarClose?.focus();
+    };
+
+    function closeDrawer(restoreFocus = true) {
+        document.body.classList.remove('sidebar-drawer-open');
+        syncA11y();
+        if (restoreFocus) returnFocus?.focus?.();
+        returnFocus = null;
+    }
+
+    els.gameStatusBtn.addEventListener('click', openDrawer);
+    els.gameSidebarClose?.addEventListener('click', () => closeDrawer());
+    els.sidebarDrawerBackdrop?.addEventListener('click', () => closeDrawer());
+    if (compactViewport.addEventListener) compactViewport.addEventListener('change', syncA11y);
+    else compactViewport.addListener?.(syncA11y);
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !event.defaultPrevented && openOverlayStack.length === 0 && document.body.classList.contains('sidebar-drawer-open')) {
+            event.preventDefault();
+            closeDrawer();
+        }
+    });
+    syncA11y();
+}
+
 const NPC_ICON_MAP = {
     'Мама': 'person', 'Папа': 'person', 'Бабушка': 'person', 'Дедушка': 'person',
     'Брат': 'child', 'Сестра': 'girl', 'Дядя': 'person', 'Тётя': 'person'
@@ -3098,6 +3376,7 @@ function renderUI() {
         modeHTML += `<span class="summary-badge">${uiIcon('clipboard')} Сводка: ход ${state.lastSummaryTurn}</span>`;
     }
     els.modeDisplay.innerHTML = modeHTML;
+    renderStatusGraphic();
 
     els.story.innerHTML = buildArchiveStoryMarkup(archiveEntry);
 
@@ -3157,21 +3436,25 @@ function renderUI() {
     for (const [key, value] of Object.entries(state.stats)) {
         if (!STATS_INFO[key]) continue;
         const toneClass = getStatClass(value);
-        const visual = STAT_VISUALS[key] || { icon: '•', short: 'состояние' };
+        const visual = STAT_VISUALS[key] || { icon: 'target', short: 'состояние' };
+        const meterLeft = Math.min(value, 5) * 10;
+        const meterWidth = Math.abs(value - 5) * 10;
+        const riskHint = value < 5 ? STATS_INFO[key].low : value > 5 ? STATS_INFO[key].high : 'Сейчас показатель в условном балансе.';
         els.stats.innerHTML += `
-            <div class="stat-card ${toneClass}">
+            <div class="stat-card ${toneClass}" title="${escapeHTML(riskHint)}">
                 <div class="stat-card__top">
                     <div class="stat-card__label">
                         <span class="stat-card__icon">${uiIcon(visual.icon)}</span>
                         <div>
                             <div class="stat-card__name">${escapeHTML(STATS_INFO[key].name)}</div>
-                            <div class="stat-card__desc">${escapeHTML(visual.short)}</div>
+                            <div class="stat-card__desc">${escapeHTML(getStatDescriptor(value))}</div>
                         </div>
                     </div>
-                    <span class="stat-card__value ${toneClass}">${value}</span>
+                    <span class="stat-card__value ${toneClass}" aria-label="${value} из 10">${value}</span>
                 </div>
-                <div class="stat-meter">
-                    <span class="stat-meter__fill ${toneClass}" style="width:${Math.max(4, value * 10)}%"></span>
+                <div class="stat-meter" role="meter" aria-label="${escapeHTML(STATS_INFO[key].name)}" aria-valuemin="0" aria-valuemax="10" aria-valuenow="${value}">
+                    <span class="stat-meter__center" aria-hidden="true"></span>
+                    <span class="stat-meter__fill ${toneClass}" style="left:${meterLeft}%; width:${meterWidth}%"></span>
                 </div>
             </div>
         `;
@@ -3261,10 +3544,10 @@ window.copyCurrentPeriodToClipboard = async function copyCurrentPeriodToClipboar
     try {
         const entry = getSelectedArchiveEntry();
         await copyArchiveEntryToClipboard(entry);
-        alert('Период скопирован!');
+        showToast('Период скопирован');
     } catch (err) {
         console.error('Ошибка копирования периода:', err);
-        alert('Не удалось скопировать период.');
+        showToast('Не удалось скопировать период', 'error');
     }
 };
 
@@ -3289,20 +3572,22 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
         const header = `=== ЭПОХА ПЕРЕМЕН: 1993 ===\nПерсонаж: ${GENDER_INFO[state.gender].name}, ${state.age} лет\nЛокация: ${locInfo.fullName}\nДата: ${getDateLabel()}\nПровайдер: ${getProviderConfig().label}\n\n`;
         const statsText = Object.entries(state.stats).map(([k, v]) => `${STATS_INFO[k].name}: ${v}`).join(', ');
         await navigator.clipboard.writeText(header + `Текущие параметры: ${statsText}\n\n=== ИСТОРИЯ ===\n${historyText}`);
-        alert('История скопирована!');
+        showToast('Вся история скопирована');
     } catch (err) {
         console.error('Ошибка копирования:', err);
-        alert('Не удалось скопировать историю.');
+        showToast('Не удалось скопировать историю', 'error');
     }
 };
 
 loadStoredApiKeys();
 syncCurrentApiKey();
+setupDialogFocusManagement();
 setupProviderSwitcher();
 setupSettingsModal();
 setupResetConfirmation();
 setupArchiveControls();
 setupLorePanels();
+setupSidebarDrawer();
 setupLoaderCancel();
 renderProviderSwitcher();
 updateApiKeyInput();
@@ -3317,13 +3602,22 @@ if (!savedGameLoaded) {
     const setupShell = document.getElementById('setup-shell');
     const setupShowcase = setupShell?.querySelector('.setup-showcase');
     const setupForm = document.getElementById('setup-form-wrap');
-    document.getElementById('setup-intro-btn')?.addEventListener('click', () => {
+    const showSetupForm = () => {
         setupShell?.classList.add('setup-shell--started');
         setupShowcase?.classList.add('hidden');
         setupForm?.classList.remove('hidden');
         setupForm?.querySelector('button, select, input')?.focus();
         document.getElementById('setup-screen')?.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    };
+    const showSetupCover = () => {
+        setupShell?.classList.remove('setup-shell--started');
+        setupForm?.classList.add('hidden');
+        setupShowcase?.classList.remove('hidden');
+        document.getElementById('setup-screen')?.scrollTo({ top: 0, behavior: 'smooth' });
+        document.getElementById('setup-intro-btn')?.focus();
+    };
+    document.getElementById('setup-intro-btn')?.addEventListener('click', showSetupForm);
+    document.getElementById('setup-cover-btn')?.addEventListener('click', showSetupCover);
 
     els.regionSelect.value = state.region;
     els.citySelect.value = state.city;
@@ -3530,8 +3824,8 @@ window.openIllustrationModal = function(base64Url) {
     modal.id = 'illustration-zoom-modal';
     modal.className = 'illustration-modal';
     modal.innerHTML = `
-        <div class="illustration-modal__backdrop"></div>
-        <div class="illustration-modal__content">
+        <div class="illustration-modal__backdrop" aria-hidden="true"></div>
+        <div class="illustration-modal__content" role="dialog" aria-modal="true" aria-label="Иллюстрация воспоминания" tabindex="-1">
             <button type="button" class="illustration-modal__close" aria-label="Закрыть">${uiIcon('close')}</button>
             <div class="illustration-modal__body">
                 <img src="${base64Url}" class="illustration-modal__img" alt="Увеличенное изображение" />
@@ -3544,17 +3838,15 @@ window.openIllustrationModal = function(base64Url) {
     modal.querySelector('.illustration-modal__img').onclick = window.closeIllustrationModal;
 
     document.body.appendChild(modal);
-    document.body.style.overflow = 'hidden';
+    openOverlay(modal, modal.querySelector('.illustration-modal__close'));
 };
 
 window.closeIllustrationModal = function() {
     const modal = document.getElementById('illustration-zoom-modal');
     if (modal) {
+        releaseOverlay(modal);
         modal.classList.add('illustration-modal--closing');
-        setTimeout(() => {
-            modal.remove();
-            document.body.style.overflow = '';
-        }, 200);
+        setTimeout(() => modal.remove(), 200);
     }
 };
 
@@ -3656,7 +3948,7 @@ ${archiveForEnhance}${canonBlock}`;
         }
     } catch(e) {
         console.error(e);
-        alert('Не удалось отполировать: ' + e.message);
+        showToast(`Не удалось отполировать: ${e.message}`, 'error');
     } finally {
         setLoading(false);
         save();
@@ -3706,8 +3998,7 @@ window.selectImgStyle = function(turnStr, style, btnElem) {
     const group = document.getElementById('img-style-group-' + turnStr);
     if (group) {
         const buttons = group.querySelectorAll('button');
-        buttons.forEach(b => b.classList.remove('selected'));
-        btnElem.classList.add('selected');
+        buttons.forEach((button) => setToggleSelected(button, button === btnElem));
     }
     const valInput = document.getElementById('img-style-val-' + turnStr);
     if (valInput) valInput.value = style;
@@ -3897,40 +4188,58 @@ ${archiveForEnhance}${canonBlock}${statsGuidance ? `\nОсобые указан�
     }
 
     // ---------- Tab switching ----------
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            currentTab = btn.dataset.tab;
-            tabBtns.forEach(b => {
-                const isActive = b.dataset.tab === currentTab;
-                b.style.background  = isActive ? 'var(--amber,#e8b061)' : 'var(--paper-2,#26201a)';
-                b.style.color       = isActive ? 'var(--paper-0,#0c0a08)' : 'var(--ink-soft)';
-                b.style.borderColor = isActive ? 'var(--line-warm,#c98a3a)' : 'var(--line-strong)';
-                b.classList.toggle('selected', isActive);
-            });
-            renderPromptInspector();
+    const promptTabs = [...tabBtns];
+    function activatePromptTab(tab, moveFocus = false) {
+        currentTab = tab;
+        promptTabs.forEach((button) => {
+            const isActive = button.dataset.tab === currentTab;
+            button.style.background  = isActive ? 'var(--amber,#e8b061)' : 'var(--paper-2,#26201a)';
+            button.style.color       = isActive ? 'var(--paper-0,#0c0a08)' : 'var(--ink-soft)';
+            button.style.borderColor = isActive ? 'var(--line-warm,#c98a3a)' : 'var(--line-strong)';
+            button.classList.toggle('selected', isActive);
+            button.setAttribute('aria-selected', String(isActive));
+            button.tabIndex = isActive ? 0 : -1;
+            if (isActive) {
+                content.setAttribute('aria-labelledby', button.id);
+                if (moveFocus) button.focus();
+            }
+        });
+        renderPromptInspector();
+    }
+
+    promptTabs.forEach((button, index) => {
+        button.addEventListener('click', () => activatePromptTab(button.dataset.tab));
+        button.addEventListener('keydown', (event) => {
+            let nextIndex = null;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % promptTabs.length;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + promptTabs.length) % promptTabs.length;
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = promptTabs.length - 1;
+            if (nextIndex === null) return;
+            event.preventDefault();
+            activatePromptTab(promptTabs[nextIndex].dataset.tab, true);
         });
     });
 
     // ---------- Open / Close ----------
     function openModal() {
         renderPromptInspector();
-        modal.classList.remove('hidden');
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
+        openOverlay(modal, closeBtn);
     }
     function closeModal() {
-        modal.classList.add('hidden');
-        modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
+        closeOverlay(modal);
     }
 
-        fab?.addEventListener('click', openModal);
+    fab?.addEventListener('click', openModal);
     closeBtn?.addEventListener('click', closeModal);
     backdrop?.addEventListener('click', closeModal);
     refreshBtn?.addEventListener('click', renderPromptInspector);
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !event.defaultPrevented && getTopDialogRoot() === modal) {
+            event.preventDefault();
+            closeModal();
+        }
     });
 
     // ---------- Copy ----------
