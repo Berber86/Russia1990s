@@ -109,16 +109,14 @@ let userApiKeys = {
 };
 let setupStepIndex = 0;
 
-// Пользовательский сценарий создания героя состоит из пяти коротких этапов.
-// Несколько связанных секций могут отображаться внутри одного этапа — так мы
-// сохраняем существующую логику выбора, но не заставляем игрока проходить
-// семь почти одинаковых экранов.
+// Три коротких этапа создания героя и отдельный, не считающийся шагом,
+// экран подтверждения. Входная обложка живёт отдельно от мастера.
+const SETUP_STEP_COUNT = 3;
 const SETUP_STEPS = [
-    { title: 'Пролог', caption: 'Вступление', badge: 'Начнём спокойно, шаг за шагом.' },
-    { title: 'Кто ты', caption: 'Герой', badge: 'Возраст и характер задают интонацию всей жизни.' },
+    { title: 'Кто ты', caption: 'Герой', badge: 'Возраст задаёт интонацию всей истории.' },
     { title: 'Где ты живёшь', caption: 'Место', badge: 'Город, село или регион — это часть судьбы героя.' },
-    { title: 'Как прожить историю', caption: 'Ритм', badge: 'Выбери темп и количество деталей. Остальное можно изменить позже.' },
-    { title: 'Первый день', caption: 'Старт', badge: 'Последний взгляд перед тем, как история начнётся по-настоящему.' }
+    { title: 'Как прожить историю', caption: 'Ритм', badge: 'Выбери темп, сложность и количество деталей.' },
+    { title: 'Первый день', caption: 'Всё готово', badge: 'Последний взгляд перед началом истории.' }
 ];
 
 // ========== ЭЛЕМЕНТЫ DOM ==========
@@ -881,13 +879,18 @@ function renderSetupWizard() {
     const meta = SETUP_STEPS[safeIndex];
     if (els.setupStepTitle) els.setupStepTitle.textContent = meta.title;
     if (els.setupStepCaption) els.setupStepCaption.textContent = meta.caption;
-    if (els.setupStepCounter) els.setupStepCounter.textContent = `Шаг ${safeIndex + 1} из ${SETUP_STEPS.length}`;
+    const isReview = safeIndex === lastIndex;
+    if (els.setupStepCounter) {
+        els.setupStepCounter.textContent = isReview ? 'Настройка завершена' : `Шаг ${safeIndex + 1} из ${SETUP_STEP_COUNT}`;
+    }
     if (els.setupStepHintBadge) els.setupStepHintBadge.textContent = meta.badge;
-    if (els.setupProgressFill) els.setupProgressFill.style.width = `${((safeIndex + 1) / SETUP_STEPS.length) * 100}%`;
+    if (els.setupProgressFill) {
+        els.setupProgressFill.style.width = `${(Math.min(safeIndex + 1, SETUP_STEP_COUNT) / SETUP_STEP_COUNT) * 100}%`;
+    }
     if (els.setupPrevBtn) els.setupPrevBtn.disabled = safeIndex === 0;
     if (els.setupNextBtn) {
-        els.setupNextBtn.style.display = safeIndex === lastIndex ? 'none' : 'inline-flex';
-        els.setupNextBtn.textContent = safeIndex === 0 ? 'Начать' : 'Дальше';
+        els.setupNextBtn.style.display = isReview ? 'none' : 'inline-flex';
+        els.setupNextBtn.textContent = safeIndex === SETUP_STEP_COUNT - 1 ? 'Проверить героя' : 'Дальше';
     }
     if (els.startBtn) {
         els.startBtn.style.display = safeIndex === lastIndex ? 'inline-flex' : 'none';
@@ -3325,6 +3328,18 @@ const savedGameLoaded = tryLoadSavedGame();
 if (!savedGameLoaded) {
     els.setup.classList.remove('hidden');
     els.game.classList.add('hidden');
+
+    const setupShell = document.getElementById('setup-shell');
+    const setupShowcase = setupShell?.querySelector('.setup-showcase');
+    const setupForm = document.getElementById('setup-form-wrap');
+    document.getElementById('setup-intro-btn')?.addEventListener('click', () => {
+        setupShell?.classList.add('setup-shell--started');
+        setupShowcase?.classList.add('hidden');
+        setupForm?.classList.remove('hidden');
+        setupForm?.querySelector('button, select, input')?.focus();
+        document.getElementById('setup-screen')?.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
     els.regionSelect.value = state.region;
     els.citySelect.value = state.city;
     els.startAge.value = String(state.startAge);

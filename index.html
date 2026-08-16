@@ -81,64 +81,35 @@
     <div class="screen-vignette" aria-hidden="true"></div>
 
     <div id="setup-screen">
-        <div class="setup-shell">
-            <section class="setup-showcase">
+        <div class="setup-shell" id="setup-shell">
+            <section class="setup-showcase" aria-labelledby="setup-intro-title">
                 <div class="setup-hero-art"></div>
-                <div class="setup-hero-copy">
+                <div class="setup-hero-copy setup-hero-copy--intro">
                     <div class="setup-eyebrow">Интерактивная хроника детства</div>
-                    <h1>Эпоха Перемен</h1>
+                    <h1 id="setup-intro-title">Эпоха Перемен</h1>
                     <p class="setup-lead">
-                        Атмосферная текстовая RPG о жизни в России 90-х — с дворами, подъездами, дефицитом,
-                        тревогой перемен и теми маленькими событиями, которые потом помнятся всю жизнь.
+                        Проживи детство в России 90-х — без глянца, глазами ребёнка.
                     </p>
-                    <div class="setup-feature-grid">
-                        <div class="setup-feature-card">
-                            <span class="setup-feature-icon"><svg class="ui-icon"><use href="#icon-film"></use></svg></span>
-                            <div>
-                                <strong>Ностальгия без глянца</strong>
-                                <p>Не открытка, а настоящая эпоха — с холодом лестничных клеток и светом кухонь.</p>
-                            </div>
-                        </div>
-                        <div class="setup-feature-card">
-                            <span class="setup-feature-icon"><svg class="ui-icon"><use href="#icon-child"></use></svg></span>
-                            <div>
-                                <strong>Взгляд ребёнка</strong>
-                                <p>История рассказывается не с высоты взрослого, а изнутри возраста героя.</p>
-                            </div>
-                        </div>
-                        <div class="setup-feature-card">
-                            <span class="setup-feature-icon"><svg class="ui-icon"><use href="#icon-map"></use></svg></span>
-                            <div>
-                                <strong>Разные судьбы</strong>
-                                <p>Москва, Сибирь, село на Урале или Кавказ — место меняет сам ритм жизни.</p>
-                            </div>
-                        </div>
-                        <div class="setup-feature-card">
-                            <span class="setup-feature-icon"><svg class="ui-icon"><use href="#icon-theatre"></use></svg></span>
-                            <div>
-                                <strong>Крайности опасны</strong>
-                                <p>Здесь не работает логика «чем больше — тем лучше». Любой перекос чего-то стоит.</p>
-                            </div>
-                        </div>
-                    </div>
+                    <button type="button" class="primary setup-intro-cta" id="setup-intro-btn">Начать историю</button>
+                    <p class="setup-intro-note">Создание героя займёт около минуты</p>
                 </div>
             </section>
 
-            <section class="setup-form-wrap">
+            <section class="setup-form-wrap hidden" id="setup-form-wrap">
                 <div class="setup-form-topbar">
                     <button type="button" class="icon-btn icon-btn--ghost" id="setup-settings-btn" aria-label="Открыть настройки"><svg class="ui-icon"><use href="#icon-settings"></use></svg></button>
                 </div>
                 <div class="setup-form-head">
                     <div>
                         <div class="setup-eyebrow">Создание героя</div>
-                        <h2 id="setup-step-title">Пролог</h2>
+                        <h2 id="setup-step-title">Кто ты</h2>
                     </div>
-                    <div class="setup-badge" id="setup-step-hint-badge">Начнём спокойно, шаг за шагом.</div>
+                    <div class="setup-badge" id="setup-step-hint-badge">Возраст задаёт интонацию всей истории.</div>
                 </div>
                 <div class="setup-progress-wrap">
                     <div class="setup-progress-labels">
-                        <span id="setup-step-counter">Шаг 1 из 5</span>
-                        <span id="setup-step-caption">Вступление</span>
+                        <span id="setup-step-counter">Шаг 1 из 3</span>
+                        <span id="setup-step-caption">Герой</span>
                     </div>
                     <div class="setup-progress-track">
                         <div class="setup-progress-fill" id="setup-progress-fill"></div>
@@ -146,23 +117,8 @@
                 </div>
 
                 <div class="setup-wizard" id="setup-wizard">
-                    <!-- Шаг 0: Пролог -->
-                    <section class="setup-step active" data-step="0" data-wizard-group="0">
-                        <div class="setup-section setup-section--focus">
-                            <h3>Добро пожаловать</h3>
-                            <p class="setup-copy">
-                                Ты проживёшь жизнь ребёнка в России 90-х. Каждый ход — не просто событие, а маленький сдвиг судьбы:
-                                в семье, здоровье, дружбе, самоощущении и месте в мире.
-                            </p>
-                            <div class="setup-tip">
-                                <strong>Подсказка:</strong>
-                                игра любит не «победные» решения, а жизненные. Иногда самый осторожный выбор — тоже драма.
-                            </div>
-                        </div>
-                    </section>
-
                     <!-- Шаг 1: Персонаж -->
-                    <section class="setup-step" data-step="1" data-wizard-group="1">
+                    <section class="setup-step" data-step="1" data-wizard-group="0">
                         <div class="setup-section">
                             <h3>Кто твой герой</h3>
                             <div class="setup-row setup-row-stack-mobile">
@@ -193,7 +149,7 @@
                     </section>
 
                     <!-- Шаг 2: Локация -->
-                    <section class="setup-step" data-step="2" data-wizard-group="2">
+                    <section class="setup-step" data-step="2" data-wizard-group="1">
                         <div class="setup-section location-section">
                             <h3>Где всё начинается</h3>
                             <div class="setup-row setup-row-stack-mobile">
@@ -212,7 +168,7 @@
                     </section>
 
                     <!-- Шаг 3: Конкретное место -->
-                    <section class="setup-step" data-step="3" data-wizard-group="2">
+                    <section class="setup-step" data-step="3" data-wizard-group="1">
                         <div class="setup-section location-section">
                             <h3>Где именно</h3>
                             <div class="setup-row is-hidden" id="region-select-row">
@@ -246,7 +202,7 @@
                     </section>
 
                     <!-- Шаг 3: Ритм игры -->
-                    <section class="setup-step" data-step="4" data-wizard-group="3">
+                    <section class="setup-step" data-step="4" data-wizard-group="2">
                         <div class="setup-grid-2 setup-grid-2--tight">
                             <div class="setup-section">
                                 <h3>Темп повествования</h3>
@@ -281,7 +237,7 @@
                     </section>
 
                     <!-- Шаг 5: Стиль повествования -->
-                    <section class="setup-step" data-step="5" data-wizard-group="3">
+                    <section class="setup-step" data-step="5" data-wizard-group="2">
                         <div class="setup-section">
                             <h3>Стиль повествования</h3>
                             <div class="setup-row setup-row-stack-mobile">
@@ -303,35 +259,22 @@
                     </section>
 
                     <!-- Шаг 6: Старт -->
-                    <section class="setup-step" data-step="6" data-wizard-group="4">
+                    <section class="setup-step" data-step="6" data-wizard-group="3">
                         <div class="setup-section setup-section--focus">
                             <h3>Твой старт</h3>
                             <p class="setup-copy setup-copy--small">
-                                Ниже — случайный стартовый срез жизни героя: близкие люди, вещи, атмосфера дома и то,
-                                как всё это повлияет на первые ощущения от мира.
+                                Всё готово. Вот герой и случайный срез его жизни перед первой сценой.
                             </p>
-                            <div class="setup-tip">
-                                <strong>Подсказка:</strong>
-                                не пытайся собрать «идеальный» старт. В этой игре интереснее всего работают шероховатости, нехватка и странные совпадения.
-                            </div>
                         </div>
                         <div class="start-summary" id="start-summary" aria-label="Итоги создания героя"></div>
                         <div class="start-preview" id="start-preview"></div>
-                        <button id="start-btn" class="primary">Начать игру</button>
+                        <button id="start-btn" class="primary">Прожить первый день</button>
                     </section>
                 </div>
 
                 <div class="setup-nav" id="setup-nav">
                     <button type="button" class="control-btn control-btn--ghost" id="setup-prev-btn">Назад</button>
                     <button type="button" class="control-btn" id="setup-next-btn">Дальше</button>
-                </div>
-
-                <div class="support-card support-card--setup">
-                    <p class="support-card__title"><svg class="ui-icon"><use href="#icon-heart"></use></svg> Поддержать проект</p>
-                    <p>
-                        Ответы нейросети не бесплатны для автора проекта. Помочь с оплатой API:<br>
-                        <strong>+7 950 004-88-24</strong> (Озон, Дарья)
-                    </p>
                 </div>
             </section>
         </div>
