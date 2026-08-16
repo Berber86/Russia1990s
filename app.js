@@ -261,6 +261,14 @@ const els = {
     gameStatusBtn: document.getElementById('game-status-btn'),
     gameSidebarClose: document.getElementById('game-sidebar-close'),
     sidebarDrawerBackdrop: document.getElementById('sidebar-drawer-backdrop'),
+    statusMiniRing: document.getElementById('status-mini-ring'),
+    statusAvatarUse: document.getElementById('status-avatar-use'),
+    gameStatusBrief: document.getElementById('game-status-brief'),
+    dossierBalanceRing: document.getElementById('dossier-balance-ring'),
+    dossierAvatarUse: document.getElementById('dossier-avatar-use'),
+    dossierSummaryTitle: document.getElementById('dossier-summary-title'),
+    dossierSummaryText: document.getElementById('dossier-summary-text'),
+    dossierRiskCount: document.getElementById('dossier-risk-count'),
     appToast: document.getElementById('app-toast')
 };
 
@@ -712,6 +720,81 @@ function getStatDescriptor(value) {
     if (value === 6) return 'заметный сдвиг';
     if (value <= 8) return 'тревожный избыток';
     return 'почти катастрофа';
+}
+
+function pluralizeRu(number, forms) {
+    const mod10 = number % 10;
+    const mod100 = number % 100;
+    if (mod10 === 1 && mod100 !== 11) return forms[0];
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms[1];
+    return forms[2];
+}
+
+function getStatusRingColor(value) {
+    const distance = Math.abs(value - 5);
+    if (distance === 0) return 'var(--moss)';
+    if (distance === 1) return 'var(--amber)';
+    if (distance === 2) return 'var(--amber-deep)';
+    return 'var(--rust)';
+}
+
+function buildStatusRingGradient(stats) {
+    const keys = Object.keys(STAT_VISUALS);
+    const wedge = 360 / keys.length;
+    const gap = 2.2;
+    const stops = [];
+    keys.forEach((key, index) => {
+        const start = index * wedge;
+        const end = (index + 1) * wedge;
+        stops.push(`transparent ${start}deg ${start + gap}deg`);
+        stops.push(`${getStatusRingColor(stats[key] ?? 5)} ${start + gap}deg ${end - gap}deg`);
+        stops.push(`transparent ${end - gap}deg ${end}deg`);
+    });
+    return `conic-gradient(from -22.5deg, ${stops.join(', ')})`;
+}
+
+function renderStatusGraphic() {
+    const entries = Object.entries(state.stats)
+        .filter(([key]) => STATS_INFO[key])
+        .map(([key, value]) => ({ key, value, distance: Math.abs(value - 5) }))
+        .sort((a, b) => b.distance - a.distance);
+    if (!entries.length) return;
+
+    const maxDistance = entries[0].distance;
+    const attention = entries.filter((entry) => entry.distance >= 2);
+    const risks = entries.filter((entry) => entry.distance >= 3);
+    const tone = maxDistance >= 4 ? 'critical' : maxDistance >= 3 ? 'danger' : maxDistance >= 2 ? 'watch' : 'balanced';
+    const title = {
+        balanced: maxDistance === 0 ? 'Полный баланс' : 'Ровный период',
+        watch: 'Баланс смещён',
+        danger: 'Нужна осторожность',
+        critical: 'Критическая грань'
+    }[tone];
+    const brief = attention.length
+        ? `${attention.length} ${pluralizeRu(attention.length, ['отклонение', 'отклонения', 'отклонений'])}`
+        : 'всё близко к балансу';
+    const focusNames = attention.slice(0, 2).map((entry) => STATS_INFO[entry.key].name.toLowerCase());
+    const summary = focusNames.length
+        ? `${focusNames.join(' и ')} дальше всего от отметки 5.`
+        : 'Все восемь показателей находятся рядом с отметкой 5.';
+    const riskText = risks.length
+        ? `${risks.length} ${pluralizeRu(risks.length, ['зона риска', 'зоны риска', 'зон риска'])}`
+        : 'критических рисков нет';
+    const gradient = buildStatusRingGradient(state.stats);
+    const avatarHref = state.gender === 'female' ? '#icon-girl' : '#icon-child';
+
+    [els.statusMiniRing, els.dossierBalanceRing].forEach((ring) => {
+        ring?.style.setProperty('--status-ring', gradient);
+        ring?.setAttribute('data-tone', tone);
+    });
+    els.statusAvatarUse?.setAttribute('href', avatarHref);
+    els.dossierAvatarUse?.setAttribute('href', avatarHref);
+    els.gameStatusBtn?.setAttribute('data-tone', tone);
+    els.gameStatusBtn?.setAttribute('aria-label', `Открыть состояние героя. ${title}. ${brief}.`);
+    if (els.gameStatusBrief) els.gameStatusBrief.textContent = brief;
+    if (els.dossierSummaryTitle) els.dossierSummaryTitle.textContent = title;
+    if (els.dossierSummaryText) els.dossierSummaryText.textContent = summary;
+    if (els.dossierRiskCount) els.dossierRiskCount.textContent = riskText;
 }
 
 function buildChoiceMarkup(choice, index = 0) {
@@ -3293,6 +3376,7 @@ function renderUI() {
         modeHTML += `<span class="summary-badge">${uiIcon('clipboard')} Сводка: ход ${state.lastSummaryTurn}</span>`;
     }
     els.modeDisplay.innerHTML = modeHTML;
+    renderStatusGraphic();
 
     els.story.innerHTML = buildArchiveStoryMarkup(archiveEntry);
 

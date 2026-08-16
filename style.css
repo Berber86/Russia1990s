@@ -3977,3 +3977,423 @@ body.dialog-open {
         scroll-margin-top: 16px;
     }
 }
+
+/* ============================================================
+   UX/UI CYCLE 3 — graphical dossier and discoverable status control
+   ============================================================ */
+
+/* ---------- SEGMENTED STATUS RING ---------- */
+
+.status-ring {
+    --status-ring: conic-gradient(from -22.5deg, var(--moss) 0deg 42deg, transparent 42deg 45deg);
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--status-ring);
+    box-shadow: 0 0 0 1px var(--line-strong), 0 8px 22px rgba(0, 0, 0, 0.24);
+}
+
+.status-ring::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    inset: 6px;
+    border-radius: inherit;
+    background: var(--paper-1);
+    border: 1px solid var(--line);
+}
+
+.status-ring .ui-icon {
+    position: relative;
+    z-index: 1;
+    color: var(--ink-soft);
+    stroke-width: 1.8;
+}
+
+.status-ring--mini {
+    width: 42px;
+    height: 42px;
+}
+
+.status-ring--mini::before {
+    inset: 5px;
+}
+
+.status-ring--mini .ui-icon {
+    width: 17px;
+    height: 17px;
+}
+
+.status-ring--dossier {
+    width: 74px;
+    height: 74px;
+    box-shadow: 0 0 0 1px rgba(239, 229, 208, 0.22), 0 14px 32px rgba(0, 0, 0, 0.34);
+}
+
+.status-ring--dossier::before {
+    inset: 8px;
+    background: color-mix(in srgb, var(--paper-0) 86%, transparent);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+}
+
+.status-ring--dossier .ui-icon {
+    width: 27px;
+    height: 27px;
+    color: #f2e8d6;
+}
+
+.status-ring[data-tone="danger"],
+.status-ring[data-tone="critical"] {
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--rust) 55%, var(--line-strong)),
+        0 0 0 5px color-mix(in srgb, var(--rust) 10%, transparent),
+        0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes statusAttention {
+    0%, 68%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--rust) 55%, var(--line-strong)), 0 0 0 4px color-mix(in srgb, var(--rust) 8%, transparent), 0 12px 28px rgba(0,0,0,.3); }
+    82% { box-shadow: 0 0 0 1px var(--rust), 0 0 0 9px color-mix(in srgb, var(--rust) 3%, transparent), 0 12px 28px rgba(0,0,0,.3); }
+}
+
+.status-ring[data-tone="critical"] {
+    animation: statusAttention 2.8s ease-in-out infinite;
+}
+
+/* ---------- STATUS CONTROL: action + preview, not an unlabeled utility ---------- */
+
+.game-status-btn {
+    position: relative;
+    overflow: visible;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    justify-content: initial;
+    gap: 11px;
+    min-width: 252px;
+    min-height: 60px;
+    padding: 8px 10px;
+    border-color: var(--line-warm);
+    border-radius: var(--radius-md);
+    background:
+        linear-gradient(120deg, color-mix(in srgb, var(--amber) 9%, transparent), transparent 52%),
+        var(--paper-2);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 1rem;
+    letter-spacing: 0;
+    text-align: left;
+    text-transform: none;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.025);
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, opacity 0.2s ease;
+}
+
+.game-status-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 18%;
+    width: 42%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--amber) 60%, transparent), transparent);
+}
+
+.game-status-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--amber);
+    background:
+        linear-gradient(120deg, color-mix(in srgb, var(--amber) 15%, transparent), transparent 58%),
+        var(--paper-2);
+    box-shadow: 0 15px 34px rgba(0, 0, 0, 0.27), 0 0 0 3px var(--amber-soft);
+}
+
+.game-status-btn[data-tone="danger"],
+.game-status-btn[data-tone="critical"] {
+    border-color: color-mix(in srgb, var(--rust) 58%, var(--line-strong));
+    background:
+        linear-gradient(120deg, color-mix(in srgb, var(--rust) 12%, transparent), transparent 58%),
+        var(--paper-2);
+}
+
+.game-status-btn__copy {
+    display: grid;
+    min-width: 0;
+    line-height: 1.1;
+}
+
+.game-status-btn__copy small {
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.game-status-btn[data-tone="danger"] .game-status-btn__copy small,
+.game-status-btn[data-tone="critical"] .game-status-btn__copy small {
+    color: var(--rust);
+}
+
+.game-status-btn__copy strong {
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.game-status-btn__copy em {
+    margin-top: 4px;
+    overflow: hidden;
+    color: var(--ink-dim);
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    font-style: normal;
+    letter-spacing: 0.03em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.game-status-btn__arrow {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--line-warm);
+    border-radius: 50%;
+    color: var(--amber);
+    font-family: var(--mono);
+    transition: transform 0.22s ease, background 0.22s ease;
+}
+
+.game-status-btn:hover .game-status-btn__arrow {
+    transform: translateX(2px);
+    background: var(--amber-soft);
+}
+
+/* ---------- GRAPHICAL DOSSIER SUMMARY ---------- */
+
+.dossier-summary {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: 154px;
+    margin-bottom: 10px;
+    padding: 18px 16px 12px;
+    border: 1px solid var(--line-warm);
+    border-radius: var(--radius-md);
+    background: var(--paper-2);
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.dossier-summary::before {
+    content: "";
+    position: absolute;
+    z-index: -2;
+    inset: 0;
+    background-position: center;
+    background-size: cover;
+    opacity: 0.34;
+    filter: saturate(0.62) contrast(1.05);
+}
+
+.dossier-summary::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--paper-0) 92%, transparent) 0%, color-mix(in srgb, var(--paper-1) 80%, transparent) 64%, color-mix(in srgb, var(--paper-1) 58%, transparent) 100%),
+        linear-gradient(0deg, var(--paper-1), transparent 65%);
+}
+
+body[data-season="winter"] .dossier-summary::before { background-image: url("images/city_winter.jpg"); }
+body[data-season="spring"] .dossier-summary::before { background-image: url("images/city_spring.jpg"); }
+body[data-season="summer"] .dossier-summary::before { background-image: url("images/city_summer.jpg"); }
+body[data-season="autumn"] .dossier-summary::before { background-image: url("images/city_autumn.jpg"); }
+body[data-location-type="village"][data-season="winter"] .dossier-summary::before { background-image: url("images/village_winter.jpg"); }
+body[data-location-type="village"][data-season="spring"] .dossier-summary::before { background-image: url("images/village_spring.jpg"); }
+body[data-location-type="village"][data-season="summer"] .dossier-summary::before { background-image: url("images/village_summer.jpg"); }
+body[data-location-type="village"][data-season="autumn"] .dossier-summary::before { background-image: url("images/village_autumn.jpg"); }
+
+body[data-theme="paper"] .dossier-summary::before {
+    opacity: 0.23;
+    filter: sepia(0.18) saturate(0.55) contrast(0.9);
+}
+
+.dossier-summary__content {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+}
+
+.dossier-summary__copy {
+    display: grid;
+    min-width: 0;
+}
+
+.dossier-summary__eyebrow {
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.dossier-summary__copy strong {
+    margin-top: 5px;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 1.08rem;
+    font-weight: 600;
+    line-height: 1.08;
+}
+
+.dossier-summary__copy p {
+    margin-top: 6px;
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.dossier-summary__footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 9px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-family: var(--mono);
+    font-size: 0.53rem;
+    letter-spacing: 0.035em;
+}
+
+.dossier-summary__footer span:first-child {
+    color: var(--amber);
+}
+
+/* ---------- PAPER DETAILS ON THE READING SURFACE ---------- */
+
+body[data-screen="game"] .story-shell {
+    overflow: hidden;
+}
+
+body[data-screen="game"] .story-notice-slot {
+    position: relative;
+    z-index: 1;
+}
+
+body[data-screen="game"] .story-shell::before {
+    content: "ЛИЧНАЯ ХРОНИКА  /  АРХИВНАЯ ЗАПИСЬ";
+    display: block;
+    position: absolute;
+    z-index: 0;
+    top: 15px;
+    left: clamp(22px, 6vw, 76px);
+    color: var(--ink-muted);
+    font-family: var(--mono);
+    font-size: 0.53rem;
+    letter-spacing: 0.15em;
+}
+
+body[data-screen="game"] .story-shell::after {
+    content: "";
+    display: block;
+    position: absolute;
+    z-index: 0;
+    top: 0;
+    right: 0;
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(225deg, var(--paper-1) 0 48%, var(--line-strong) 49% 50%, transparent 51% 100%);
+    pointer-events: none;
+}
+
+/* ---------- RESPONSIVE ACCESS ---------- */
+
+@media (max-width: 1080px) {
+    .game-status-btn {
+        display: grid;
+    }
+}
+
+@media (max-width: 700px) {
+    body[data-screen="game"] {
+        padding-bottom: calc(76px + env(safe-area-inset-bottom));
+    }
+
+    .game-status-btn {
+        position: fixed;
+        z-index: 1450;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(64px, calc(env(safe-area-inset-right) + 54px));
+        bottom: max(10px, env(safe-area-inset-bottom));
+        width: auto;
+        min-width: 0;
+        min-height: 58px;
+        padding: 7px 9px;
+        border-radius: 16px;
+        box-shadow: 0 14px 38px rgba(0, 0, 0, 0.42), 0 0 0 1px color-mix(in srgb, var(--amber) 10%, transparent);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .game-status-btn__copy strong {
+        font-size: 0.86rem;
+    }
+
+    .game-status-btn__copy em {
+        font-size: 0.54rem;
+    }
+
+    .status-ring--mini {
+        width: 40px;
+        height: 40px;
+    }
+
+    .game-status-btn__arrow {
+        width: 26px;
+        height: 26px;
+    }
+
+    body.sidebar-drawer-open .game-status-btn,
+    body.dialog-open .game-status-btn {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateY(12px);
+    }
+
+    .app-toast {
+        bottom: max(84px, calc(env(safe-area-inset-bottom) + 76px));
+    }
+
+    body[data-screen="game"] .story-shell::before {
+        top: 11px;
+        left: 20px;
+        font-size: 0.48rem;
+        letter-spacing: 0.1em;
+    }
+}
+
+@media (max-width: 360px) {
+    .game-status-btn__copy em {
+        display: none;
+    }
+
+    .game-status-btn {
+        gap: 8px;
+    }
+
+    .game-status-btn__arrow {
+        display: none;
+    }
+}

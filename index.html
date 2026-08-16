@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Эпоха Перемен</title>
-    <link rel="stylesheet" href="style.css?v=20260816-3">
-    <script type="module" src="app.js?v=20260816-3"></script>
+    <link rel="stylesheet" href="style.css?v=20260816-4">
+    <script type="module" src="app.js?v=20260816-4"></script>
     <link rel="preload" href="fonts/EBGaramond-400-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/EBGaramond-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/JetBrainsMono-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
@@ -432,9 +432,16 @@
                         <small>Личная хроника</small>
                     </span>
                 </div>
-                <button type="button" class="game-status-btn" id="game-status-btn" aria-controls="game-sidebar" aria-expanded="false">
-                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-health"></use></svg>
-                    Состояние
+                <button type="button" class="game-status-btn" id="game-status-btn" aria-controls="game-sidebar" aria-expanded="false" aria-label="Открыть состояние героя">
+                    <span class="status-ring status-ring--mini" id="status-mini-ring" aria-hidden="true">
+                        <svg class="ui-icon"><use id="status-avatar-use" href="#icon-child"></use></svg>
+                    </span>
+                    <span class="game-status-btn__copy">
+                        <small>Открыть досье</small>
+                        <strong>Состояние героя</strong>
+                        <em id="game-status-brief">8 показателей</em>
+                    </span>
+                    <span class="game-status-btn__arrow" aria-hidden="true">→</span>
                 </button>
             </header>
 
@@ -491,6 +498,23 @@
             </div>
             <div class="sidebar-scroll">
                 <div id="mode-display" class="status-stack" aria-live="polite"></div>
+
+                <section class="dossier-summary" aria-labelledby="dossier-summary-title">
+                    <div class="dossier-summary__content">
+                        <span class="status-ring status-ring--dossier" id="dossier-balance-ring" aria-hidden="true">
+                            <svg class="ui-icon"><use id="dossier-avatar-use" href="#icon-child"></use></svg>
+                        </span>
+                        <div class="dossier-summary__copy">
+                            <span class="dossier-summary__eyebrow">Сводка состояния</span>
+                            <strong id="dossier-summary-title">Ровный период</strong>
+                            <p id="dossier-summary-text">Все показатели близки к балансу.</p>
+                        </div>
+                    </div>
+                    <div class="dossier-summary__footer">
+                        <span id="dossier-risk-count">0 зон риска</span>
+                        <span>центр шкалы — 5</span>
+                    </div>
+                </section>
 
                 <section class="sidebar-card personality-card">
                     <div class="sidebar-card__head">
