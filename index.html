@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Эпоха Перемен</title>
-    <link rel="stylesheet" href="style.css?v=20260603-3">
-    <script type="module" src="app.js?v=20260603-2"></script>
+    <link rel="stylesheet" href="style.css?v=20260816-1">
+    <script type="module" src="app.js?v=20260816-1"></script>
     <link rel="preload" href="fonts/EBGaramond-400-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/EBGaramond-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/JetBrainsMono-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
@@ -66,8 +66,17 @@
         <symbol id="icon-construction" viewBox="0 0 24 24"><path d="M4 21h16M6 21V8h12v13M3 8h18M8 5h8l2 3H6l2-3Z"/><path d="M9 12h6M9 16h6"/></symbol>
         <symbol id="icon-flower" viewBox="0 0 24 24"><circle cx="12" cy="9" r="2"/><path d="M12 11v10M12 17c-3 0-5-1-6-3M12 14c3 0 5-1 6-3M9 9c-3-1-3-5 0-6 2 0 3 2 3 4 0-2 1-4 3-4 3 1 2 5-1 6 3-1 5 2 3 4-2 1-4-1-5-3 0 2-1 4-3 3-2-2-1-4 0-5Z"/></symbol>
         <symbol id="icon-mosque" viewBox="0 0 24 24"><path d="M4 21V10h16v11M2 21h20M6 10c0-3 2-5 6-7 4 2 6 4 6 7M12 3v-2M8 14v3M12 14v3M16 14v3"/></symbol>
+        <symbol id="icon-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+        <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+        <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+        <symbol id="icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></symbol>
+        <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M19.1 4.9l-2.2 2.2M7.1 16.9l-2.2 2.2"/></symbol>
+        <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z"/></symbol>
     </svg>
-    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Переключить тему" title="Переключить тему">◐</button>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Переключить тему" title="Переключить тему">
+        <svg class="ui-icon theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true"><use href="#icon-sun"></use></svg>
+        <svg class="ui-icon theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true"><use href="#icon-moon"></use></svg>
+    </button>
     <div class="screen-noise" aria-hidden="true"></div>
     <div class="screen-vignette" aria-hidden="true"></div>
 
@@ -206,7 +215,7 @@
                     <section class="setup-step" data-step="3" data-wizard-group="2">
                         <div class="setup-section location-section">
                             <h3>Где именно</h3>
-                            <div class="setup-row" id="region-select-row" class="is-hidden">
+                            <div class="setup-row is-hidden" id="region-select-row">
                                 <label>Регион:</label>
                                 <select id="region-select" class="region-select">
                                     <option value="central">Центральная Россия</option>
@@ -306,6 +315,7 @@
                                 не пытайся собрать «идеальный» старт. В этой игре интереснее всего работают шероховатости, нехватка и странные совпадения.
                             </div>
                         </div>
+                        <div class="start-summary" id="start-summary" aria-label="Итоги создания героя"></div>
                         <div class="start-preview" id="start-preview"></div>
                         <button id="start-btn" class="primary">Начать игру</button>
                     </section>
@@ -336,7 +346,7 @@
                     <div class="setup-eyebrow">Настройки игры</div>
                     <h3 id="settings-title">Параметры</h3>
                 </div>
-                <button type="button" class="icon-btn icon-btn--ghost" id="settings-close-btn" aria-label="Закрыть настройки">✕</button>
+                <button type="button" class="icon-btn icon-btn--ghost" id="settings-close-btn" aria-label="Закрыть настройки"><svg class="ui-icon"><use href="#icon-close"></use></svg></button>
             </div>
 
             <!-- Табы -->
@@ -403,6 +413,14 @@
                 </div>
                 <p class="developer-note">Эти инструменты нужны для диагностики запросов и проверки промптов. Они не влияют на ход игры.</p>
             </div>
+
+            <div class="support-card support-card--settings">
+                <p class="support-card__title"><svg class="ui-icon"><use href="#icon-heart"></use></svg> Поддержать проект</p>
+                <p>
+                    Ответы нейросети не бесплатны для автора проекта. Помочь с оплатой API:<br>
+                    <strong>+7 950 004-88-24</strong> (Озон, Дарья)
+                </p>
+            </div>
         </div>
     </div>
 
@@ -434,18 +452,29 @@
             </div>
 
             <div class="archive-strip" id="archive-strip">
-                <button type="button" class="archive-btn" id="archive-prev-btn" aria-label="Предыдущий период">←</button>
+                <button type="button" class="archive-btn" id="archive-prev-btn" aria-label="Предыдущий период" title="Предыдущий период"><svg class="ui-icon"><use href="#icon-arrow-left"></use></svg></button>
                 <div class="archive-label" id="archive-label">Текущий период</div>
-                <button type="button" class="archive-btn" id="archive-current-btn" aria-label="Вернуться к текущему периоду">●</button>
-                <button type="button" class="archive-btn" id="archive-copy-btn" aria-label="Скопировать текущий период">⧉</button>
-                <button type="button" class="archive-btn" id="archive-next-btn" aria-label="Следующий период">→</button>
+                <button type="button" class="archive-btn" id="archive-current-btn" aria-label="Вернуться к текущему периоду" title="К текущему периоду"><svg class="ui-icon"><use href="#icon-target"></use></svg></button>
+                <button type="button" class="archive-btn" id="archive-copy-btn" aria-label="Скопировать текущий период" title="Скопировать период"><svg class="ui-icon"><use href="#icon-copy"></use></svg></button>
+                <button type="button" class="archive-btn" id="archive-next-btn" aria-label="Следующий период" title="Следующий период"><svg class="ui-icon"><use href="#icon-arrow-right"></use></svg></button>
             </div>
 
             <div class="story-stage">
+                <div id="onboarding-slot"></div>
                 <div class="story-shell">
+                    <div id="story-error-slot" class="story-notice-slot" hidden></div>
                     <div id="story-display" class="story-content" aria-live="polite" aria-atomic="false"></div>
                 </div>
-                <div class="loading-container is-hidden" id="loader" role="status" aria-live="polite"><div class="loading-bar"></div><div class="loading-message" id="loader-message"></div></div>
+                <div class="loading-container is-hidden" id="loader" role="status" aria-live="polite">
+                    <div class="loading-panel">
+                        <div class="loading-panel__head">
+                            <span class="loading-panel__title"><svg class="ui-icon" aria-hidden="true"><use href="#icon-film"></use></svg> Хроника времени</span>
+                            <button type="button" class="loading-cancel" id="loader-cancel-btn">Отмена</button>
+                        </div>
+                        <div class="loading-bar"></div>
+                        <div class="loading-message" id="loader-message"></div>
+                    </div>
+                </div>
                 <div class="choices-wrap choices-wrap--minimal" id="choices-wrap">
                     <div class="choices" id="choices-display" aria-live="polite"></div>
                 </div>
@@ -493,10 +522,6 @@
                     <button onclick="requestResetGame()" class="control-btn control-btn--danger"><svg class="ui-icon"><use href="#icon-refresh"></use></svg> Сброс</button>
                 </div>
 
-                <div class="support-card support-card--sidebar">
-                    <p class="support-card__title"><svg class="ui-icon"><use href="#icon-heart"></use></svg> Поддержать проект</p>
-                    <p><strong>+7 950 004-88-24</strong> (Дарья, Озон)</p>
-                </div>
             </div>
         </aside>
     </div>
@@ -507,7 +532,7 @@
         <div class="lore-panel__sheet">
             <div class="lore-panel__topbar">
                 <div class="lore-panel__eyebrow">Альбом памяти</div>
-                <button type="button" class="lore-panel__close" id="npcs-close" aria-label="Закрыть альбом">✕</button>
+                <button type="button" class="lore-panel__close" id="npcs-close" aria-label="Закрыть альбом"><svg class="ui-icon"><use href="#icon-close"></use></svg></button>
             </div>
             <div class="lore-panel__header">
                 <h2 class="lore-panel__title"><svg class="ui-icon"><use href="#icon-users"></use></svg> Близкие люди</h2>
@@ -524,7 +549,7 @@
         <div class="lore-panel__sheet lore-panel__sheet--items">
             <div class="lore-panel__topbar">
                 <div class="lore-panel__eyebrow">Сундук памяти</div>
-                <button type="button" class="lore-panel__close" id="items-close" aria-label="Закрыть сундук">✕</button>
+                <button type="button" class="lore-panel__close" id="items-close" aria-label="Закрыть сундук"><svg class="ui-icon"><use href="#icon-close"></use></svg></button>
             </div>
             <div class="lore-panel__header">
                 <h2 class="lore-panel__title"><svg class="ui-icon"><use href="#icon-bag"></use></svg> Вещи и память</h2>
@@ -544,7 +569,7 @@
                     <div class="setup-eyebrow">Для отладки нейросетей</div>
                     <h2 class="settings-title">Системный лог</h2>
                 </div>
-                <button type="button" class="icon-btn" id="debug-close-btn" aria-label="Закрыть">✕</button>
+                <button type="button" class="icon-btn" id="debug-close-btn" aria-label="Закрыть"><svg class="ui-icon"><use href="#icon-close"></use></svg></button>
             </div>
             <div class="settings-sheet__body" style="overflow-y: auto; flex: 1; padding: 1rem;">
                 <div id="debug-log-container" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -570,7 +595,7 @@
                     <div class="setup-eyebrow">Промпт-инжиниринг</div>
                     <h2 class="settings-title" style="font-size:1.4rem;">Инспектор промпта</h2>
                 </div>
-                <button type="button" class="icon-btn" id="prompt-close-btn" aria-label="Закрыть">✕</button>
+                <button type="button" class="icon-btn" id="prompt-close-btn" aria-label="Закрыть"><svg class="ui-icon"><use href="#icon-close"></use></svg></button>
             </div>
 
             <!-- Tabs -->

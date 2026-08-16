@@ -32,6 +32,11 @@
     --moss:          #6b8a5a;          /* для «нормы» статов */
     --ash:           #8a8a8a;
 
+    /* Семантические алиасы — чтобы состояния ошибок/предупреждений
+       ссылались на палитру, а не на несуществующие переменные. */
+    --danger:        var(--rust);
+    --warning:       var(--amber);
+
     --shadow-deep:   0 32px 80px rgba(0, 0, 0, 0.55);
     --shadow-soft:   0 14px 40px rgba(0, 0, 0, 0.32);
 
@@ -203,6 +208,13 @@ body::after {
     background: color-mix(in srgb, var(--amber) 14%, var(--paper-1));
 }
 
+/* Иконка показывает тему, в которую ведёт переключение:
+   в тёмной — солнце, в светлой — месяц. */
+.theme-toggle .theme-toggle__icon { width: 1.1em; height: 1.1em; }
+.theme-toggle .theme-toggle__icon--moon { display: none; }
+body[data-theme="paper"] .theme-toggle .theme-toggle__icon--sun { display: none; }
+body[data-theme="paper"] .theme-toggle .theme-toggle__icon--moon { display: inline-block; }
+
 /* ---------- TYPOGRAPHY PRIMITIVES ---------- */
 
 .eyebrow {
@@ -263,7 +275,8 @@ body::after {
     background: var(--paper-2);
     border: 1px solid var(--line);
     box-shadow: var(--shadow-deep);
-    min-height: 880px;
+    /* Высота следует за высотой вьюпорта и формой рядом, а не торчит жёсткими 880px */
+    min-height: clamp(520px, calc(100vh - 2 * clamp(16px, 2.4vw, 40px)), 880px);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -1150,7 +1163,12 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
     content: "▶";
     color: var(--amber);
     font-size: 0.7rem;
-    animation: blink 2.4s ease-in-out infinite;
+    opacity: 0.65;
+}
+/* «REC»-мигание только пока история пишется — не дёргает глаз во время чтения */
+body.is-loading .date-badge__time::before {
+    animation: blink 1.6s ease-in-out infinite;
+    opacity: 1;
 }
 @keyframes blink {
     0%, 60%, 100% { opacity: 1; }
@@ -1335,17 +1353,67 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
     opacity: 0.7;
 }
 
-/* ---------- LOADING BAR ---------- */
+/* ---------- LOADING — инлайнная «плёнка записи» ----------
+   История остаётся на экране и читаемой; лоадер живёт под ней. */
+
+.loading-container {
+    max-width: 66ch;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.loading-panel {
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line-warm);
+    background: color-mix(in srgb, var(--paper-2) 82%, var(--amber) 5%);
+    animation: stepIn 0.3s ease;
+}
+
+.loading-panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.loading-panel__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--amber);
+}
+.loading-panel__title .ui-icon { width: 1.1em; height: 1.1em; }
+
+.loading-cancel {
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--ink-dim);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.loading-cancel:hover {
+    border-color: var(--rust);
+    color: var(--rust);
+}
 
 .loading-bar {
     height: 2px;
     background: var(--line);
     overflow: hidden;
-    border-radius: 0;
-    display: none;
+    border-radius: 2px;
     position: relative;
-    max-width: var(--measure);
-    margin: 0 auto;
 }
 .loading-bar::after {
     content: "";
@@ -2137,7 +2205,7 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
 
 .illustration-btn:hover {
     background: var(--amber);
-    color: var(--bg);
+    color: var(--paper-0);
     box-shadow: 0 0 10px rgba(239, 213, 173, 0.3);
 }
 
@@ -2282,59 +2350,8 @@ body[data-theme="paper"] .panel-main::before { opacity: 0.06 !important; filter:
     background-color: #000;
 }
 
-/* ---------- РЕТРО ЛОАДЕР ДЛЯ ГЕНЕРАЦИИ ТЕКСТА ---------- */
-.retro-loader-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(16, 14, 11, 0.85);
-    backdrop-filter: blur(6px);
-    z-index: 99999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: illuFadeIn 0.2s ease forwards;
-    pointer-events: all; /* Blocks any clicks on background elements */
-}
-
-.retro-loader-card {
-    background: var(--bg-card, #26221c);
-    border: 2px solid var(--amber, #efd5ad);
-    border-radius: 8px;
-    padding: 32px 24px;
-    max-width: 400px;
-    width: 90%;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-}
-
-.retro-loader-spinner {
-    width: 45px;
-    height: 45px;
-    border: 3px solid rgba(239, 213, 173, 0.2);
-    border-top-color: var(--amber, #efd5ad);
-    border-radius: 50%;
-    animation: illuSpin 1.2s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
-    margin: 0 auto 20px;
-}
-
-.retro-loader-title {
-    font-family: var(--mono, monospace);
-    color: var(--amber, #efd5ad);
-    font-size: 1.1rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    margin-bottom: 12px;
-}
-
-.retro-loader-sub {
-    font-family: var(--serif, serif);
-    color: var(--ink-soft, #d5c8ad);
-    font-size: 1.05rem;
-    line-height: 1.6;
-}
+/* Ретро-оверлей на весь экран удалён: генерация хода теперь показывается
+   инлайн-панелью под историей (.loading-panel), текст остаётся читаемым. */
 
 /* ── ПЛАШКА СДВИГОВ СТАТОВ ── */
 .stat-delta-bar {
@@ -2422,8 +2439,8 @@ body[data-theme="paper"] .settings-tab-btn.selected { color: #fff8e7; }
 
 /* ---------- UX CLEANUP ---------- */
 /* Служебные панели остаются доступными для разработки, но не конкурируют
-   с игровым интерфейсом в пользовательской сборке. */
-.dev-tool-fab { display: none !important; }
+   с игровым интерфейсом в пользовательской сборке.
+   (Правило .dev-tool-fab объявлено ниже вместе с admin-tools-enabled.) */
 .support-card--setup { display: none; }
 
 /* Клавиатурная навигация должна быть заметна не меньше, чем hover. */
@@ -2488,22 +2505,31 @@ input:focus-visible {
     border-top: 1px solid var(--line);
 }
 
-.choices::before {
-    content: "Что ты сделаешь?";
+/* Ярлык рендерится из JS только там, где действительно есть выбор игрока
+   (не показывается при game over, ретрае и в архиве). */
+.choices-label {
     display: block;
     color: var(--amber);
     font-family: var(--mono);
     font-size: 0.68rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    margin-bottom: 2px;
 }
 
 .choice-btn {
     min-height: 68px;
     padding: 15px 18px 15px 20px;
-    background: color-mix(in srgb, var(--paper-2) 88%, var(--amber) 12%);
+    background: var(--paper-2);
 }
+
+/* Служебные состояния кнопки выбора: повтор хода и новая жизнь */
+.choice-btn--warn {
+    border-color: color-mix(in srgb, var(--amber) 45%, var(--line-strong));
+}
+.choice-btn--danger {
+    border-color: color-mix(in srgb, var(--rust) 45%, var(--line-strong));
+}
+.choice-btn--danger .choice-btn__arrow { color: var(--rust); }
 
 .choice-btn__title { font-size: 1.06rem; }
 
@@ -2927,14 +2953,15 @@ button:disabled {
 }
 
 .loading-message {
-    margin-top: 0.5rem;
-    text-align: center;
-    color: var(--muted);
-    font-size: 0.85em;
+    margin-top: 10px;
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 0.94rem;
+    line-height: 1.5;
 }
 
 /* Служебная разметка не должна протекать в пользовательский визуальный слой. */
-.retro-loader-title .ui-icon,
 .illustration-text .ui-icon,
 .illustration-btn .ui-icon {
     margin-right: 0.28em;
@@ -2947,3 +2974,152 @@ button:disabled {
 
 .loading-container { display: block; }
 .loading-container.is-hidden { display: none !important; }
+
+/* ============================================================
+   UX/UI ПОЛИРОВКА — уведомления, онбординг, сводка, иконки
+   ============================================================ */
+
+/* ---------- УВЕДОМЛЕНИЯ ОБ ОШИБКАХ (не стирают историю) ---------- */
+
+.story-notice-slot { margin-bottom: 18px; }
+.story-notice-slot:empty,
+.story-notice-slot[hidden] { display: none; }
+
+.story-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line-strong);
+    background: var(--paper-2);
+    animation: stepIn 0.3s ease;
+}
+
+.story-notice--error {
+    border-color: color-mix(in srgb, var(--rust) 45%, var(--line));
+    background: color-mix(in srgb, var(--rust) 7%, var(--paper-2));
+}
+
+.story-notice__icon {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--rust) 14%, transparent);
+    color: var(--rust);
+}
+.story-notice:not(.story-notice--error) .story-notice__icon {
+    background: var(--amber-soft);
+    color: var(--amber);
+}
+.story-notice__icon .ui-icon { width: 1.15em; height: 1.15em; }
+
+.story-notice__body { min-width: 0; }
+.story-notice__body strong {
+    display: block;
+    margin-bottom: 4px;
+    font-family: var(--serif);
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--ink);
+}
+.story-notice--error .story-notice__body strong { color: var(--rust); }
+.story-notice__body p {
+    font-family: var(--serif);
+    font-size: 0.94rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+}
+
+/* ---------- ОНБОРДИНГ ПЕРВОГО ХОДА ---------- */
+
+.onboarding-card {
+    max-width: 66ch;
+    margin: 0 auto 22px;
+    padding: 18px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line-warm);
+    background:
+        radial-gradient(circle at top right, var(--amber-soft), transparent 55%),
+        var(--paper-2);
+    animation: stepIn 0.4s ease;
+}
+
+.onboarding-card__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--amber);
+}
+.onboarding-card__title .ui-icon { width: 1.15em; height: 1.15em; }
+
+.onboarding-card p {
+    margin-bottom: 12px;
+    font-family: var(--serif);
+    font-size: 0.96rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+}
+
+.onboarding-card__close {
+    padding: 7px 16px;
+    font-size: 0.88rem;
+}
+
+/* ---------- СВОДКА ВЫБОРОВ НА ФИНАЛЬНОМ ШАГЕ ---------- */
+
+.start-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 14px;
+}
+.start-summary:empty { display: none; }
+
+.start-summary__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--paper-0);
+    color: var(--ink-soft);
+    font-family: var(--serif);
+    font-size: 0.88rem;
+    line-height: 1.3;
+}
+.start-summary__chip .ui-icon { width: 1em; height: 1em; color: var(--amber); }
+
+/* ---------- ИКОНКИ В МЕЛКИХ КОНТРОЛАХ ---------- */
+
+.archive-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.archive-btn .ui-icon { width: 0.95em; height: 0.95em; margin: 0; }
+
+.lore-panel__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.lore-panel__close .ui-icon { width: 1em; height: 1em; }
+
+/* Длинные названия статов («Авторитет у сверстников») не должны рвать карточку */
+.stat-card__name {
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+}
+
+/* Донат-карточка теперь живёт в настройках */
+.support-card--settings { margin-top: 22px; }
