@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Эпоха Перемен</title>
-    <link rel="stylesheet" href="style.css?v=20260816-1">
-    <script type="module" src="app.js?v=20260816-1"></script>
+    <link rel="stylesheet" href="style.css?v=20260816-2">
+    <script type="module" src="app.js?v=20260816-2"></script>
     <link rel="preload" href="fonts/EBGaramond-400-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/EBGaramond-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/JetBrainsMono-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
@@ -99,19 +99,38 @@
         <div class="setup-shell" id="setup-shell">
             <section class="setup-showcase" aria-labelledby="setup-intro-title">
                 <div class="setup-hero-art"></div>
+                <div class="cover-topline" aria-hidden="true">
+                    <span>Личный архив</span>
+                    <span class="cover-topline__rule"></span>
+                    <span>Россия · 1993</span>
+                </div>
                 <div class="setup-hero-copy setup-hero-copy--intro">
                     <div class="setup-eyebrow">Интерактивная хроника детства</div>
-                    <h1 id="setup-intro-title">Эпоха Перемен</h1>
+                    <h1 id="setup-intro-title">Эпоха<br>Перемен</h1>
                     <p class="setup-lead">
-                        Проживи детство в России 90-х — без глянца, глазами ребёнка.
+                        Проживи детство в России 90-х — без глянца, глазами ребёнка. Каждый выбор становится частью личной истории.
                     </p>
-                    <button type="button" class="primary setup-intro-cta" id="setup-intro-btn">Начать историю</button>
-                    <p class="setup-intro-note">Создание героя займёт около минуты</p>
+                    <div class="setup-intro-facts" aria-label="Особенности игры">
+                        <span><svg class="ui-icon" aria-hidden="true"><use href="#icon-map"></use></svg> 13 мест</span>
+                        <span><svg class="ui-icon" aria-hidden="true"><use href="#icon-theatre"></use></svg> Выбор меняет судьбу</span>
+                        <span><svg class="ui-icon" aria-hidden="true"><use href="#icon-book"></use></svg> Прогресс сохраняется</span>
+                    </div>
+                    <button type="button" class="primary setup-intro-cta" id="setup-intro-btn">Создать героя</button>
+                    <p class="setup-intro-note">Без регистрации · настройка займёт около минуты</p>
                 </div>
+                <div class="cover-catalog" aria-hidden="true">ЭП—93 / 001</div>
             </section>
 
             <section class="setup-form-wrap hidden" id="setup-form-wrap">
                 <div class="setup-form-topbar">
+                    <button type="button" class="setup-back-to-cover" id="setup-cover-btn">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+                        <span>На обложку</span>
+                    </button>
+                    <div class="setup-form-wordmark" aria-label="Эпоха Перемен">
+                        <span class="setup-form-wordmark__mark">ЭП</span>
+                        <span>Эпоха Перемен</span>
+                    </div>
                     <button type="button" class="icon-btn icon-btn--ghost" id="setup-settings-btn" aria-label="Открыть настройки"><svg class="ui-icon"><use href="#icon-settings"></use></svg></button>
                 </div>
                 <div class="setup-form-head">
@@ -121,13 +140,19 @@
                     </div>
                     <div class="setup-badge" id="setup-step-hint-badge">Возраст задаёт интонацию всей истории.</div>
                 </div>
-                <div class="setup-progress-wrap">
+                <div class="setup-progress-wrap" aria-label="Прогресс создания героя">
                     <div class="setup-progress-labels">
                         <span id="setup-step-counter">Шаг 1 из 3</span>
                         <span id="setup-step-caption">Герой</span>
                     </div>
-                    <div class="setup-progress-track">
+                    <div class="setup-progress-track" aria-hidden="true">
                         <div class="setup-progress-fill" id="setup-progress-fill"></div>
+                    </div>
+                    <div class="setup-progress-steps" aria-hidden="true">
+                        <span data-progress-step="0">Герой</span>
+                        <span data-progress-step="1">Место</span>
+                        <span data-progress-step="2">Ритм</span>
+                        <span data-progress-step="3">Старт</span>
                     </div>
                 </div>
 
@@ -399,6 +424,20 @@
     <!-- Game UI -->
     <div class="container app-shell hidden" id="game-ui">
         <section class="panel panel-main">
+            <header class="game-masthead">
+                <div class="game-wordmark">
+                    <span class="game-wordmark__mark" aria-hidden="true">ЭП</span>
+                    <span class="game-wordmark__copy">
+                        <strong>Эпоха Перемен</strong>
+                        <small>Личная хроника</small>
+                    </span>
+                </div>
+                <button type="button" class="game-status-btn" id="game-status-btn" aria-controls="game-sidebar" aria-expanded="false">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-health"></use></svg>
+                    Состояние
+                </button>
+            </header>
+
             <div class="date-badge" id="date-display">
                 <div class="date-badge__time">
                     <span id="date-text">...</span>
@@ -439,7 +478,17 @@
             </div>
         </section>
 
-        <aside class="panel panel-sidebar">
+        <div class="sidebar-drawer-backdrop" id="sidebar-drawer-backdrop" aria-hidden="true"></div>
+        <aside class="panel panel-sidebar" id="game-sidebar" aria-label="Состояние героя">
+            <div class="sidebar-mobile-head">
+                <div>
+                    <span>Досье героя</span>
+                    <strong>Состояние и память</strong>
+                </div>
+                <button type="button" class="icon-btn icon-btn--ghost" id="game-sidebar-close" aria-label="Закрыть состояние героя">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+                </button>
+            </div>
             <div class="sidebar-scroll">
                 <div id="mode-display" class="status-stack" aria-live="polite"></div>
 
@@ -447,6 +496,8 @@
                     <div class="sidebar-card__head">
                         <div><h3>Состояние героя</h3></div>
                     </div>
+                    <div class="stats-legend"><span>0</span><span>5 · баланс</span><span>10</span></div>
+                    <p class="stats-explainer">Чем дальше от середины, тем выше риск.</p>
                     <div id="stats-display" class="stats-grid"></div>
                 </section>
 
@@ -590,5 +641,7 @@
             </div>
         </div>
     </div>
+
+    <div class="app-toast" id="app-toast" role="status" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>

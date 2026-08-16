@@ -249,7 +249,12 @@ const els = {
     npcsTrigger: document.getElementById('npcs-trigger'),
     itemsTrigger: document.getElementById('items-trigger'),
     npcsCount: document.getElementById('npcs-count'),
-    itemsCount: document.getElementById('items-count')
+    itemsCount: document.getElementById('items-count'),
+    gameSidebar: document.getElementById('game-sidebar'),
+    gameStatusBtn: document.getElementById('game-status-btn'),
+    gameSidebarClose: document.getElementById('game-sidebar-close'),
+    sidebarDrawerBackdrop: document.getElementById('sidebar-drawer-backdrop'),
+    appToast: document.getElementById('app-toast')
 };
 
 // ========== УТИЛИТЫ ==========
@@ -559,6 +564,18 @@ function escapeHTML(value = '') {
         .replace(/'/g, '&#39;');
 }
 
+let toastTimer = null;
+function showToast(message, kind = 'success') {
+    if (!els.appToast) return;
+    window.clearTimeout(toastTimer);
+    els.appToast.textContent = message;
+    els.appToast.dataset.kind = kind;
+    els.appToast.classList.add('is-visible');
+    toastTimer = window.setTimeout(() => {
+        els.appToast.classList.remove('is-visible');
+    }, 2600);
+}
+
 function uiIcon(name, label = '') {
     const safeName = String(name || 'pin').replace(/[^a-z0-9_-]/gi, '') || 'pin';
     const title = label ? ` aria-label="${escapeHTML(label)}" role="img"` : ' aria-hidden="true"';
@@ -598,6 +615,7 @@ function getStatDescriptor(value) {
 function buildChoiceMarkup(choice, index = 0) {
     const label = choice.text || choice.action || `Выбор ${index + 1}`;
     return `
+        <span class="choice-btn__index" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>
         <span class="choice-btn__body choice-btn__body--single">
             <span class="choice-btn__title">${escapeHTML(label)}</span>
         </span>
@@ -887,6 +905,11 @@ function renderSetupWizard() {
     if (els.setupProgressFill) {
         els.setupProgressFill.style.width = `${(Math.min(safeIndex + 1, SETUP_STEP_COUNT) / SETUP_STEP_COUNT) * 100}%`;
     }
+    document.querySelectorAll('[data-progress-step]').forEach((step) => {
+        const index = Number(step.dataset.progressStep);
+        step.classList.toggle('is-current', index === safeIndex);
+        step.classList.toggle('is-complete', index < safeIndex);
+    });
     if (els.setupPrevBtn) els.setupPrevBtn.disabled = safeIndex === 0;
     if (els.setupNextBtn) {
         els.setupNextBtn.style.display = isReview ? 'none' : 'inline-flex';
@@ -1004,7 +1027,9 @@ function setupSettingsModal() {
 function setupArchiveControls() {
     els.archivePrevBtn?.addEventListener('click', () => {
         if (!state.archiveEntries?.length) return;
-        if (!isArchiveMode()) setArchiveView(state.archiveEntries.length - 1);
+        // Из текущего периода сразу уходим на действительно предыдущий,
+        // а не открываем тот же самый ход под ярлыком «архив».
+        if (!isArchiveMode()) setArchiveView(Math.max(0, state.archiveEntries.length - 2));
         else if (state.archiveViewIndex > 0) setArchiveView(state.archiveViewIndex - 1);
     });
     els.archiveNextBtn?.addEventListener('click', () => {
@@ -1016,10 +1041,10 @@ function setupArchiveControls() {
     els.archiveCopyBtn?.addEventListener('click', async () => {
         try {
             await copyArchiveEntryToClipboard(getSelectedArchiveEntry());
-            alert('Период скопирован!');
+            showToast('Период скопирован');
         } catch (e) {
             console.error('Archive copy error:', e);
-            alert('Не удалось скопировать период.');
+            showToast('Не удалось скопировать период', 'error');
         }
     });
 }
@@ -2998,6 +3023,51 @@ function setupLorePanels() {
         }
     });
 }
+
+// На узких экранах досье открывается поверх длинной истории. Так игроку не
+// приходится прокручивать несколько экранов вниз, чтобы проверить состояние.
+function setupSidebarDrawer() {
+    if (!els.gameSidebar || !els.gameStatusBtn) return;
+    const compactViewport = window.matchMedia('(max-width: 1080px)');
+    let returnFocus = null;
+
+    const syncA11y = () => {
+        const isOpen = document.body.classList.contains('sidebar-drawer-open');
+        const isCompact = compactViewport.matches;
+        els.gameStatusBtn.setAttribute('aria-expanded', String(isOpen));
+        els.gameSidebar.setAttribute('aria-hidden', String(isCompact && !isOpen));
+        els.gameSidebar.inert = isCompact && !isOpen;
+        if (!isCompact && isOpen) closeDrawer(false);
+    };
+
+    const openDrawer = () => {
+        if (!compactViewport.matches) return;
+        returnFocus = document.activeElement;
+        document.body.classList.add('sidebar-drawer-open');
+        syncA11y();
+        els.gameSidebarClose?.focus();
+    };
+
+    function closeDrawer(restoreFocus = true) {
+        document.body.classList.remove('sidebar-drawer-open');
+        syncA11y();
+        if (restoreFocus) returnFocus?.focus?.();
+        returnFocus = null;
+    }
+
+    els.gameStatusBtn.addEventListener('click', openDrawer);
+    els.gameSidebarClose?.addEventListener('click', () => closeDrawer());
+    els.sidebarDrawerBackdrop?.addEventListener('click', () => closeDrawer());
+    if (compactViewport.addEventListener) compactViewport.addEventListener('change', syncA11y);
+    else compactViewport.addListener?.(syncA11y);
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && document.body.classList.contains('sidebar-drawer-open')) {
+            closeDrawer();
+        }
+    });
+    syncA11y();
+}
+
 const NPC_ICON_MAP = {
     'Мама': 'person', 'Папа': 'person', 'Бабушка': 'person', 'Дедушка': 'person',
     'Брат': 'child', 'Сестра': 'girl', 'Дядя': 'person', 'Тётя': 'person'
@@ -3157,21 +3227,25 @@ function renderUI() {
     for (const [key, value] of Object.entries(state.stats)) {
         if (!STATS_INFO[key]) continue;
         const toneClass = getStatClass(value);
-        const visual = STAT_VISUALS[key] || { icon: '•', short: 'состояние' };
+        const visual = STAT_VISUALS[key] || { icon: 'target', short: 'состояние' };
+        const meterLeft = Math.min(value, 5) * 10;
+        const meterWidth = Math.abs(value - 5) * 10;
+        const riskHint = value < 5 ? STATS_INFO[key].low : value > 5 ? STATS_INFO[key].high : 'Сейчас показатель в условном балансе.';
         els.stats.innerHTML += `
-            <div class="stat-card ${toneClass}">
+            <div class="stat-card ${toneClass}" title="${escapeHTML(riskHint)}">
                 <div class="stat-card__top">
                     <div class="stat-card__label">
                         <span class="stat-card__icon">${uiIcon(visual.icon)}</span>
                         <div>
                             <div class="stat-card__name">${escapeHTML(STATS_INFO[key].name)}</div>
-                            <div class="stat-card__desc">${escapeHTML(visual.short)}</div>
+                            <div class="stat-card__desc">${escapeHTML(getStatDescriptor(value))}</div>
                         </div>
                     </div>
-                    <span class="stat-card__value ${toneClass}">${value}</span>
+                    <span class="stat-card__value ${toneClass}" aria-label="${value} из 10">${value}</span>
                 </div>
-                <div class="stat-meter">
-                    <span class="stat-meter__fill ${toneClass}" style="width:${Math.max(4, value * 10)}%"></span>
+                <div class="stat-meter" role="meter" aria-label="${escapeHTML(STATS_INFO[key].name)}" aria-valuemin="0" aria-valuemax="10" aria-valuenow="${value}">
+                    <span class="stat-meter__center" aria-hidden="true"></span>
+                    <span class="stat-meter__fill ${toneClass}" style="left:${meterLeft}%; width:${meterWidth}%"></span>
                 </div>
             </div>
         `;
@@ -3261,10 +3335,10 @@ window.copyCurrentPeriodToClipboard = async function copyCurrentPeriodToClipboar
     try {
         const entry = getSelectedArchiveEntry();
         await copyArchiveEntryToClipboard(entry);
-        alert('Период скопирован!');
+        showToast('Период скопирован');
     } catch (err) {
         console.error('Ошибка копирования периода:', err);
-        alert('Не удалось скопировать период.');
+        showToast('Не удалось скопировать период', 'error');
     }
 };
 
@@ -3289,10 +3363,10 @@ window.copyHistoryToClipboard = async function copyHistoryToClipboard() {
         const header = `=== ЭПОХА ПЕРЕМЕН: 1993 ===\nПерсонаж: ${GENDER_INFO[state.gender].name}, ${state.age} лет\nЛокация: ${locInfo.fullName}\nДата: ${getDateLabel()}\nПровайдер: ${getProviderConfig().label}\n\n`;
         const statsText = Object.entries(state.stats).map(([k, v]) => `${STATS_INFO[k].name}: ${v}`).join(', ');
         await navigator.clipboard.writeText(header + `Текущие параметры: ${statsText}\n\n=== ИСТОРИЯ ===\n${historyText}`);
-        alert('История скопирована!');
+        showToast('Вся история скопирована');
     } catch (err) {
         console.error('Ошибка копирования:', err);
-        alert('Не удалось скопировать историю.');
+        showToast('Не удалось скопировать историю', 'error');
     }
 };
 
@@ -3303,6 +3377,7 @@ setupSettingsModal();
 setupResetConfirmation();
 setupArchiveControls();
 setupLorePanels();
+setupSidebarDrawer();
 setupLoaderCancel();
 renderProviderSwitcher();
 updateApiKeyInput();
@@ -3317,13 +3392,22 @@ if (!savedGameLoaded) {
     const setupShell = document.getElementById('setup-shell');
     const setupShowcase = setupShell?.querySelector('.setup-showcase');
     const setupForm = document.getElementById('setup-form-wrap');
-    document.getElementById('setup-intro-btn')?.addEventListener('click', () => {
+    const showSetupForm = () => {
         setupShell?.classList.add('setup-shell--started');
         setupShowcase?.classList.add('hidden');
         setupForm?.classList.remove('hidden');
         setupForm?.querySelector('button, select, input')?.focus();
         document.getElementById('setup-screen')?.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    };
+    const showSetupCover = () => {
+        setupShell?.classList.remove('setup-shell--started');
+        setupForm?.classList.add('hidden');
+        setupShowcase?.classList.remove('hidden');
+        document.getElementById('setup-screen')?.scrollTo({ top: 0, behavior: 'smooth' });
+        document.getElementById('setup-intro-btn')?.focus();
+    };
+    document.getElementById('setup-intro-btn')?.addEventListener('click', showSetupForm);
+    document.getElementById('setup-cover-btn')?.addEventListener('click', showSetupCover);
 
     els.regionSelect.value = state.region;
     els.citySelect.value = state.city;
