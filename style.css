@@ -4668,3 +4668,79 @@ body[data-reading-mode="high-contrast"] .story-content > p:first-of-type::first-
         margin-bottom: 0;
     }
 }
+
+/* ---------- MOBILE: досье всегда в потоке, не поверх текста ---------- */
+@media (max-width: 1080px) {
+    .app-shell {
+        display: flex !important;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .panel-sidebar {
+        order: 1;
+        position: sticky !important;
+        top: 0 !important;
+        right: auto !important;
+        z-index: 30;
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        transform: none !important;
+        visibility: visible !important;
+        padding: 12px !important;
+        border-radius: var(--radius-lg) !important;
+        box-shadow: var(--shadow-soft);
+    }
+
+    .panel-main {
+        order: 2;
+    }
+
+    .sidebar-drawer-backdrop {
+        display: none !important;
+        pointer-events: none !important;
+    }
+
+    .panel-sidebar .sidebar-mobile-head {
+        display: none !important;
+    }
+
+    .panel-sidebar .sidebar-scroll {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .game-status-btn {
+        display: none !important;
+    }
+
+    body.sidebar-drawer-open {
+        overflow: auto !important;
+    }
+
+    body.sidebar-drawer-open .panel-sidebar {
+        transform: none !important;
+        visibility: visible !important;
+    }
+
+    body[data-screen="game"] {
+        padding-bottom: clamp(12px, 2vw, 28px) !important;
+    }
+}
+
+@media (max-width: 700px) {
+    .panel-sidebar {
+        position: relative !important;
+        top: auto !important;
+    }
+
+    .personality-card .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .game-status-btn {
+        display: none !important;
+        position: static !important;
+    }
+}

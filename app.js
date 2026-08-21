@@ -3362,17 +3362,13 @@ function setupSidebarDrawer() {
     const syncA11y = () => {
         const isOpen = document.body.classList.contains('sidebar-drawer-open');
         const isCompact = compactViewport.matches;
-        els.gameStatusBtn.setAttribute('aria-expanded', String(isOpen));
-        els.gameSidebar.setAttribute('aria-hidden', String(isCompact && !isOpen));
-        els.gameSidebar.inert = isCompact && !isOpen;
-        if (isCompact) {
-            els.gameSidebar.setAttribute('role', 'dialog');
-            els.gameSidebar.setAttribute('aria-modal', 'true');
-        } else {
-            els.gameSidebar.removeAttribute('role');
-            els.gameSidebar.removeAttribute('aria-modal');
-        }
-        if (!isCompact && isOpen) closeDrawer(false);
+        // На узком экране досье всегда в потоке над историей, не в выезжающем слое.
+        els.gameStatusBtn.setAttribute('aria-expanded', 'true');
+        els.gameSidebar.removeAttribute('aria-hidden');
+        els.gameSidebar.inert = false;
+        els.gameSidebar.removeAttribute('role');
+        els.gameSidebar.removeAttribute('aria-modal');
+        if (isOpen) closeDrawer(false);
     };
 
     const openDrawer = () => {
