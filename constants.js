@@ -18,9 +18,14 @@ export const LLM_PROVIDERS = {
     }
 };
 
-// Доступные модели для полировки текста (второй проход).
-// Первый элемент — «вариант 1», второй — «вариант 2» (по умолчанию).
-export const ENHANCE_MODEL_OPTIONS = ["gemini-3.1-pro", "glm-5.2"];
+// Gemini на Hydra недоступен. Полировка текста отключена.
+export const ENHANCE_MODEL_OPTIONS = ["glm-5.2"];
+export const GEMINI_HYDRA_ENABLED = false;
+export const POLISH_ENABLED = false;
+
+// Суточные лимиты (календарный день, локальное время браузера).
+export const DAILY_STORY_START_LIMIT = 3;
+export const DAILY_TURNS_PER_STORY_LIMIT = 5;
 
 // Временно отключает иллюстрации (UI скрыт, генерация заблокирована).
 // Код и сохранённые картинки остаются — вернуть = true.

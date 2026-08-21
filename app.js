@@ -10,6 +10,10 @@ import {
 
     ENHANCE_MODEL_OPTIONS,
 
+    DAILY_STORY_START_LIMIT,
+
+    DAILY_TURNS_PER_STORY_LIMIT,
+
     ILLUSTRATIONS_ENABLED,
 
     SEASONS,
@@ -189,10 +193,77 @@ function createDefaultState() {
         lastChoices: null,
         lastStatDeltas: null,
         verbosity: 'normal',
-        enhanceModel: ENHANCE_MODEL_OPTIONS[1],
+        enhanceModel: ENHANCE_MODEL_OPTIONS[0],
+        storyId: null,
         lastMiracle: null,
         gameOverData: null
     };
+}
+
+const QUOTA_STORAGE_KEY = 'rpg90_daily_quota';
+
+function todayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function loadQuota() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(QUOTA_STORAGE_KEY) || 'null');
+        if (!raw || raw.date !== todayKey()) {
+            return { date: todayKey(), storiesStarted: 0, storyTurns: {} };
+        }
+        return {
+            date: raw.date,
+            storiesStarted: Number(raw.storiesStarted) || 0,
+            storyTurns: raw.storyTurns && typeof raw.storyTurns === 'object' ? raw.storyTurns : {}
+        };
+    } catch {
+        return { date: todayKey(), storiesStarted: 0, storyTurns: {} };
+    }
+}
+
+function saveQuota(quota) {
+    try {
+        localStorage.setItem(QUOTA_STORAGE_KEY, JSON.stringify(quota));
+    } catch (e) {
+        console.warn('Не удалось сохранить лимиты:', e);
+    }
+}
+
+function getStoryTurnsToday(storyId) {
+    if (!storyId) return 0;
+    return Number(loadQuota().storyTurns[storyId]) || 0;
+}
+
+function canStartNewStory() {
+    return loadQuota().storiesStarted < DAILY_STORY_START_LIMIT;
+}
+
+function canPlayTurn(storyId) {
+    return getStoryTurnsToday(storyId) < DAILY_TURNS_PER_STORY_LIMIT;
+}
+
+function recordStoryStart() {
+    const quota = loadQuota();
+    quota.storiesStarted += 1;
+    saveQuota(quota);
+}
+
+function recordStoryTurn(storyId) {
+    if (!storyId) return;
+    const quota = loadQuota();
+    quota.storyTurns[storyId] = (Number(quota.storyTurns[storyId]) || 0) + 1;
+    saveQuota(quota);
+}
+
+function quotaStoryStartMessage() {
+    return `Сегодня уже начато ${DAILY_STORY_START_LIMIT} ${pluralizeRu(DAILY_STORY_START_LIMIT, ['история', 'истории', 'историй'])}. Новую можно начать завтра.`;
+}
+
+function quotaTurnMessage(storyId) {
+    const used = getStoryTurnsToday(storyId);
+    return `Лимит ходов на сегодня исчерпан (${used} из ${DAILY_TURNS_PER_STORY_LIMIT}). Эта история продолжится завтра.`;
 }
 
 let state = createDefaultState();
@@ -926,34 +997,7 @@ function buildArchiveStoryMarkup(entry) {
     if (!entry) return renderMarkdown(state.lastStory || '');
     let html = renderMarkdown(entry.storyEnhanced || entry.storyOriginal || entry.story || '');
 
-    if (entry && entry.polishFailed) {
-        // Полировка сорвалась — показываем предупреждение сверху
-        html = `
-            <div style="background: rgba(220,50,50,0.1); border: 1px dashed var(--danger); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                <strong style="color: var(--danger);">${uiIcon('alert')} Полировка текста сорвалась</strong>
-                <span style="font-size:0.9em;">Отображается черновой вариант. Вы можете повторить попытку (например, после смены провайдера в настройках).</span>
-                <button class="btn" style="align-self: flex-start; border-color: var(--danger); color: var(--danger);" onclick="window.retryPolish('${entry.turn}')">Отполировать заново</button>
-            </div>
-        ` + html;
-    } else if (entry && entry.turn && entry.storyOriginal) {
-        if (entry.storyEnhanced) {
-            // Полировка прошла успешно — тихая кнопка переполировки под текстом
-            html += `
-                <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                    <button class="control-btn control-btn--ghost" style="font-size: 0.82rem; padding: 6px 14px; opacity: 0.55; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'" onclick="window.retryPolish('${entry.turn}')">✦ Переполировать текст</button>
-                    <span style="font-size: 0.78rem; color: var(--ink-muted); font-family: var(--mono);">второй проход заново — механики не затронуты</span>
-                </div>
-            `;
-        } else {
-            // Ещё не было полировки — кнопка создания чистовика
-            html += `
-                <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                    <button class="control-btn control-btn--ghost" style="font-size: 0.82rem; padding: 6px 14px; opacity: 0.85; transition: opacity 0.2s; border: 1px dashed var(--link); color: var(--link);" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'" onclick="window.retryPolish('${entry.turn}')">✦ Отполировать текст (чистовик)</button>
-                    <span style="font-size: 0.78rem; color: var(--ink-muted); font-family: var(--mono);">сделать текст более сочным, добавить атмосферные диалоги и детали эпохи</span>
-                </div>
-            `;
-        }
-    }
+
 
     if (ILLUSTRATIONS_ENABLED && entry) {
         if (entry.illustrationStatus === 'loading') {
@@ -1217,7 +1261,6 @@ function renderSetupWizard() {
 function openSettingsModal() {
     if (!els.settingsModal) return;
     syncSettingsVerbosityBtns();
-    syncSettingsEnhanceModelBtns();
     syncReadingModeControls();
     openOverlay(els.settingsModal, els.settingsCloseBtn);
 }
@@ -1242,11 +1285,6 @@ function syncSettingsVerbosityBtns() {
     }
 }
 
-function syncSettingsEnhanceModelBtns() {
-    // Синхронизирует переключатель модели полировки в модалке настроек
-    const btns = document.querySelectorAll('#settings-enhance-model-btns .option-btn');
-    btns.forEach((button) => setToggleSelected(button, button.dataset.value === state.enhanceModel));
-}
 
 function areAdminToolsEnabled() {
     try { return localStorage.getItem(ADMIN_TOOLS_STORAGE_KEY) === 'true'; }
@@ -1332,8 +1370,7 @@ function setupSettingsModal() {
     document.querySelectorAll('#settings-enhance-model-btns .option-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             state.enhanceModel = btn.dataset.value;
-            syncSettingsEnhanceModelBtns();
-            renderProviderSwitcher();
+                    renderProviderSwitcher();
             if (hasActiveRun()) save();
         });
     });
@@ -1494,22 +1531,12 @@ function updateApiKeyInput() {
         els.apiProviderTitle.innerHTML = `${uiIcon('plug')} API ключ — ${escapeHTML(cfg.label)}`;
     }
     if (els.apiKeyHint) {
-        if (provider === 'hybrid') {
-            els.apiKeyHint.textContent = 'Hybrid использует два сохранённых ключа: OpenRouter для первого ответа и Hydra для полировки. Если env настроены на сервере, поля можно не заполнять.';
-        } else {
-            els.apiKeyHint.textContent = `Можно оставить пустым, если на сервере настроен ключ ${cfg.label}.`;
-        }
+        els.apiKeyHint.textContent = 'Ключ Hydra хранится в переменных окружения Vercel (HYDRA_API_KEY). Поле ниже не нужно.';
     }
     if (els.keyInput) {
-        if (provider === 'hybrid') {
-            els.keyInput.value = '';
-            els.keyInput.placeholder = 'Hybrid использует сохранённые ключи Hydra и OpenRouter';
-            els.keyInput.disabled = true;
-        } else {
-            els.keyInput.disabled = false;
-            els.keyInput.value = userApiKeys[provider] || '';
-            els.keyInput.placeholder = provider === 'openrouter' ? 'OpenRouter API key' : 'Hydra API key';
-        }
+        els.keyInput.value = '';
+        els.keyInput.placeholder = 'Ключ задаётся в Vercel env';
+        els.keyInput.disabled = true;
     }
 }
 
@@ -1527,9 +1554,17 @@ function renderProviderSwitcher() {
     document.querySelectorAll('[data-provider-models]').forEach((el) => {
         el.innerHTML = `
             <div><strong>${uiIcon(cfg.icon)} ${cfg.label}</strong></div>
-            <div>Первый ответ: <code>${cfg.models.main}</code> · ${uiIcon(mainExecCfg.icon)} ${mainExecCfg.label}</div>
-            <div>Полировка: <code>${enhanceModel}</code> · ${uiIcon(enhanceExecCfg.icon)} ${enhanceExecCfg.label}</div>
+            <div>Модель: <code>glm-5.2</code></div>
+            <div class="provider-hint">Gemini на Hydra пока недоступен.</div>
         `;
+    });
+    document.querySelectorAll('#settings-enhance-model-btns .option-btn').forEach((button) => {
+        const isGemini = button.dataset.value === 'gemini-3.1-pro';
+        button.disabled = isGemini;
+        button.style.opacity = isGemini ? '0.4' : '';
+        button.style.filter = isGemini ? 'grayscale(1)' : '';
+        button.title = isGemini ? 'Gemini на Hydra пока недоступен' : '';
+        setToggleSelected(button, button.dataset.value === 'glm-5.2');
     });
 }
 
@@ -1883,8 +1918,9 @@ function applyStartSettings() {
         pace: state.pace,
         difficulty: state.difficulty,
         verbosity: state.verbosity,
-        enhanceModel: state.enhanceModel,
-        startAge: state.startAge
+        enhanceModel: 'glm-5.2',
+        startAge: state.startAge,
+        storyId: `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     };
     state.age = state.startAge;
     state.year = 1993;
@@ -2255,8 +2291,8 @@ async function callLLM({
     const logicalCfg = getProviderConfig(provider);
     const executionProvider = resolveExecutionProvider(modelKind, provider);
     const cfg = getProviderConfig(executionProvider);
-    const resolvedModel = model || getProviderModel(modelKind, provider) || MODEL;
-    const providerApiKey = (userApiKeys[executionProvider] || '').trim();
+    const resolvedModel = 'glm-5.2';
+    const providerApiKey = '';
     const isLocal = isLocalEnvironment();
     console.log('========== ПОЛНЫЙ ПРОМПТ К LLM ==========');
     console.log('Режим:', logicalCfg.label, '| Исполнитель:', cfg.label, '| Модель:', resolvedModel, 'Темп:', temperature, 'Max tokens:', max_tokens);
@@ -2310,36 +2346,7 @@ async function callLLM({
                 }
                 return data;
             }
-            // Hydra можно вызывать напрямую пользовательским ключом.
-            if (executionProvider === 'hydra' && providerApiKey) {
-                const { controller, finish } = beginFetch();
-                const response = await fetch(cfg.directUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${providerApiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: resolvedModel,
-                        messages,
-                        temperature,
-                        max_tokens,
-                        ...(response_format ? { response_format } : {})
-                    }),
-                    signal: controller.signal
-                });
-                finish();
-                if (!response.ok) {
-                    const errText = await response.text();
-                    let parsed = null;
-                    try { parsed = JSON.parse(errText); } catch (e) { parsed = null; }
-                    throw new Error(extractApiError(parsed, `HTTP ${response.status}: ${errText.slice(0, 500)}`));
-                }
-                return await response.json();
-            }
-            if (isLocal) {
-                throw new Error(`Для локальной разработки необходимо ввести API ключ ${cfg.label}.`);
-            }
+            // Hydra — только серверный ключ из env Vercel.
             const { controller, finish } = beginFetch();
             const response = await fetch(cfg.serverPath, {
                 method: 'POST',
@@ -2794,7 +2801,7 @@ function showTurnNotice(title, message, action, kind = 'error') {
             </div>
         `;
     }
-    showRetryButton(action);
+    if (action) showRetryButton(action);
 }
 
 function cancelCurrentTurn() {
@@ -2806,6 +2813,12 @@ function cancelCurrentTurn() {
 async function turn(action) {
     if (state.gameOver) return;
     if (isLoading()) return;
+    if (!state.storyId) state.storyId = `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    if (!canPlayTurn(state.storyId)) {
+        showToast(quotaTurnMessage(state.storyId), 'error');
+        showTurnNotice('Лимит ходов на сегодня', quotaTurnMessage(state.storyId), null, 'notice');
+        return;
+    }
     clearTurnNotice();
     turnAbortController = new AbortController();
     const turnSignal = turnAbortController.signal;
@@ -2978,6 +2991,7 @@ async function turn(action) {
         pushArchiveEntry(newEntry);
 
         state.lastMiracle = null;
+        recordStoryTurn(state.storyId);
         save();
         renderUI();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3348,17 +3362,13 @@ function setupSidebarDrawer() {
     const syncA11y = () => {
         const isOpen = document.body.classList.contains('sidebar-drawer-open');
         const isCompact = compactViewport.matches;
-        els.gameStatusBtn.setAttribute('aria-expanded', String(isOpen));
-        els.gameSidebar.setAttribute('aria-hidden', String(isCompact && !isOpen));
-        els.gameSidebar.inert = isCompact && !isOpen;
-        if (isCompact) {
-            els.gameSidebar.setAttribute('role', 'dialog');
-            els.gameSidebar.setAttribute('aria-modal', 'true');
-        } else {
-            els.gameSidebar.removeAttribute('role');
-            els.gameSidebar.removeAttribute('aria-modal');
-        }
-        if (!isCompact && isOpen) closeDrawer(false);
+        // На узком экране досье всегда в потоке над историей, не в выезжающем слое.
+        els.gameStatusBtn.setAttribute('aria-expanded', 'true');
+        els.gameSidebar.removeAttribute('aria-hidden');
+        els.gameSidebar.inert = false;
+        els.gameSidebar.removeAttribute('role');
+        els.gameSidebar.removeAttribute('aria-modal');
+        if (isOpen) closeDrawer(false);
     };
 
     const openDrawer = () => {
@@ -3551,6 +3561,21 @@ function renderUI() {
                 els.choices.appendChild(deltaBar);
             }
 
+            const turnsLeft = DAILY_TURNS_PER_STORY_LIMIT - getStoryTurnsToday(state.storyId);
+            const quotaNote = document.createElement('div');
+            quotaNote.className = 'choices-label';
+            quotaNote.style.opacity = '0.7';
+            quotaNote.textContent = turnsLeft > 0
+                ? `Ходов сегодня: ${getStoryTurnsToday(state.storyId)} из ${DAILY_TURNS_PER_STORY_LIMIT}`
+                : quotaTurnMessage(state.storyId);
+            els.choices.appendChild(quotaNote);
+
+            if (turnsLeft <= 0) {
+                const wait = document.createElement('div');
+                wait.className = 'story-notice';
+                wait.innerHTML = `<div class="story-notice__body"><strong>Лимит на сегодня</strong><p>${escapeHTML(quotaTurnMessage(state.storyId))}</p></div>`;
+                els.choices.appendChild(wait);
+            } else {
             state.lastChoices.forEach((choice, index) => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -3559,6 +3584,7 @@ function renderUI() {
                 btn.onclick = () => turn(choice.action || choice.text);
                 els.choices.appendChild(btn);
             });
+            }
         }
     }
 
@@ -3652,7 +3678,9 @@ function tryLoadSavedGame() {
         if (!state.lastCompressTurn) state.lastCompressTurn = 0;
         if (!state.dialogArchive) state.dialogArchive = '';
         if (!state.verbosity) state.verbosity = 'normal';
-        if (!state.enhanceModel) state.enhanceModel = ENHANCE_MODEL_OPTIONS[1];
+        if (!state.enhanceModel) state.enhanceModel = ENHANCE_MODEL_OPTIONS[0];
+        if (!state.storyId) state.storyId = `legacy-${Date.now()}`;
+        state.enhanceModel = 'glm-5.2';
         if (!state.lastDialogCompress) state.lastDialogCompress = 0;
         if (!state.archiveEntries) state.archiveEntries = [];
         if (state.archiveViewIndex === undefined) state.archiveViewIndex = null;
@@ -3797,14 +3825,11 @@ if (!savedGameLoaded) {
 }
 
 els.startBtn.onclick = () => {
-    const provider = getActiveProvider();
-    const key = els.keyInput.disabled ? '' : els.keyInput.value.trim();
-    if (provider === 'hybrid') {
-        console.log('Hybrid режим использует сохранённые ключи OpenRouter и Hydra либо серверные env-ключи.');
-    } else if (!key) {
-        console.log(`Поле API ключа пусто, будет использован серверный ключ ${getProviderConfig(provider).label}`);
+    if (!canStartNewStory()) {
+        showToast(quotaStoryStartMessage(), 'error');
+        return;
     }
-    saveApiKey(provider, key);
+    recordStoryStart();
     applyStartSettings();
     initGame();
 };
@@ -4010,83 +4035,8 @@ window.downloadIllustration = function(dateLabel, base64Url) {
     document.body.removeChild(link);
 };
 
-window.retryPolish = async function(turnStr) {
-    const turnNum = parseInt(turnStr, 10);
-    const entry = state.archiveEntries.find(e => e.turn === turnNum);
-    if (!entry) return; // polishFailed не проверяем — кнопка доступна всегда
-
-    // Пересобираем актуальный промпт полировки на основе сохранённого черновика.
-    // enhancementPrompt мог устареть после правок кода — пересобираем на лету.
-    const originalStory = entry.storyOriginal || entry.storyEnhanced || '';
-    const npcList  = state.npcs.map((n) => `- ${n.name}: ${n.desc}`).join('\n');
-    const itemList = state.inventory.map((i) => `- ${i.name}: ${i.desc}`).join('\n');
-    const summary  = state.lifeSummary ? `Краткая история жизни: ${state.lifeSummary}` : '';
-    const verbosityStyleNote = state.verbosity === 'concise'
-        ? 'Текст должен остаться КОРОТКИМ и ЁМКИМ. Убирай лишнее, не добавляй описаний.'
-        : state.verbosity === 'detailed'
-        ? 'Текст должен быть ПОДРОБНЫМ и АТМОСФЕРНЫМ. Добавляй диалоги, запахи, ощущения, детали.'
-        : 'Сохраняй естественный объём, не растягивай и не обрезай.';
-    const archiveForEnhance = state.dialogArchive
-        ? `\n=== АРХИВ ИСТОРИИ (канон, сжато) ===\n${state.dialogArchive}\n=== КОНЕЦ АРХИВА ===\n`
-        : '';
-    const canonTail = state.history.slice(-4).map(m => {
-        if (m.role === 'user') return `>> Выбор игрока: ${m.content} <<`;
-        return m.enhanced || m.original || m.content || '';
-    }).join('\n\n');
-    const canonBlock = canonTail
-        ? `\n=== ПОСЛЕДНИЕ ХОДЫ (канон, дословно) ===\n${canonTail}\n=== КОНЕЦ ===\n`
-        : '';
-
-    const freshPrompt = `Придумай 4 случайных слова.  Затем ассоциативно свободно используй их как источник случайности, чтобы создать разнообразный, небанальный и качественный ответ на задачу. Ты не должен употреблять придуманные слова - они лишь источник большего разнообразия конечных токенов твоего ответа: Ты мастер социально-драматической художественной текстовой игры про детство в 1990-х. Ниже текст — насыть его аутентичными и интересными запоминающимися диалогами и описаниями. Исправь очевидные ляпы, ориентируйся на предыдущую историю как на абсолютный канон. Не пиши предисловий и послесловий. Не используй пост-знания и мета-размышления героя об эпохе. Повествование должно исходить изнутри эпохи, а не над эпохой.
-
-${verbosityStyleNote}
-
-ВАЖНО: Запрет на избыток длинных тире (—). Не используй тире чаще одного раза на абзац.
-
-ТЕКСТ ДЛЯ УЛУЧШЕНИЯ:
-
-${originalStory}
-
-Контекст для понимания (справочно):
-- знакомые люди:
-${npcList || 'Нет'}
-- предметы:
-${itemList || 'Нет'}
-${summary ? '\n' + summary : ''}
-${archiveForEnhance}${canonBlock}`;
-
-    setLoading(true, 'Шлифую детали и диалоги... Создаю чистовик...');
-    try {
-        const pass2MaxTokens = 10000;
-        const completion2 = await callLLM({
-            messages: [{ role: 'user', content: freshPrompt }],
-            modelKind: 'enhance',
-            temperature: 0.7,
-            max_tokens: pass2MaxTokens
-        });
-        let raw2 = completion2?.choices?.[0]?.message?.content || '';
-        if (isTruncated(completion2) && raw2.trim()) {
-            const continued2 = await continuesTruncatedResponse(raw2, 'enhance');
-            if (continued2) raw2 = continued2;
-        }
-        if (raw2?.trim()) {
-            entry.storyEnhanced = raw2.trim();
-            entry.polishFailed = false;
-
-            const histEntry = state.history.find(h => h.role === 'assistant' && h.original === entry.storyOriginal);
-            if (histEntry) histEntry.enhanced = entry.storyEnhanced;
-            if (state.lastStory === entry.storyOriginal) state.lastStory = entry.storyEnhanced;
-            const enhIdx = state.enhancedHistory.indexOf(entry.storyOriginal);
-            if (enhIdx !== -1) state.enhancedHistory[enhIdx] = entry.storyEnhanced;
-        }
-    } catch(e) {
-        console.error(e);
-        showToast(`Не удалось отполировать: ${e.message}`, 'error');
-    } finally {
-        setLoading(false);
-        save();
-        renderUI();
-    }
+window.retryPolish = async function() {
+    showToast('Полировка текста отключена', 'error');
 };
 
 window.startGenImg = function(turnStr, style) {

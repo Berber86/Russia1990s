@@ -13,16 +13,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { messages, model, temperature, max_tokens, response_format, apiKey } = req.body || {};
-  const apiKeyToUse = apiKey || process.env.HYDRA_API_KEY;
+  const { messages, temperature, max_tokens, response_format } = req.body || {};
+  // Ключ только из env Vercel (HYDRA_API_KEY). Клиентский ключ не принимаем.
+  const apiKeyToUse = process.env.HYDRA_API_KEY;
 
   if (!apiKeyToUse) {
-    return res.status(500).json({ error: 'No API key available' });
+    return res.status(500).json({ error: 'HYDRA_API_KEY не задан в переменных окружения Vercel' });
   }
 
   try {
     const requestBody = {
-      model: model || 'glm-5.2',
+      // Gemini на Hydra временно отключён — только GLM 5.2
+      model: 'glm-5.2',
       messages,
       temperature: temperature ?? 0.6,
       max_tokens: max_tokens ?? 5000
